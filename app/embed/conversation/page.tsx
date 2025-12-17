@@ -33,17 +33,47 @@ export default function ConversationEmbedPage() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const createConversation = useCallback(async (key: string, assistant: string, customerId: string) => {
+  const getAuthToken = useCallback(async (clientId: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/widget-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        setAuthToken(data.token);
+        setError(null);
+        return data.token;
+      } else {
+        setError(data.detail || 'Failed to get authentication token');
+        return null;
+      }
+    } catch (err) {
+      setError('Network error: Could not get authentication token');
+      console.error('Token request error:', err);
+      return null;
+    }
+  }, []);
+
+  const createConversation = useCallback(async (assistant: string, customerId: string, token: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': key,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           assistant_id: assistant,
@@ -65,12 +95,12 @@ export default function ConversationEmbedPage() {
     }
   }, []);
 
-  const loadConversationMessages = useCallback(async (conversationId: string, apiKey: string) => {
+  const loadConversationMessages = useCallback(async (conversationId: string, token: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}/messages`, {
         method: 'GET',
         headers: {
-          'X-API-Key': apiKey,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -91,13 +121,13 @@ export default function ConversationEmbedPage() {
     }
   }, []);
 
-  const initializeConversation = useCallback(async (key: string, assistant: string, customerId: string) => {
+  const initializeConversation = useCallback(async (assistant: string, customerId: string, token: string) => {
     try {
       // First, try to find existing conversations for this customer and assistant
       const conversationsResponse = await fetch(`${API_BASE_URL}/conversations/`, {
         method: 'GET',
         headers: {
-          'X-API-Key': key,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -112,7 +142,7 @@ export default function ConversationEmbedPage() {
           if (existingConversation) {
             // Load existing conversation and messages
             setConversationId(existingConversation.id);
-            await loadConversationMessages(existingConversation.id, key);
+            await loadConversationMessages(existingConversation.id, token);
             setError(null);
             return;
           }
@@ -120,7 +150,7 @@ export default function ConversationEmbedPage() {
       }
 
       // If no existing conversation found, create a new one
-      await createConversation(key, assistant, customerId);
+      await createConversation(assistant, customerId, token);
     } catch (err) {
       setError('Network error: Could not initialize conversation');
       console.error('Conversation initialization error:', err);
@@ -130,28 +160,32 @@ export default function ConversationEmbedPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Extract API parameters
-    const apiKeyParam = urlParams.get('apiKey');
+    // Extract client ID parameter
+    const clientIdParam = urlParams.get('clientId');
     const assistantIdParam = urlParams.get('assistantId');
     const customerIdParam = urlParams.get('customerId') || `widget-user-${Date.now()}`;
 
-    if (apiKeyParam) {
-      setApiKey(apiKeyParam);
+    if (clientIdParam) {
+      setClientId(clientIdParam);
     }
 
-    // Initialize conversation if we have required parameters
-    if (apiKeyParam && assistantIdParam) {
-      initializeConversation(apiKeyParam, assistantIdParam, customerIdParam);
+    // Get auth token if we have required parameters
+    if (clientIdParam && assistantIdParam) {
+      getAuthToken(clientIdParam).then((token) => {
+        if (token) {
+          initializeConversation(assistantIdParam, customerIdParam, token);
+        }
+      });
     }
-  }, [initializeConversation]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // Check if we have a conversation
-    if (!conversationId || !apiKey) {
-      setError('API key and assistant ID are required. Please check your widget configuration.');
+    // Check if we have a conversation and auth token
+    if (!conversationId || !authToken) {
+      setError('Conversation or authentication token not available. Please check your widget configuration.');
       return;
     }
 
@@ -171,7 +205,7 @@ export default function ConversationEmbedPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           content: userMessage.text,

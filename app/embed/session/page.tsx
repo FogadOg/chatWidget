@@ -17,34 +17,68 @@ export default function EmbedPage() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Extract API parameters
-    const apiKeyParam = urlParams.get('apiKey');
+    // Extract client ID parameter
+    const clientIdParam = urlParams.get('clientId');
     const assistantIdParam = urlParams.get('assistantId');
 
-    if (apiKeyParam) {
-      setApiKey(apiKeyParam);
+    if (clientIdParam) {
+      setClientId(clientIdParam);
     }
 
-    // Create session if we have both API key and assistant ID
-    if (apiKeyParam && assistantIdParam) {
-      createSession(apiKeyParam, assistantIdParam);
+    // Get auth token if we have required parameters
+    if (clientIdParam && assistantIdParam) {
+      getAuthToken(clientIdParam).then((token) => {
+        if (token) {
+          createSession(assistantIdParam, token);
+        }
+      });
     }
   }, []);
 
-  const createSession = async (key: string, assistant: string) => {
+  const getAuthToken = async (clientId: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/widget-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        setAuthToken(data.token);
+        setError(null);
+        return data.token;
+      } else {
+        setError(data.detail || 'Failed to get authentication token');
+        return null;
+      }
+    } catch (err) {
+      setError('Network error: Could not get authentication token');
+      console.error('Token request error:', err);
+      return null;
+    }
+  };
+
+  const createSession = async (assistant: string, token: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/sessions/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': key,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           assistant_id: assistant,
@@ -70,9 +104,9 @@ export default function EmbedPage() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // Check if we have a session
-    if (!sessionId || !apiKey) {
-      setError('API key and assistant ID are required. Please check your widget configuration.');
+    // Check if we have a session and auth token
+    if (!sessionId || !authToken) {
+      setError('Session or authentication token not available. Please check your widget configuration.');
       return;
     }
 
@@ -92,7 +126,7 @@ export default function EmbedPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           content: userMessage.text,
