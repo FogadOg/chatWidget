@@ -8,6 +8,23 @@ This is a Next.js chat widget that integrates with the Companin's AI assistant A
 - Real-time messaging with AI assistant
 - API key authentication
 - Transparent iframe embedding
+- Two widget types: Sessions and Conversations
+
+## Widget Types
+
+### Sessions Widget (`/embed`)
+Uses the sessions API endpoint for chat functionality. Sessions automatically manage conversation lifecycle and provide features like:
+- Automatic conversation creation
+- Session expiration handling
+- Built-in rate limiting per session
+
+### Conversations Widget (`/embed/conversation`)
+Uses the conversations API endpoint directly. Provides more control over conversation management:
+- Direct conversation management
+- Persistent conversations across sessions
+- More granular control over conversation lifecycle
+
+Choose the sessions widget for simpler integration, or the conversations widget for more advanced use cases.
 
 ## API Integration
 
@@ -26,6 +43,47 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 When embedding the widget, you must provide these URL parameters:
 
 - `apiKey`: Your organization's API key (client_id from OAuth application)
+- `assistantId`: The UUID of the assistant to use for chat
+- `customerId` (Conversations widget only): Unique identifier for the user/customer to maintain conversation persistence
+
+### Optional Parameters
+
+- `customerId`: For conversations widget, this maintains persistent conversations. If not provided, a random ID will be generated.
+
+### Conversation Persistence
+
+The **Conversations Widget** maintains persistent conversations for each `customerId`:
+
+- **First visit**: Creates a new conversation for the customer
+- **Return visits**: Loads existing conversation and message history
+- **Same customer, different assistants**: Each assistant gets its own conversation
+- **Conversation status**: Only active conversations are resumed
+
+This ensures users can continue conversations across sessions and devices.
+
+### Embedding Examples
+
+#### Sessions Widget
+```html
+<iframe
+  src="http://localhost:3001/embed?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID"
+  width="400"
+  height="600"
+  style="border: none; background: transparent;"
+  title="Chat Widget"
+/>
+```
+
+#### Conversations Widget
+```html
+<iframe
+  src="http://localhost:3001/embed/conversation?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID"
+  width="400"
+  height="600"
+  style="border: none; background: transparent;"
+  title="Chat Widget"
+/>
+```
 - `assistantId`: UUID of the assistant to chat with
 
 ### Example Usage
