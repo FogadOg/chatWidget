@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chat Widget with API Integration
 
-## Getting Started
+This is a Next.js chat widget that integrates with the Companin's AI assistant API.
+
+## Features
+
+- Collapsible chat interface
+- Real-time messaging with AI assistant
+- API key authentication
+- Transparent iframe embedding
+
+## API Integration
+
+The widget connects to the Companin's Django API backend for chat functionality.
+
+### Configuration
+
+Create a `.env.local` file in the widget-app directory:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+### Required Parameters
+
+When embedding the widget, you must provide these URL parameters:
+
+- `apiKey`: Your organization's API key (client_id from OAuth application)
+- `assistantId`: UUID of the assistant to chat with
+
+### Example Usage
+
+```html
+<iframe
+  src="http://localhost:3001/embed?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID"
+  width="400"
+  height="600"
+  style="border: none; position: fixed; bottom: 16px; right: 16px; z-index: 1000; background-color: transparent;"
+  title="Embedded Chat Widget"
+/>
+```
+
+### Getting API Credentials
+
+1. **API Key**: This is your OAuth application's `client_id`. You can find it in your Django admin under OAuth Applications.
+
+2. **Assistant ID**: Create an assistant through the API or Django admin, then use its UUID.
+
+### API Endpoints Used
+
+- `POST /api/v1/sessions/` - Create a chat session
+- `POST /api/v1/sessions/{session_id}/messages` - Send messages and receive AI responses
+
+## Development
 
 First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001/embed](http://localhost:3001/embed) with your browser to see the widget.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The widget automatically:
+- Parses URL parameters for API configuration
+- Creates a session on load
+- Handles authentication with X-API-Key header
+- Displays error messages for API failures
 
-## Learn More
+## Error Handling
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The widget displays user-friendly error messages for:
+- Missing API key or assistant ID
+- Network connectivity issues
+- Invalid API credentials
+- Session creation failures

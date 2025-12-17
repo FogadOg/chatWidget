@@ -8,32 +8,73 @@ type Message = {
   from: 'user' | 'assistant';
 };
 
-const mockResponses = [
-  "That's a great question! Let me help you understand this concept better.",
-  "I'd be happy to explain this topic in detail. Let me break it down for you.",
-  "This is an interesting topic that comes up frequently. Here's what I recommend...",
-  "Great choice of topic! This is something that many developers encounter.",
-  "That's definitely worth exploring. Here's the best approach...",
-];
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function EmbedPage() {
-  const [args, setArgs] = useState('Loading...');
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Hello! How can I help you today?', from: 'assistant' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const params = Array.from(urlParams.entries()).map(([key, value]) => `${key}: ${value}`).join(', ');
-    setArgs(params || 'None');
+
+    // Extract API parameters
+    const apiKeyParam = urlParams.get('apiKey');
+    const assistantIdParam = urlParams.get('assistantId');
+
+    if (apiKeyParam) {
+      setApiKey(apiKeyParam);
+    }
+
+    // Create session if we have both API key and assistant ID
+    if (apiKeyParam && assistantIdParam) {
+      createSession(apiKeyParam, assistantIdParam);
+    }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const createSession = async (key: string, assistant: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': key,
+        },
+        body: JSON.stringify({
+          assistant_id: assistant,
+          visitor_id: `widget-${Date.now()}`, // Unique visitor ID for the widget
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === 'success') {
+        setSessionId(data.data.session_id);
+        setError(null);
+      } else {
+        setError(data.detail || 'Failed to create session');
+      }
+    } catch (err) {
+      setError('Network error: Could not connect to API');
+      console.error('Session creation error:', err);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
+
+    // Check if we have a session
+    if (!sessionId || !apiKey) {
+      setError('API key and assistant ID are required. Please check your widget configuration.');
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -44,18 +85,42 @@ export default function EmbedPage() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
+    setError(null);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const response = mockResponses[Math.floor(Math.random() * mockResponses.length)];
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response,
-        from: 'assistant'
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({
+          content: userMessage.text,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === 'success') {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: data.data.assistant_message.content,
+          from: 'assistant'
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        setError(data.detail || 'Failed to send message');
+        // Re-add the user message input since the API call failed
+        setInput(userMessage.text);
+      }
+    } catch (err) {
+      setError('Network error: Could not send message');
+      console.error('Message send error:', err);
+      // Re-add the user message input since the API call failed
+      setInput(userMessage.text);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 2000);
+    }
   };
 
   const toggleCollapsed = () => {
@@ -110,6 +175,13 @@ export default function EmbedPage() {
                 </svg>
               </button>
             </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mx-3 mt-3 rounded">
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {messages.map((message) => (
