@@ -1,0 +1,12 @@
+{
+  "typeYourMessage": "Typ je bericht...",
+  "send": "Verzenden",
+  "failedToSendMessage": "Bericht verzenden mislukt",
+  "networkError": "Netwerkfout: Kon bericht niet verzenden",
+  "sessionOrAuthError": "Sessie of authenticatietoken niet beschikbaar. Controleer uw widget-configuratie.",
+  "networkErrorConnect": "Netwerkfout: Kon niet verbinden met API",
+  "failedToCreateSession": "Sessie aanmaken mislukt",
+  "failedToCreateConversation": "Conversatie aanmaken mislukt",
+  "networkErrorInitialize": "Netwerkfout: Kon conversatie niet initialiseren",
+  "chat": "Chat"
+}

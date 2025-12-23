@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
+import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 
 type Message = {
   id: string;
@@ -13,9 +14,7 @@ type Message = {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function EmbedPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Hello! How can I help you today?', from: 'assistant' }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -23,6 +22,8 @@ export default function EmbedPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const [assistantName, setAssistantName] = useState<string>('');
+  const { translations: t, locale } = useWidgetTranslation();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -36,6 +37,7 @@ export default function EmbedPage() {
     if (clientIdParam && assistantIdParam) {
       getAuthToken(clientIdParam).then((token) => {
         if (token) {
+          fetchAssistantDetails(assistantIdParam, token);
           createSession(assistantIdParam, token);
         } else if (authError) {
           setError(authError);
@@ -79,12 +81,64 @@ export default function EmbedPage() {
       if (response.ok && data.status === 'success') {
         setSessionId(data.data.session_id);
         setError(null);
+        // Show typing animation while loading greeting message
+        setIsTyping(true);
+        // Load messages after session creation
+        await loadSessionMessages(data.data.session_id, token);
       } else {
-        setError(data.detail || 'Failed to create session');
+        setError(data.detail || t.failedToCreateSession);
       }
     } catch (err) {
-      setError('Network error: Could not connect to API');
+      setError(t.networkErrorConnect);
       console.error('Session creation error:', err);
+    }
+  };
+
+  const fetchAssistantDetails = async (assistantId: string, token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          setAssistantName(data.data.name);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching assistant details:', err);
+    }
+  };
+
+  const loadSessionMessages = async (sessionId: string, token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          // Convert API messages to widget message format
+          const loadedMessages: Message[] = data.data.messages.map((msg: any) => ({
+            id: msg.id,
+            text: msg.content,
+            from: msg.sender as 'user' | 'assistant'
+          }));
+          setMessages(loadedMessages);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading session messages:', err);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -94,7 +148,7 @@ export default function EmbedPage() {
 
     // Check if we have a session and auth token
     if (!sessionId || !authToken) {
-      setError('Session or authentication token not available. Please check your widget configuration.');
+      setError(t.sessionOrAuthError);
       return;
     }
 
@@ -118,6 +172,7 @@ export default function EmbedPage() {
         },
         body: JSON.stringify({
           content: userMessage.text,
+          locale: locale,
         }),
       });
 
@@ -131,12 +186,12 @@ export default function EmbedPage() {
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
-        setError(data.detail || 'Failed to send message');
+        setError(data.detail || t.failedToSendMessage);
         // Re-add the user message input since the API call failed
         setInput(userMessage.text);
       }
     } catch (err) {
-      setError('Network error: Could not send message');
+      setError(t.networkError);
       console.error('Message send error:', err);
       // Re-add the user message input since the API call failed
       setInput(userMessage.text);
@@ -160,7 +215,7 @@ export default function EmbedPage() {
       setInput={setInput}
       handleSubmit={handleSubmit}
       error={error}
-      title="Chat"
+      assistantName={assistantName}
     />
   );
 }

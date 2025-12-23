@@ -48,6 +48,9 @@ When embedding the widget, you must provide these URL parameters:
 
 ### Optional Parameters
 
+- `locale`: Language code for widget localization (en, de, es, fr, pt, sv, nl, nb, it). Defaults to English if not provided.
+- `startOpen`: Controls initial widget state ("true"/"1" = open, "false"/"0" = closed). Defaults to closed.
+
 - `customerId`: For conversations widget, this maintains persistent conversations. If not provided, a random ID will be generated.
 
 ### Conversation Persistence
@@ -126,6 +129,41 @@ The widget automatically:
 - Creates a session on load
 - Handles authentication with X-API-Key header
 - Displays error messages for API failures
+
+## Internationalization
+
+The widget supports multiple languages through URL parameters:
+
+- `en` - English (default)
+- `de` - German
+- `es` - Spanish
+- `fr` - French
+- `pt` - Portuguese
+- `sv` - Swedish
+- `nl` - Dutch
+- `nb` - Norwegian Bokmål
+- `it` - Italian
+
+### Usage
+
+Add the `locale` parameter to your widget URL:
+
+```html
+<iframe
+  src="http://localhost:3001/embed?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID&locale=de"
+  width="400"
+  height="600"
+  style="border: none;"
+  title="Chat Widget"
+/>
+```
+
+### Adding New Languages
+
+1. Create a new JSON file in `/locales/` (e.g., `it.json`)
+2. Add translations for all keys from `en.json`
+3. Update the `LOCALES` object in `/lib/i18n.ts`
+4. Update the `useWidgetTranslation` hook to include the new locale
 
 ## Error Handling
 

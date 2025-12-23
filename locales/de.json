@@ -1,0 +1,12 @@
+{
+  "typeYourMessage": "Schreiben Sie Ihre Nachricht...",
+  "send": "Senden",
+  "failedToSendMessage": "Nachricht konnte nicht gesendet werden",
+  "networkError": "Netzwerkfehler: Konnte nicht mit der API verbinden",
+  "sessionOrAuthError": "Sitzung oder Authentifizierungstoken nicht verfügbar. Bitte überprüfen Sie Ihre Widget-Konfiguration.",
+  "networkErrorConnect": "Netzwerkfehler: Konnte nicht mit der API verbinden",
+  "failedToCreateSession": "Sitzung konnte nicht erstellt werden",
+  "failedToCreateConversation": "Konversation konnte nicht erstellt werden",
+  "networkErrorInitialize": "Netzwerkfehler: Konnte Konversation nicht initialisieren",
+  "chat": "Chat"
+}

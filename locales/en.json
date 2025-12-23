@@ -1,0 +1,12 @@
+{
+  "typeYourMessage": "Type your message...",
+  "send": "Send",
+  "failedToSendMessage": "Failed to send message",
+  "networkError": "Network error: Could not send message",
+  "sessionOrAuthError": "Session or authentication token not available. Please check your widget configuration.",
+  "networkErrorConnect": "Network error: Could not connect to API",
+  "failedToCreateSession": "Failed to create session",
+  "failedToCreateConversation": "Failed to create conversation",
+  "networkErrorInitialize": "Network error: Could not initialize conversation",
+  "chat": "Chat"
+}

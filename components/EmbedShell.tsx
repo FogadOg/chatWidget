@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 
 type Message = {
   id: string;
@@ -19,6 +20,7 @@ type Props = {
   handleSubmit: (e: React.FormEvent) => void;
   error?: string | null;
   title?: string;
+  assistantName?: string;
 };
 
 export default function EmbedShell({
@@ -31,8 +33,10 @@ export default function EmbedShell({
   setInput,
   handleSubmit,
   error,
-  title = 'Chat',
+  title,
+  assistantName,
 }: Props) {
+  const { translations: t } = useWidgetTranslation();
   return (
     <>
       {isEmbedded ? (
@@ -53,7 +57,7 @@ export default function EmbedShell({
           ) : (
             <div className="h-full flex flex-col bg-white">
               <div className="bg-gray-900 text-white p-3 flex items-center justify-between">
-                <h3 className="font-semibold">{title}</h3>
+                <h3 className="font-semibold">{assistantName || title || t.chat}</h3>
                 <button
                   type="button"
                   onClick={toggleCollapsed}
@@ -100,11 +104,11 @@ export default function EmbedShell({
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your message..."
+                    placeholder={t.typeYourMessage}
                     className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
                     disabled={isTyping}
                   />
-                  <button type="submit" disabled={!input.trim() || isTyping} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">Send</button>
+                  <button type="submit" disabled={!input.trim() || isTyping} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">{t.send}</button>
                 </div>
               </form>
             </div>
@@ -122,7 +126,7 @@ export default function EmbedShell({
             <div className="w-100 h-150 flex flex-col">
               <div className="bg-white rounded-lg shadow-lg flex-1 flex flex-col overflow-hidden">
                 <div className="bg-gray-900 text-white p-3 rounded-t-lg flex items-center justify-between">
-                  <h3 className="font-semibold">{title}</h3>
+                  <h3 className="font-semibold">{assistantName || title || t.chat}</h3>
                   <button type="button" onClick={toggleCollapsed} className="w-6 h-6 hover:bg-gray-700 rounded flex items-center justify-center transition-colors" title="Minimize Chat">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="6,9 12,15 18,9" />
@@ -160,8 +164,8 @@ export default function EmbedShell({
 
                 <form onSubmit={handleSubmit} className="p-3 border-t">
                   <div className="flex space-x-2">
-                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type your message..." className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" disabled={isTyping} />
-                    <button type="submit" disabled={!input.trim() || isTyping} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">Send</button>
+                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t.typeYourMessage} className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" disabled={isTyping} />
+                    <button type="submit" disabled={!input.trim() || isTyping} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">{t.send}</button>
                   </div>
                 </form>
               </div>

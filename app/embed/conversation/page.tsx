@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
+import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 
 type Message = {
   id: string;
@@ -29,9 +30,7 @@ type ApiMessage = {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function ConversationEmbedPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Hello! How can I help you today?', from: 'assistant' }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -39,6 +38,8 @@ export default function ConversationEmbedPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const [assistantName, setAssistantName] = useState<string>('');
+  const { translations: t, locale } = useWidgetTranslation();
 
 
   const createConversation = useCallback(async (assistant: string, customerId: string, token: string) => {
@@ -60,12 +61,36 @@ export default function ConversationEmbedPage() {
       if (response.ok && data.status === 'success') {
         setConversationId(data.data.id);
         setError(null);
+        // Show typing animation while loading greeting message
+        setIsTyping(true);
+        // Load messages after conversation creation
+        await loadConversationMessages(data.data.id, token);
       } else {
-        setError(data.detail || 'Failed to create conversation');
+        setError(data.detail || t.failedToCreateConversation);
       }
     } catch (err) {
-      setError('Network error: Could not connect to API');
+      setError(t.networkErrorConnect);
       console.error('Conversation creation error:', err);
+    }
+  }, []);
+
+  const fetchAssistantDetails = useCallback(async (assistantId: string, token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          setAssistantName(data.data.name);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching assistant details:', err);
     }
   }, []);
 
@@ -92,6 +117,8 @@ export default function ConversationEmbedPage() {
       }
     } catch (err) {
       console.error('Error loading conversation messages:', err);
+    } finally {
+      setIsTyping(false);
     }
   }, []);
 
@@ -116,6 +143,7 @@ export default function ConversationEmbedPage() {
           if (existingConversation) {
             // Load existing conversation and messages
             setConversationId(existingConversation.id);
+            setIsTyping(true);
             await loadConversationMessages(existingConversation.id, token);
             setError(null);
             return;
@@ -126,10 +154,10 @@ export default function ConversationEmbedPage() {
       // If no existing conversation found, create a new one
       await createConversation(assistant, customerId, token);
     } catch (err) {
-      setError('Network error: Could not initialize conversation');
+      setError(t.networkErrorInitialize);
       console.error('Conversation initialization error:', err);
     }
-  }, [createConversation, loadConversationMessages]);
+  }, [createConversation, loadConversationMessages, fetchAssistantDetails]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -143,6 +171,7 @@ export default function ConversationEmbedPage() {
     if (clientIdParam && assistantIdParam) {
       getAuthToken(clientIdParam).then((token) => {
         if (token) {
+          fetchAssistantDetails(assistantIdParam, token);
           initializeConversation(assistantIdParam, customerIdParam, token);
         } else if (authError) {
           setError(authError);
@@ -170,7 +199,7 @@ export default function ConversationEmbedPage() {
 
     // Check if we have a conversation and auth token
     if (!conversationId || !authToken) {
-      setError('Conversation or authentication token not available. Please check your widget configuration.');
+      setError(t.sessionOrAuthError);
       return;
     }
 
@@ -194,6 +223,7 @@ export default function ConversationEmbedPage() {
         },
         body: JSON.stringify({
           content: userMessage.text,
+          locale: locale,
         }),
       });
 
@@ -207,12 +237,12 @@ export default function ConversationEmbedPage() {
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
-        setError(data.detail || 'Failed to send message');
+        setError(data.detail || t.failedToSendMessage);
         // Re-add the user message input since the API call failed
         setInput(userMessage.text);
       }
     } catch (err) {
-      setError('Network error: Could not send message');
+      setError(t.networkError);
       console.error('Message send error:', err);
       // Re-add the user message input since the API call failed
       setInput(userMessage.text);
@@ -236,7 +266,7 @@ export default function ConversationEmbedPage() {
       setInput={setInput}
       handleSubmit={handleSubmit}
       error={error}
-      title="Chat"
+      assistantName={assistantName}
     />
   );
 }
