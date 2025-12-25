@@ -64,6 +64,7 @@ export default function EmbedPage() {
 
   const createSession = async (assistant: string, token: string) => {
     try {
+      console.log('Creating session with locale:', locale);
       const response = await fetch(`${API_BASE_URL}/sessions/`, {
         method: 'POST',
         headers: {
@@ -73,6 +74,7 @@ export default function EmbedPage() {
         body: JSON.stringify({
           assistant_id: assistant,
           visitor_id: `widget-${Date.now()}`, // Unique visitor ID for the widget
+          locale: locale,
         }),
       });
 

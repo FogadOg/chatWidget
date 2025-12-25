@@ -53,6 +53,7 @@ export default function ConversationEmbedPage() {
         body: JSON.stringify({
           assistant_id: assistant,
           customer_id: customerId,
+          locale: locale,
         }),
       });
 
