@@ -11,7 +11,7 @@ type Message = {
   from: 'user' | 'assistant';
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`
 
 export default function EmbedPage() {
   const [messages, setMessages] = useState<Message[]>([]);
