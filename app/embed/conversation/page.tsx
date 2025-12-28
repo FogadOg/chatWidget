@@ -43,6 +43,7 @@ export default function ConversationEmbedPage() {
 
 
   const createConversation = useCallback(async (assistant: string, customerId: string, token: string) => {
+    console.log('WIDGET: Creating conversation for assistant:', assistant, 'customer:', customerId);
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/`, {
         method: 'POST',
@@ -56,8 +57,10 @@ export default function ConversationEmbedPage() {
           locale: locale,
         }),
       });
+      console.log('WIDGET: Conversation creation response:', response.status, response.ok);
 
       const data = await response.json();
+      console.log('WIDGET: Conversation creation data:', data);
 
       if (response.ok && data.status === 'success') {
         setConversationId(data.data.id);
@@ -162,15 +165,20 @@ export default function ConversationEmbedPage() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    console.log('WIDGET: URL params:', window.location.search);
 
     // Extract client ID parameter
     const clientIdParam = urlParams.get('clientId');
     const assistantIdParam = urlParams.get('assistantId');
     const customerIdParam = urlParams.get('customerId') || `widget-user-${Date.now()}`;
 
+    console.log('WIDGET: Extracted params:', { clientIdParam, assistantIdParam, customerIdParam });
+
     // Get auth token if we have required parameters
     if (clientIdParam && assistantIdParam) {
+      console.log('WIDGET: Getting auth token...');
       getAuthToken(clientIdParam).then((token) => {
+        console.log('WIDGET: Got token:', !!token);
         if (token) {
           fetchAssistantDetails(assistantIdParam, token);
           initializeConversation(assistantIdParam, customerIdParam, token);
@@ -178,6 +186,8 @@ export default function ConversationEmbedPage() {
           setError(authError);
         }
       });
+    } else {
+      console.log('WIDGET: Missing required params');
     }
 
     // Detect iframe embedding and allow initial open/closed control
@@ -198,8 +208,10 @@ export default function ConversationEmbedPage() {
     e.preventDefault();
     if (!input.trim()) return;
 
+    console.log('WIDGET: handleSubmit called, input:', input);
     // Check if we have a conversation and auth token
     if (!conversationId || !authToken) {
+      console.log('WIDGET: Missing conversationId or authToken:', { conversationId, authToken });
       setError(t.sessionOrAuthError);
       return;
     }
@@ -215,6 +227,7 @@ export default function ConversationEmbedPage() {
     setIsTyping(true);
     setError(null);
 
+    console.log('WIDGET: Sending message to API:', `${API_BASE_URL}/conversations/${conversationId}/messages`);
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}/messages`, {
         method: 'POST',
@@ -227,8 +240,10 @@ export default function ConversationEmbedPage() {
           locale: locale,
         }),
       });
+      console.log('WIDGET: Message send response:', response.status, response.ok);
 
       const data = await response.json();
+      console.log('WIDGET: Message send data:', data);
 
       if (response.ok && data.status === 'success') {
         const assistantMessage: Message = {
