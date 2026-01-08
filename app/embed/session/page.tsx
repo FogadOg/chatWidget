@@ -221,8 +221,23 @@ export default function EmbedPage() {
 
   const getLocalizedText = (textObj: { [lang: string]: string } | undefined): string => {
     if (!textObj) return '';
-    const lang = widgetConfig?.default_language || locale || 'en';
-    return textObj[lang] || textObj[widgetConfig?.default_language || 'en'] || textObj['en'] || '';
+
+    // Priority: user's locale -> widget's default language -> English -> first available
+    const userLocale = locale || 'en';
+    const defaultLang = widgetConfig?.default_language || 'en';
+
+    // Try user's locale first
+    if (textObj[userLocale]) return textObj[userLocale];
+
+    // Fall back to widget's default language
+    if (textObj[defaultLang]) return textObj[defaultLang];
+
+    // Fall back to English
+    if (textObj['en']) return textObj['en'];
+
+    // Return first available translation
+    const values = Object.values(textObj);
+    return values.length > 0 ? values[0] : '';
   };
 
   const processWidgetFlow = (action: string | undefined, isFollowUpButton: boolean = false): boolean => {
