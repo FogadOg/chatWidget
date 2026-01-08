@@ -39,6 +39,18 @@ type WidgetConfig = {
     flows?: any[];
   };
   default_language: string;
+  // New appearance fields
+  font_family: string;
+  font_size: number;
+  font_weight: string;
+  shadow_intensity: string;
+  shadow_color: string;
+  widget_width: number;
+  widget_height: number;
+  button_size: string;
+  message_bubble_radius: number;
+  button_border_radius: number;
+  opacity: number;
 };
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`
@@ -63,11 +75,6 @@ export default function EmbedPage() {
     // Detect mobile device
     const checkIsMobile = () => {
       const isMobileDevice = window.innerWidth <= 768 && /Android|iPhone|Mobile|Mobi/i.test(navigator.userAgent);
-      console.log('Mobile detection:', {
-        width: window.innerWidth,
-        userAgent: navigator.userAgent,
-        isMobile: isMobileDevice
-      });
       setIsMobile(isMobileDevice);
     };
 
@@ -122,40 +129,19 @@ export default function EmbedPage() {
   useEffect(() => {
     if (!widgetConfig) return;
 
-    const width = window.innerWidth;
     const ua = navigator.userAgent;
-    const hasWidth = width <= 768;
-    const hasUserAgent = /Android|iPhone|iPad|iPod|Mobile|Mobi/i.test(ua);
-    const isMobile = hasWidth || hasUserAgent; // Changed to OR instead of AND
+    // Only check user agent for mobile device detection (not screen width)
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|Mobi/i.test(ua);
 
-    console.log('Widget config loaded:', {
-      hide_on_mobile: widgetConfig.hide_on_mobile,
-      start_open: widgetConfig.start_open,
-      width: width,
-      userAgent: ua,
-      hasWidth: hasWidth,
-      hasUserAgent: hasUserAgent,
-      isMobile: isMobile,
-      shouldHide: widgetConfig.hide_on_mobile && isMobile
-    });
-
-    // Check if widget should be hidden on mobile
-    if (widgetConfig.hide_on_mobile && isMobile) {
-      console.log('Setting shouldRender to false - hiding widget on mobile');
-      setShouldRender(false);
-      return;
-    }
-
-    console.log('Setting shouldRender to true - showing widget');
+    // Always show the widget (don't hide it completely)
     setShouldRender(true);
 
-    // On mobile, always start collapsed
-    // On desktop, follow start_open setting
-    if (isMobile) {
-      console.log('Mobile detected - collapsing widget');
+    // Determine collapsed state based on device and settings
+    if (isMobileDevice && widgetConfig.hide_on_mobile) {
+      // On mobile devices with hide_on_mobile=true: always start collapsed
       setIsCollapsed(true);
     } else {
-      console.log('Desktop detected - applying start_open setting:', widgetConfig.start_open);
+      // On desktop OR mobile with hide_on_mobile=false: follow start_open setting
       setIsCollapsed(!widgetConfig.start_open);
     }
   }, [widgetConfig]);
@@ -214,7 +200,6 @@ export default function EmbedPage() {
 
   const fetchWidgetConfig = async (configId: string, token: string) => {
     try {
-      console.log('Fetching widget config for configId:', configId);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/organization/testing/widget-config/${configId}`, {
         method: 'GET',
         headers: {
@@ -223,11 +208,9 @@ export default function EmbedPage() {
       });
 
       const data = await response.json();
-      console.log('Widget config response:', data);
 
       if (response.ok) {
         if (data.status === 'success') {
-          console.log('Setting widget config:', data.data);
           setWidgetConfig(data.data);
         }
       }
@@ -437,8 +420,11 @@ export default function EmbedPage() {
 
   console.log('Render check:', { shouldRender, widgetConfig: widgetConfig?.id });
 
+  if (!widgetConfig) {
+    return null; // Wait for widget config to load before rendering anything
+  }
+
   if (!shouldRender) {
-    console.log('Widget not rendering - shouldRender is false');
     return null; // Don't render the widget at all if shouldRender is false
   }
 
