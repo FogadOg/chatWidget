@@ -6,7 +6,5 @@
   "sessionOrAuthError": "Session eller autentiseringstoken inte tillgänglig. Vänligen kontrollera din widget-konfiguration.",
   "networkErrorConnect": "Nätverksfel: Kunde inte ansluta till API",
   "failedToCreateSession": "Misslyckades att skapa session",
-  "failedToCreateConversation": "Misslyckades att skapa konversation",
-  "networkErrorInitialize": "Nätverksfel: Kunde inte initiera konversation",
   "chat": "Chatt"
 }

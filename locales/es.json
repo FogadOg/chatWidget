@@ -6,7 +6,5 @@
   "sessionOrAuthError": "Sesión o token de autenticación no disponible. Por favor verifica la configuración de tu widget.",
   "networkErrorConnect": "Error de red: No se pudo conectar a la API",
   "failedToCreateSession": "Error al crear la sesión",
-  "failedToCreateConversation": "Error al crear la conversación",
-  "networkErrorInitialize": "Error de red: No se pudo inicializar la conversación",
   "chat": "Chat"
 }

@@ -6,7 +6,5 @@
   "sessionOrAuthError": "Session ou jeton d'authentification non disponible. Veuillez vérifier la configuration de votre widget.",
   "networkErrorConnect": "Erreur réseau : Impossible de se connecter à l'API",
   "failedToCreateSession": "Échec de la création de la session",
-  "failedToCreateConversation": "Échec de la création de la conversation",
-  "networkErrorInitialize": "Erreur réseau : Impossible d'initialiser la conversation",
   "chat": "Chat"
 }

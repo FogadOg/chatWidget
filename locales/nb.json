@@ -6,7 +6,5 @@
   "sessionOrAuthError": "Økt eller autentiseringstoken ikke tilgjengelig. Vennligst sjekk widget-konfigurasjonen din.",
   "networkErrorConnect": "Nettverksfeil: Kunne ikke koble til API",
   "failedToCreateSession": "Kunne ikke opprette økt",
-  "failedToCreateConversation": "Kunne ikke opprette samtale",
-  "networkErrorInitialize": "Nettverksfeil: Kunne ikke initialisere samtale",
   "chat": "Chat"
 }

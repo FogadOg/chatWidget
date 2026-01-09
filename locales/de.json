@@ -6,7 +6,5 @@
   "sessionOrAuthError": "Sitzung oder Authentifizierungstoken nicht verfügbar. Bitte überprüfen Sie Ihre Widget-Konfiguration.",
   "networkErrorConnect": "Netzwerkfehler: Konnte nicht mit der API verbinden",
   "failedToCreateSession": "Sitzung konnte nicht erstellt werden",
-  "failedToCreateConversation": "Konversation konnte nicht erstellt werden",
-  "networkErrorInitialize": "Netzwerkfehler: Konnte Konversation nicht initialisieren",
   "chat": "Chat"
 }
