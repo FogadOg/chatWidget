@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Companin Widget - Test Page</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      line-height: 1.6;
+      color: #333;
+    }
+    h1 {
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #6b7280;
+      font-size: 1.1em;
+      margin-bottom: 40px;
+    }
+    .content {
+      background: #f9fafb;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .code-block {
+      background: #1f2937;
+      color: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    .code-block code {
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .note {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    button.secondary:hover {
+      background: #4b5563;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 Companin Widget Demo</h1>
+  <p class="subtitle">This page demonstrates the JavaScript-injected widget in action</p>
+
+  <div class="content">
+    <h2>Welcome! 👋</h2>
+    <p>
+      This is a test page for the Companin AI assistant widget. The widget is loaded via a simple
+      JavaScript snippet and appears as a floating chat interface in the bottom-right corner.
+    </p>
+    <p>
+      You can interact with it, resize it, and test all the features. The widget is completely
+      isolated in an iframe, so it won't interfere with your site's CSS or JavaScript.
+    </p>
+  </div>
+
+  <div class="controls">
+    <h3>Widget Controls</h3>
+    <p>Use these buttons to programmatically control the widget:</p>
+    <button onclick="window.CompaninWidget?.show()">Show Widget</button>
+    <button onclick="window.CompaninWidget?.hide()">Hide Widget</button>
+    <button onclick="window.CompaninWidget?.resize(400, 700)">Resize (Large)</button>
+    <button onclick="window.CompaninWidget?.resize(350, 500)">Resize (Small)</button>
+    <button class="secondary" onclick="window.CompaninWidget?.sendMessage('Hello from host!')">
+      Send Test Message
+    </button>
+  </div>
+
+  <div class="content">
+    <h2>How to Install on Your Site</h2>
+    <p>Simply add this script tag before the closing <code>&lt;/body&gt;</code> tag:</p>
+
+    <div class="code-block">
+      <code>&lt;script
+  src="http://localhost:3001/widget.js"
+  data-client-id="u322QLKwOrY-SRBGIrgMlS42XEq8RYw2RQu9OHlB40k"
+  data-assistant-id="aba4e422-97d0-4f8d-917e-a4ffbf19b7bb"
+  data-config-id="88ee4029-5d33-4f5b-84d9-ba6a9c5081a1"
+  data-locale="en"
+  data-start-open="true"
+  data-dev="true"
+&gt;&lt;/script&gt;</code>
+    </div>
+
+    <div class="note">
+      <strong>📝 Note:</strong> In production, change <code>data-dev="true"</code> to
+      <code>data-dev="false"</code> or remove it entirely, and the widget will automatically
+      point to your production URL.
+    </div>
+  </div>
+
+  <div class="content">
+    <h2>Available Attributes</h2>
+    <ul>
+      <li><strong>data-client-id</strong> (required) - Your OAuth client ID</li>
+      <li><strong>data-assistant-id</strong> (required) - The assistant's unique ID</li>
+      <li><strong>data-config-id</strong> (required) - Widget configuration ID</li>
+      <li><strong>data-locale</strong> (optional) - Language code (en, es, fr, de, etc.). Default: en</li>
+      <li><strong>data-start-open</strong> (optional) - "true" or "false". Default: false</li>
+      <li><strong>data-dev</strong> (optional) - "true" for localhost. Default: false</li>
+    </ul>
+  </div>
+
+  <div class="content">
+    <h2>JavaScript API</h2>
+    <p>Access the widget programmatically via <code>window.CompaninWidget</code>:</p>
+    <div class="code-block">
+      <code>// Show or hide the widget
+window.CompaninWidget.show();
+window.CompaninWidget.hide();
+
+// Resize the widget
+window.CompaninWidget.resize(400, 700);
+
+// Send a message to the widget
+window.CompaninWidget.sendMessage({ type: 'greeting', text: 'Hello!' });</code>
+    </div>
+  </div>
+
+  <!-- The actual widget script -->
+  <script
+    src="http://localhost:3001/widget.js"
+    data-client-id="u322QLKwOrY-SRBGIrgMlS42XEq8RYw2RQu9OHlB40k"
+    data-assistant-id="aba4e422-97d0-4f8d-917e-a4ffbf19b7bb"
+    data-config-id="88ee4029-5d33-4f5b-84d9-ba6a9c5081a1"
+    data-locale="en"
+    data-start-open="true"
+    data-dev="true"
+  ></script>
+</body>
+</html>

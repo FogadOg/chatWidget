@@ -176,38 +176,48 @@ export default function EmbedShell({
   return (
     <>
       {isEmbedded ? (
-        <div className="w-full h-screen bg-transparent">
+        <>
           {isCollapsed ? (
-            <div className="fixed bottom-4 right-4 z-50">
-              <button
-                type="button"
-                onClick={toggleCollapsed}
-                style={{
-                  backgroundColor: primaryColor,
-                  borderRadius: `${buttonBorderRadius * 2}px`,
-                  ...fontStyles
-                }}
-                className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
-                title="Open Chat"
-              >
-                <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <div
-              className="h-full flex flex-col"
+            <button
+              type="button"
+              onClick={toggleCollapsed}
               style={{
-                backgroundColor: `rgba(${hexToRgb(backgroundColor)}, ${backgroundOpacity})`,
-                boxShadow: getShadowStyle(),
-                width: `${widgetWidth}px`,
-                height: `${widgetHeight}px`,
-                margin: '0 auto',
-                borderRadius: `${borderRadius}px`,
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 999999,
+                backgroundColor: primaryColor,
+                borderRadius: `${buttonBorderRadius * 2}px`,
                 ...fontStyles
               }}
+              className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
+              title="Open Chat"
             >
+              <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+              </svg>
+            </button>
+          ) : (
+            <div
+              style={{
+                width: `${widgetWidth}px`,
+                height: `${widgetHeight}px`,
+                zIndex: 999999,
+                boxShadow: 'rgba(0, 0, 0, 0.2) 0px 10px 40px',
+                borderRadius: `${borderRadius}px`,
+                overflow: 'hidden',
+                backgroundColor: 'transparent',
+                transition: '0.3s'
+              }}
+            >
+              <div
+                className="h-full flex flex-col"
+                style={{
+                  backgroundColor: `rgba(${hexToRgb(backgroundColor)}, ${backgroundOpacity})`,
+                  ...fontStyles
+                }}
+              >
               <div className="text-white p-3 flex items-center justify-between" style={{ backgroundColor: primaryColor }}>
                 <div className="flex flex-col">
                   <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
@@ -368,15 +378,17 @@ export default function EmbedShell({
                 Powered by <a href="https://companin.tech" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">Companin</a>
               </div>
             </div>
+          </div>
           )}
-        </div>
+        </>
       ) : (
-        <div className="fixed bottom-4 right-4 bg-transparent">
+        <>
           {isCollapsed ? (
             <button
               type="button"
               onClick={toggleCollapsed}
               style={{
+                zIndex: 999999,
                 backgroundColor: primaryColor,
                 borderRadius: `${buttonBorderRadius * 2}px`,
                 ...fontStyles
@@ -389,8 +401,19 @@ export default function EmbedShell({
               </svg>
             </button>
           ) : (
-            <div className="w-100 h-150 flex flex-col">
-              <div className="rounded-lg shadow-lg flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: `rgba(${hexToRgb(backgroundColor)}, ${backgroundOpacity})`, boxShadow: getShadowStyle(), width: `${widgetWidth}px`, height: `${widgetHeight}px`, ...fontStyles }}>
+            <div
+              style={{
+                width: `${widgetWidth}px`,
+                height: `${widgetHeight}px`,
+                zIndex: 999999,
+                boxShadow: 'rgba(0, 0, 0, 0.2) 0px 10px 40px',
+                borderRadius: `${borderRadius}px`,
+                overflow: 'hidden',
+                backgroundColor: 'transparent',
+                transition: '0.3s'
+              }}
+            >
+              <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: `rgba(${hexToRgb(backgroundColor)}, ${backgroundOpacity})`, ...fontStyles }}>
                 <div className="text-white p-3 flex items-center justify-between" style={{ backgroundColor: primaryColor, borderRadius: `${borderRadius}px` }}>
                   <div className="flex flex-col">
                     <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
@@ -554,7 +577,7 @@ export default function EmbedShell({
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
     </>
   );
