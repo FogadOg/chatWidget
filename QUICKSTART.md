@@ -11,12 +11,11 @@ Simply paste this script before your closing `</body>` tag:
   data-assistant-id="YOUR_ASSISTANT_ID"
   data-config-id="YOUR_CONFIG_ID"
   data-locale="en"
-  data-start-open="false"
   data-dev="true"
 ></script>
 ```
 
-**That's it!** The widget will automatically appear in the bottom-right corner.
+**That's it!** The widget will automatically appear according to your configuration settings.
 
 ---
 
@@ -33,11 +32,6 @@ Replace these placeholders with your actual values:
 ---
 
 ## 3️⃣ Optional: Customize Behavior
-
-### Start Widget Open
-```html
-data-start-open="true"
-```
 
 ### Change Language
 ```html
@@ -154,7 +148,6 @@ Here's a complete, copy-paste-ready example:
     data-assistant-id="aba4e422-97d0-4f8d-917e-a4ffbf19b7bb"
     data-config-id="88ee4029-5d33-4f5b-84d9-ba6a9c5081a1"
     data-locale="en"
-    data-start-open="true"
     data-dev="true"
   ></script>
 </body>

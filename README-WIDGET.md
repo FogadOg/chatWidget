@@ -67,7 +67,6 @@ Create a simple HTML file on any website or local server:
     data-assistant-id="aba4e422-97d0-4f8d-917e-a4ffbf19b7bb"
     data-config-id="88ee4029-5d33-4f5b-84d9-ba6a9c5081a1"
     data-locale="en"
-    data-start-open="true"
     data-dev="true"
   ></script>
 </body>
@@ -89,7 +88,6 @@ Create a simple HTML file on any website or local server:
 | Attribute | Description | Default | Example |
 |-----------|-------------|---------|---------|
 | `data-locale` | Language code (ISO 639-1) | `en` | `es`, `fr`, `de` |
-| `data-start-open` | Widget starts expanded | `false` | `true` |
 | `data-dev` | Use localhost instead of production | `false` | `true` |
 
 ## 🎮 JavaScript API

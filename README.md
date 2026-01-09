@@ -4,27 +4,31 @@ This is a Next.js chat widget that integrates with the Companin's AI assistant A
 
 ## Features
 
-- Collapsible chat interface
+- Collapsible chat interface with configurable positioning
 - Real-time messaging with AI assistant
-- API key authentication
+- OAuth authentication with widget tokens
 - Transparent iframe embedding
-- Two widget types: Sessions and Conversations
+- Dynamic sizing based on configuration
+- Multi-language support
+- Configurable appearance and behavior
 
-## Widget Types
+## Widget Architecture
 
-### Sessions Widget (`/embed`)
-Uses the sessions API endpoint for chat functionality. Sessions automatically manage conversation lifecycle and provide features like:
-- Automatic conversation creation
-- Session expiration handling
-- Built-in rate limiting per session
+The widget consists of two main components:
 
-### Conversations Widget (`/embed/conversation`)
-Uses the conversations API endpoint directly. Provides more control over conversation management:
-- Direct conversation management
-- Persistent conversations across sessions
-- More granular control over conversation lifecycle
+### Widget Loader (`public/widget.js`)
+A JavaScript loader that:
+- Creates the iframe container
+- Handles postMessage communication
+- Manages dynamic sizing
+- Provides programmatic API
 
-Choose the sessions widget for simpler integration, or the conversations widget for more advanced use cases.
+### Widget App (`app/embed/session/`)
+The React application that runs inside the iframe:
+- Chat interface with message history
+- Authentication handling
+- Configuration management
+- Responsive design
 
 ## API Integration
 
@@ -40,77 +44,89 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 
 ### Required Parameters
 
-When embedding the widget, you must provide these URL parameters:
+When embedding the widget, you must provide these data attributes on the script tag:
 
-- `apiKey`: Your organization's API key (client_id from OAuth application)
-- `assistantId`: The UUID of the assistant to use for chat
-- `customerId` (Conversations widget only): Unique identifier for the user/customer to maintain conversation persistence
+- `data-client-id`: Your OAuth client ID
+- `data-assistant-id`: The UUID of the assistant to use for chat
+- `data-config-id`: The UUID of the widget configuration
 
 ### Optional Parameters
 
-- `locale`: Language code for widget localization (en, de, es, fr, pt, sv, nl, nb, it). Defaults to English if not provided.
-- `startOpen`: Controls initial widget state ("true"/"1" = open, "false"/"0" = closed). Defaults to closed.
+- `data-locale`: Language code for widget localization (en, es, fr, etc.). Defaults to English.
+- `data-dev`: Set to "true" for development mode (uses localhost URLs)
 
-- `customerId`: For conversations widget, this maintains persistent conversations. If not provided, a random ID will be generated.
+### Authentication Flow
 
-### Conversation Persistence
+1. Widget loader requests authentication token using client_id
+2. Backend validates client_id and returns JWT token
+3. Widget uses token for all API requests
+4. Token automatically refreshes as needed
 
-The **Conversations Widget** maintains persistent conversations for each `customerId`:
+### Configuration Management
 
-- **First visit**: Creates a new conversation for the customer
-- **Return visits**: Loads existing conversation and message history
-- **Same customer, different assistants**: Each assistant gets its own conversation
-- **Conversation status**: Only active conversations are resumed
+The widget fetches its configuration from the config endpoint using the config_id:
 
-This ensures users can continue conversations across sessions and devices.
+- Appearance settings (colors, fonts, dimensions)
+- Behavior settings (start_open, position, mobile handling)
+- Content settings (greeting messages, button configurations)
 
-### Embedding Examples
+## Embedding Methods
 
-#### Sessions Widget
+### Recommended: Script Integration
+
 ```html
-<iframe
-  src="http://localhost:3001/embed?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID"
-  width="400"
-  height="600"
-  style="border: none; background: transparent;"
-  title="Chat Widget"
-/>
+<script
+  src="https://widget.companin.tech/widget.js"
+  data-client-id="YOUR_CLIENT_ID"
+  data-assistant-id="YOUR_ASSISTANT_ID"
+  data-config-id="YOUR_CONFIG_ID"
+  data-locale="en"
+  data-dev="false">
+</script>
 ```
 
-#### Conversations Widget
+### Alternative: Direct Iframe
+
 ```html
 <iframe
-  src="http://localhost:3001/embed/conversation?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID"
-  width="400"
-  height="600"
-  style="border: none; background: transparent;"
-  title="Chat Widget"
-/>
+  src="https://widget.companin.tech/embed/session?clientId=YOUR_CLIENT_ID&assistantId=YOUR_ASSISTANT_ID&configId=YOUR_CONFIG_ID&locale=en"
+  style="border: none; position: fixed; bottom: 20px; right: 20px; z-index: 999999; background-color: transparent; width: auto; height: auto;"
+  title="AI Assistant Widget">
+</iframe>
 ```
-- `assistantId`: UUID of the assistant to chat with
 
-### Example Usage
+## Widget Behavior
 
-```html
-<iframe
-  src="http://localhost:3001/embed?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID"
-  width="400"
-  height="600"
-  style="border: none; position: fixed; bottom: 16px; right: 16px; z-index: 1000; background-color: transparent;"
-  title="Embedded Chat Widget"
+### Sizing
+- **Collapsed**: Shows button sized according to config (sm: 48px, md: 56px, lg: 64px)
+- **Expanded**: Uses dimensions from widget configuration
+- Container automatically resizes via postMessage communication
+
+### Positioning
+- Button position controlled by config (bottom-right, bottom-left, etc.)
+- When collapsed, button centers on screen if configured
+- Smooth transitions between states
+
+### State Management
+- Initial state determined by config's `start_open` setting
+- State persists during session
+- Automatic collapse/expand on user interaction
 />
 ```
 
 ### Getting API Credentials
 
-1. **API Key**: This is your OAuth application's `client_id`. You can find it in your Django admin under OAuth Applications.
-
-2. **Assistant ID**: Create an assistant through the API or Django admin, then use its UUID.
+1. **Client ID**: Your OAuth application's `client_id` from Django admin
+2. **Assistant ID**: UUID of the assistant from your dashboard
+3. **Config ID**: UUID of the widget configuration from your dashboard
 
 ### API Endpoints Used
 
+- `POST /api/v1/auth/widget-token` - Get authentication token
+- `GET /organization/testing/widget-config/{config_id}` - Fetch widget configuration
 - `POST /api/v1/sessions/` - Create a chat session
 - `POST /api/v1/sessions/{session_id}/messages` - Send messages and receive AI responses
+- `GET /api/v1/sessions/{session_id}/messages` - Load message history
 
 ## Development
 
@@ -120,45 +136,43 @@ First, run the development server:
 npm run dev
 ```
 
-Open [http://localhost:3001/embed](http://localhost:3001/embed) with your browser to see the widget.
+Open [http://localhost:3001/embed/session](http://localhost:3001/embed/session) with your browser to see the widget.
 
 ## Configuration
 
 The widget automatically:
-- Parses URL parameters for API configuration
-- Creates a session on load
-- Handles authentication with X-API-Key header
-- Displays error messages for API failures
+- Parses data attributes for configuration
+- Fetches widget config from the API
+- Authenticates using OAuth tokens
+- Sizes itself dynamically based on config
+- Handles responsive behavior
 
 ## Internationalization
 
-The widget supports multiple languages through URL parameters:
+The widget supports multiple languages through the `data-locale` attribute:
 
 - `en` - English (default)
-- `de` - German
 - `es` - Spanish
 - `fr` - French
-- `pt` - Portuguese
-- `sv` - Swedish
-- `nl` - Dutch
-- `nb` - Norwegian Bokmål
-- `it` - Italian
+- And more...
 
 ### Usage
 
-Add the `locale` parameter to your widget URL:
+Set the locale in your script tag:
 
 ```html
-<iframe
-  src="http://localhost:3001/embed?apiKey=YOUR_API_KEY&assistantId=YOUR_ASSISTANT_ID&locale=de"
-  width="400"
-  height="600"
-  style="border: none;"
-  title="Chat Widget"
-/>
+<script
+  src="https://widget.companin.tech/widget.js"
+  data-client-id="YOUR_CLIENT_ID"
+  data-assistant-id="YOUR_ASSISTANT_ID"
+  data-config-id="YOUR_CONFIG_ID"
+  data-locale="es">
+</script>
 ```
 
 ### Adding New Languages
+
+Add translation files to the `locales/` directory and update the language detection logic.
 
 1. Create a new JSON file in `/locales/` (e.g., `it.json`)
 2. Add translations for all keys from `en.json`
