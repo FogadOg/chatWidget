@@ -55,9 +55,9 @@ type WidgetConfig = {
 
 const getButtonPixelSize = (buttonSize: string) => {
   const sizeMap = {
-    sm: 48, // w-12
-    md: 56, // w-14
-    lg: 100  // w-16
+    sm: 100,
+    md: 128,
+    lg: 160
   };
   return sizeMap[buttonSize as keyof typeof sizeMap] || 56;
 };
