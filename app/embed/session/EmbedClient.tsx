@@ -239,7 +239,7 @@ export default function EmbedClient({
 
   const fetchWidgetConfig = async (configId: string, token: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/organization/testing/widget-config/${configId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/widget-config/${configId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
