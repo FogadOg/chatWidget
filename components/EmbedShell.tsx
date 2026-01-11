@@ -7,6 +7,7 @@ type Message = {
   id: string;
   text: string;
   from: 'user' | 'assistant';
+  timestamp?: number;
 };
 
 type Props = {
@@ -24,7 +25,7 @@ type Props = {
   widgetConfig?: any;
   onInteractionButtonClick?: (button: any) => void;
   onFollowUpButtonClick?: (button: any) => void;
-  flowResponses?: Array<{ text: string; buttons: any[] }>;
+  flowResponses?: Array<{ text: string; buttons: any[]; timestamp: number }>;
   getLocalizedText?: (textObj: { [lang: string]: string } | undefined) => string;
 };
 
@@ -164,14 +165,19 @@ export default function EmbedShell({
     onFollowUpButtonClick?.(button);
   };
 
-  // Show greeting message with buttons when no user messages
+  // Show greeting message and buttons always (not just when no user messages)
   const hasGreetingMessage = messages.some(m => m.id.startsWith('greeting-'));
-  const userMessageCount = messages.filter(m => m.from === 'user').length;
-  const showGreeting = userMessageCount === 0 && widgetConfig?.greeting_message && !hasGreetingMessage;
+  const showGreeting = widgetConfig?.greeting_message && !hasGreetingMessage;
   const greetingText = showGreeting ? getText(widgetConfig.greeting_message.text) : '';
   // Always show interaction buttons if they exist
   const interactionButtons = widgetConfig?.greeting_message?.buttons || [];
-  const showButtons = interactionButtons.length > 0 && userMessageCount === 0;
+  const showButtons = interactionButtons.length > 0;
+
+  // Merge messages and flow responses, then sort by timestamp
+  const mergedContent = [
+    ...messages.map(msg => ({ type: 'message' as const, data: msg, timestamp: msg.timestamp || 0 })),
+    ...flowResponses.map(flow => ({ type: 'flow' as const, data: flow, timestamp: flow.timestamp || 0 }))
+  ].sort((a, b) => a.timestamp - b.timestamp);
 
   return (
     <>
@@ -278,59 +284,65 @@ export default function EmbedShell({
                   </div>
                 )}
 
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className={`max-w-[80%] p-2`}
-                      style={{
-                        backgroundColor: message.from === 'user' ? primaryColor : '#e5e7eb',
-                        color: message.from === 'user' ? '#ffffff' : textColor,
-                        borderRadius: `${messageBubbleRadius}px`,
-                        ...fontStyles
-                      }}
-                    >
-                      {message.text}
-                    </div>
-                  </div>
-                ))}
-
-                {flowResponses.map((flowResponse, index) => (
-                  <div key={`flow-${index}`} className="space-y-2">
-                    {flowResponse.text && (
-                      <div className="flex justify-start">
-                        <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                          {flowResponse.text}
+                {mergedContent.map((item, index) => {
+                  if (item.type === 'message') {
+                    const message = item.data;
+                    return (
+                      <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`max-w-[80%] p-2`}
+                          style={{
+                            backgroundColor: message.from === 'user' ? primaryColor : '#e5e7eb',
+                            color: message.from === 'user' ? '#ffffff' : textColor,
+                            borderRadius: `${messageBubbleRadius}px`,
+                            ...fontStyles
+                          }}
+                        >
+                          {message.text}
                         </div>
                       </div>
-                    )}
-                    {flowResponse.buttons.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        {flowResponse.buttons.map((button: any) => {
-                          const buttonId = button.id || button.button_id;
-                          const isClicked = clickedButtons.has(buttonId);
-                          return (
-                            <button
-                              key={buttonId}
-                              onClick={() => handleFollowUpButtonClickWrapper(button)}
-                              disabled={isClicked}
-                              style={{
-                                backgroundColor: isClicked ? '#9ca3af' : primaryColor,
-                                borderRadius: `${buttonBorderRadius}px`,
-                                ...fontStyles
-                              }}
-                              className={`w-fit px-3 py-2 text-white text-sm transition-opacity flex items-center gap-2 ${
-                                isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                              }`}
-                            >
-                              {button.icon && <span>{button.icon}</span>}
-                              {getText(button.label) || 'Button'}
-                            </button>
-                          );
-                        })}
+                    );
+                  } else {
+                    const flowResponse = item.data;
+                    return (
+                      <div key={`flow-${index}`} className="space-y-2">
+                        {flowResponse.text && (
+                          <div className="flex justify-start">
+                            <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+                              {flowResponse.text}
+                            </div>
+                          </div>
+                        )}
+                        {flowResponse.buttons.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            {flowResponse.buttons.map((button: any) => {
+                              const buttonId = button.id || button.button_id;
+                              const isClicked = clickedButtons.has(buttonId);
+                              return (
+                                <button
+                                  key={buttonId}
+                                  onClick={() => handleFollowUpButtonClickWrapper(button)}
+                                  disabled={isClicked}
+                                  style={{
+                                    backgroundColor: isClicked ? '#9ca3af' : primaryColor,
+                                    borderRadius: `${buttonBorderRadius}px`,
+                                    ...fontStyles
+                                  }}
+                                  className={`w-fit px-3 py-2 text-white text-sm transition-opacity flex items-center gap-2 ${
+                                    isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                                  }`}
+                                >
+                                  {button.icon && <span>{button.icon}</span>}
+                                  {getText(button.label) || 'Button'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                    );
+                  }
+                })}
 
                 {isTyping && (
                   <div className="flex justify-start">
@@ -475,59 +487,65 @@ export default function EmbedShell({
                     </div>
                   )}
 
-                  {messages.map((message) => (
-                    <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className="max-w-[80%] p-2"
-                        style={{
-                          backgroundColor: message.from === 'user' ? primaryColor : '#e5e7eb',
-                          color: message.from === 'user' ? '#ffffff' : textColor,
-                          borderRadius: `${messageBubbleRadius}px`,
-                          ...fontStyles
-                        }}
-                      >
-                        {message.text}
-                      </div>
-                    </div>
-                  ))}
-
-                  {flowResponses.map((flowResponse, index) => (
-                    <div key={`flow-${index}`} className="space-y-2">
-                      {flowResponse.text && (
-                        <div className="flex justify-start">
-                          <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                            {flowResponse.text}
+                  {mergedContent.map((item, index) => {
+                    if (item.type === 'message') {
+                      const message = item.data;
+                      return (
+                        <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div
+                            className="max-w-[80%] p-2"
+                            style={{
+                              backgroundColor: message.from === 'user' ? primaryColor : '#e5e7eb',
+                              color: message.from === 'user' ? '#ffffff' : textColor,
+                              borderRadius: `${messageBubbleRadius}px`,
+                              ...fontStyles
+                            }}
+                          >
+                            {message.text}
                           </div>
                         </div>
-                      )}
-                      {flowResponse.buttons.length > 0 && (
-                        <div className="flex flex-col gap-2">
-                          {flowResponse.buttons.map((button: any) => {
-                            const buttonId = button.id || button.button_id;
-                            const isClicked = clickedButtons.has(buttonId);
-                            return (
-                              <button
-                                key={buttonId}
-                                onClick={() => handleFollowUpButtonClickWrapper(button)}
-                                disabled={isClicked}
-                              style={{
-                                backgroundColor: isClicked ? '#9ca3af' : primaryColor,
-                                borderRadius: `${buttonBorderRadius}px`,
-                                ...fontStyles
-                              }}
-                                className={`w-fit px-3 py-2 text-white text-sm transition-opacity flex items-center gap-2 ${
-                                  isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                                }`}
-                              >
-                                {button.icon && <span>{button.icon}</span>}
-                                {getText(button.label) || 'Button'}
-                              </button>
-                            );
-                          })}
+                      );
+                    } else {
+                      const flowResponse = item.data;
+                      return (
+                        <div key={`flow-${index}`} className="space-y-2">
+                          {flowResponse.text && (
+                            <div className="flex justify-start">
+                              <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+                                {flowResponse.text}
+                              </div>
+                            </div>
+                          )}
+                          {flowResponse.buttons.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              {flowResponse.buttons.map((button: any) => {
+                                const buttonId = button.id || button.button_id;
+                                const isClicked = clickedButtons.has(buttonId);
+                                return (
+                                  <button
+                                    key={buttonId}
+                                    onClick={() => handleFollowUpButtonClickWrapper(button)}
+                                    disabled={isClicked}
+                                    style={{
+                                      backgroundColor: isClicked ? '#9ca3af' : primaryColor,
+                                      borderRadius: `${buttonBorderRadius}px`,
+                                      ...fontStyles
+                                    }}
+                                    className={`w-fit px-3 py-2 text-white text-sm transition-opacity flex items-center gap-2 ${
+                                      isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                                    }`}
+                                  >
+                                    {button.icon && <span>{button.icon}</span>}
+                                    {getText(button.label) || 'Button'}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      );
+                    }
+                  })}
 
                   {isTyping && (
                     <div className="flex justify-start">

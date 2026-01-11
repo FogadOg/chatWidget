@@ -9,6 +9,7 @@ type Message = {
   id: string;
   text: string;
   from: 'user' | 'assistant';
+  timestamp?: number;
 };
 
 type WidgetConfig = {
@@ -80,7 +81,7 @@ export default function EmbedClient({
   startOpen: initialStartOpen
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [flowResponses, setFlowResponses] = useState<Array<{ text: string; buttons: any[] }>>([]);
+  const [flowResponses, setFlowResponses] = useState<Array<{ text: string; buttons: any[]; timestamp: number }>>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -92,6 +93,7 @@ export default function EmbedClient({
   const [isMobile, setIsMobile] = useState(false);
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig | null>(null);
   const [shouldRender, setShouldRender] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { translations: t, locale } = useWidgetTranslation();
 
   useEffect(() => {
@@ -207,7 +209,7 @@ export default function EmbedClient({
         setSessionId(data.data.session_id);
         setError(null);
         // Load messages after session creation
-        await loadSessionMessages(data.data.session_id, token);
+        await loadSessionMessages(data.data.session_id, token, true);
       } else {
         setError(data.detail || t.failedToCreateSession);
       }
@@ -304,7 +306,8 @@ export default function EmbedClient({
         // Add flow response as a grouped object with text and buttons
         setFlowResponses((prev: any[]) => [...prev, {
           text: responseText || '',
-          buttons: response.buttons || []
+          buttons: response.buttons || [],
+          timestamp: Date.now()
         }]);
       }
     });
@@ -323,16 +326,15 @@ export default function EmbedClient({
       return;
     }
 
+    // Immediately add the user message to the UI
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `temp-${Date.now()}`,
       text: message,
-      from: 'user'
+      from: 'user',
+      timestamp: Date.now()
     };
+    setMessages(prev => [...prev, userMessage]);
 
-    // Only add message if it's from input (not from button)
-    if (!messageText) {
-      setMessages(prev => [...prev, userMessage]);
-    }
     setInput('');
     setIsTyping(true);
     setError(null);
@@ -353,22 +355,20 @@ export default function EmbedClient({
       const data = await response.json();
 
       if (response.ok && data.status === 'success') {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: data.data.assistant_message.content,
-          from: 'assistant'
-        };
-        setMessages(prev => [...prev, assistantMessage]);
+        // Reload all messages from the server to keep them in sync (this will replace the temp message)
+        await loadSessionMessages(sessionId, authToken);
       } else {
         setError(data.detail || t.failedToSendMessage);
-        // Re-add the user message input since the API call failed
-        setInput(userMessage.text);
+        // Remove the temporary message and re-add the input since the API call failed
+        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+        setInput(message);
       }
     } catch (err) {
       setError(t.networkError);
       console.error('Message send error:', err);
-      // Re-add the user message input since the API call failed
-      setInput(userMessage.text);
+      // Remove the temporary message and re-add the input since the API call failed
+      setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+      setInput(message);
     } finally {
       setIsTyping(false);
     }
@@ -388,7 +388,8 @@ export default function EmbedClient({
     if (maybeText || maybeButtons.length > 0) {
       setFlowResponses((prev: any[]) => [...prev, {
         text: maybeText || '',
-        buttons: maybeButtons
+        buttons: maybeButtons,
+        timestamp: Date.now()
       }]);
     }
 
@@ -415,7 +416,8 @@ export default function EmbedClient({
         // Add as grouped flow response instead of separate message
         setFlowResponses((prev: any[]) => [...prev, {
           text: maybeText || '',
-          buttons: maybeButtons
+          buttons: maybeButtons,
+          timestamp: Date.now()
         }]);
         setIsTyping(false);
       }, 300);
@@ -429,7 +431,7 @@ export default function EmbedClient({
     }
   };
 
-  const loadSessionMessages = async (sessionId: string, token: string) => {
+  const loadSessionMessages = async (sessionId: string, token: string, isInitial: boolean = false) => {
     try {
       const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
         method: 'GET',
@@ -454,11 +456,16 @@ export default function EmbedClient({
             .map((msg: any) => ({
               id: msg.id,
               text: msg.content,
-              from: msg.sender as 'user' | 'assistant'
+              from: msg.sender as 'user' | 'assistant',
+              timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now()
             }));
 
           setMessages(loadedMessages);
-          setFlowResponses([]);
+
+          // Only set initial load flag to false after first load
+          if (isInitial) {
+            setIsInitialLoad(false);
+          }
         }
       }
     } catch (err) {
