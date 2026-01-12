@@ -6,5 +6,14 @@
   "sessionOrAuthError": "Session or authentication token not available. Please check your widget configuration.",
   "networkErrorConnect": "Network error: Could not connect to API",
   "failedToCreateSession": "Failed to create session",
-  "chat": "Chat"
+  "chat": "Chat",
+  "rateConversation": "How was your experience?",
+  "feedbackPositive": "Good",
+  "feedbackNeutral": "Okay",
+  "feedbackNegative": "Bad",
+  "feedbackCommentPlaceholder": "Any additional comments? (optional)",
+  "submitFeedback": "Submit Feedback",
+  "skipFeedback": "Skip",
+  "thankYouFeedback": "Thank you for your feedback!",
+  "feedbackSubmitted": "Feedback submitted successfully"
 }

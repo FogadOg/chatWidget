@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
+import FeedbackDialog from '../../../components/FeedbackDialog';
 
 type Message = {
   id: string;
@@ -95,6 +96,9 @@ export default function EmbedClient({
   const [shouldRender, setShouldRender] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { translations: t, locale } = useWidgetTranslation();
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(0);
 
   // Helper function to get localStorage key for this widget instance
   const getSessionStorageKey = () => {
@@ -337,6 +341,11 @@ export default function EmbedClient({
             }));
           setMessages(loadedMessages);
           setIsInitialLoad(false);
+
+          // Check if we should show feedback (if messages exist and no feedback submitted yet)
+          if (loadedMessages.length > 0 && !feedbackSubmitted) {
+            checkFeedbackStatus(sessionId, token);
+          }
         } else {
           // Session invalid, create new one
           console.log('Session validation failed, creating new session');
@@ -395,6 +404,64 @@ export default function EmbedClient({
       }
     } catch (err) {
       console.error('Error fetching widget config:', err);
+    }
+  };
+
+  const checkFeedbackStatus = async (sessionId: string, token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/feedback`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success' && data.data.has_feedback) {
+          setFeedbackSubmitted(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking feedback status:', error);
+    }
+  };
+
+  // Detect conversation end (inactivity) and show feedback dialog
+  useEffect(() => {
+    if (!sessionId || !authToken || feedbackSubmitted || showFeedbackDialog) return;
+    if (messages.length === 0) return;
+
+    // Update last message timestamp
+    const latestMessage = messages[messages.length - 1];
+    if (latestMessage && latestMessage.timestamp) {
+      setLastMessageTimestamp(latestMessage.timestamp);
+    }
+
+    // Set a timer to show feedback dialog after 30 seconds of inactivity
+    const inactivityTimer = setTimeout(() => {
+      if (!feedbackSubmitted && messages.length > 0) {
+        setShowFeedbackDialog(true);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearTimeout(inactivityTimer);
+  }, [messages, sessionId, authToken, feedbackSubmitted, showFeedbackDialog]);
+
+  const handleFeedbackSubmit = () => {
+    setFeedbackSubmitted(true);
+    setShowFeedbackDialog(false);
+    // Store feedback submitted flag in localStorage
+    if (sessionId) {
+      localStorage.setItem(`feedback_submitted_${sessionId}`, 'true');
+    }
+  };
+
+  const handleFeedbackSkip = () => {
+    setShowFeedbackDialog(false);
+    setFeedbackSubmitted(true); // Don't show again this session
+    if (sessionId) {
+      localStorage.setItem(`feedback_submitted_${sessionId}`, 'skipped');
     }
   };
 
@@ -665,6 +732,21 @@ export default function EmbedClient({
       onFollowUpButtonClick={handleFollowUpButtonClick}
       flowResponses={flowResponses}
       getLocalizedText={getLocalizedText}
+      showFeedbackDialog={showFeedbackDialog}
+      feedbackDialog={
+        showFeedbackDialog && sessionId && authToken ? (
+          <FeedbackDialog
+            sessionId={sessionId}
+            authToken={authToken}
+            primaryColor={widgetConfig?.primary_color || '#111827'}
+            backgroundColor={widgetConfig?.background_color || '#ffffff'}
+            textColor={widgetConfig?.text_color || '#1f2937'}
+            borderRadius={widgetConfig?.border_radius || 8}
+            onSubmit={handleFeedbackSubmit}
+            onSkip={handleFeedbackSkip}
+          />
+        ) : undefined
+      }
     />
   );
 }

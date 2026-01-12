@@ -1,10 +1,19 @@
 {
   "typeYourMessage": "Escribe tu mensaje...",
   "send": "Enviar",
-  "failedToSendMessage": "Error al enviar el mensaje",
-  "networkError": "Error de red: No se pudo conectar a la API",
-  "sessionOrAuthError": "Sesión o token de autenticación no disponible. Por favor verifica la configuración de tu widget.",
+  "failedToSendMessage": "Error al enviar mensaje",
+  "networkError": "Error de red: No se pudo enviar el mensaje",
+  "sessionOrAuthError": "Sesión o token de autenticación no disponible. Por favor, verifica la configuración de tu widget.",
   "networkErrorConnect": "Error de red: No se pudo conectar a la API",
-  "failedToCreateSession": "Error al crear la sesión",
-  "chat": "Chat"
+  "failedToCreateSession": "Error al crear sesión",
+  "chat": "Chat",
+  "rateConversation": "¿Cómo fue tu experiencia?",
+  "feedbackPositive": "Buena",
+  "feedbackNeutral": "Normal",
+  "feedbackNegative": "Mala",
+  "feedbackCommentPlaceholder": "¿Comentarios adicionales? (opcional)",
+  "submitFeedback": "Enviar comentario",
+  "skipFeedback": "Saltar",
+  "thankYouFeedback": "¡Gracias por tu comentario!",
+  "feedbackSubmitted": "Comentario enviado"
 }

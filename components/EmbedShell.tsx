@@ -27,6 +27,8 @@ type Props = {
   onFollowUpButtonClick?: (button: any) => void;
   flowResponses?: Array<{ text: string; buttons: any[]; timestamp: number }>;
   getLocalizedText?: (textObj: { [lang: string]: string } | undefined) => string;
+  showFeedbackDialog?: boolean;
+  feedbackDialog?: React.ReactNode;
 };
 
 const normalizeHexColor = (color: string | undefined, fallback: string) => {
@@ -72,6 +74,8 @@ export default function EmbedShell({
   onFollowUpButtonClick,
   flowResponses = [],
   getLocalizedText,
+  showFeedbackDialog = false,
+  feedbackDialog,
 }: Props) {
   const { translations: t } = useWidgetTranslation();
 
@@ -357,6 +361,15 @@ export default function EmbedShell({
                 )}
               </div>
 
+              {/* Feedback Dialog Overlay for Embedded View */}
+              {showFeedbackDialog && feedbackDialog && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
+                  <div className="max-w-md w-full">
+                    {feedbackDialog}
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="p-3 border-t">
                 <div className="flex space-x-2">
                   <input
@@ -559,6 +572,15 @@ export default function EmbedShell({
                     </div>
                   )}
                 </div>
+
+                {/* Feedback Dialog Overlay */}
+                {showFeedbackDialog && feedbackDialog && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="max-w-md w-full">
+                      {feedbackDialog}
+                    </div>
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="p-3 border-t">
                   <div className="flex space-x-2">
