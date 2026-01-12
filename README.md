@@ -90,7 +90,7 @@ The widget fetches its configuration from the config endpoint using the config_i
 ```html
 <iframe
   src="https://widget.companin.tech/embed/session?clientId=YOUR_CLIENT_ID&assistantId=YOUR_ASSISTANT_ID&configId=YOUR_CONFIG_ID&locale=en"
-  style="border: none; position: fixed; bottom: 20px; right: 20px; z-index: 999999; background-color: transparent; width: auto; height: auto;"
+  style="border: none; z-index: 999999; background-color: transparent; width: auto; height: auto;"
   title="AI Assistant Widget">
 </iframe>
 ```

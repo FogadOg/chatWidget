@@ -193,8 +193,9 @@ export default function EmbedShell({
               onClick={toggleCollapsed}
               style={{
                 position: 'fixed',
-                bottom: '16px',
-                right: '16px',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
                 zIndex: 999999,
                 backgroundColor: primaryColor,
                 borderRadius: `${buttonBorderRadius * 2}px`,
@@ -211,8 +212,9 @@ export default function EmbedShell({
             <div
               style={{
                 position: 'fixed',
-                bottom: '80px',
-                right: '16px',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
                 width: `${widgetWidth}px`,
                 height: `${widgetHeight}px`,
                 zIndex: 999999,
@@ -415,6 +417,10 @@ export default function EmbedShell({
               type="button"
               onClick={toggleCollapsed}
               style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
                 zIndex: 999999,
                 backgroundColor: primaryColor,
                 borderRadius: `${buttonBorderRadius * 2}px`,
@@ -430,6 +436,10 @@ export default function EmbedShell({
           ) : (
             <div
               style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
                 width: `${widgetWidth}px`,
                 height: `${widgetHeight}px`,
                 zIndex: 999999,
