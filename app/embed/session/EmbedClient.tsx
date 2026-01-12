@@ -20,7 +20,6 @@ type WidgetConfig = {
   background_color: string;
   text_color: string;
   border_radius: number;
-  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   start_open: boolean;
   hide_on_mobile: boolean;
   title: { [lang: string]: string };
