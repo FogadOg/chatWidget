@@ -96,6 +96,57 @@ export default function EmbedClient({
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { translations: t, locale } = useWidgetTranslation();
 
+  // Helper function to get localStorage key for this widget instance
+  const getSessionStorageKey = () => {
+    return `companin-session-${initialClientId}-${initialAssistantId}`;
+  };
+
+  // Helper function to get or create visitor ID
+  const getVisitorId = () => {
+    const visitorKey = `companin-visitor-${initialClientId}`;
+    let visitorId = localStorage.getItem(visitorKey);
+    if (!visitorId) {
+      visitorId = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(visitorKey, visitorId);
+    }
+    return visitorId;
+  };
+
+  // Helper function to get stored session data
+  const getStoredSession = () => {
+    try {
+      const storageKey = getSessionStorageKey();
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const data = JSON.parse(stored);
+        // Check if session is expired (with 5 minute buffer before actual expiry)
+        if (data.expiresAt && new Date(data.expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
+          return data;
+        } else {
+          // Clear expired session
+          localStorage.removeItem(storageKey);
+        }
+      }
+    } catch (e) {
+      console.error('Error reading stored session:', e);
+    }
+    return null;
+  };
+
+  // Helper function to store session data
+  const storeSession = (sessionId: string, expiresAt: string) => {
+    try {
+      const storageKey = getSessionStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify({
+        sessionId,
+        expiresAt,
+        createdAt: new Date().toISOString()
+      }));
+    } catch (e) {
+      console.error('Error storing session:', e);
+    }
+  };
+
   useEffect(() => {
     // Detect mobile device
     const checkIsMobile = () => {
@@ -108,6 +159,24 @@ export default function EmbedClient({
 
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
+
+  // Periodic check for expired sessions
+  useEffect(() => {
+    const checkSessionExpiry = () => {
+      const stored = getStoredSession();
+      if (!stored && sessionId) {
+        // Session expired in localStorage, clear the state
+        console.log('Session expired, clearing state');
+        setSessionId(null);
+        setMessages([]);
+        setFlowResponses([]);
+      }
+    };
+
+    // Check every 60 seconds
+    const interval = setInterval(checkSessionExpiry, 60000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
 
   useEffect(() => {
     // Use props instead of URL params
@@ -123,7 +192,15 @@ export default function EmbedClient({
           if (configIdParam) {
             fetchWidgetConfig(configIdParam, token);
           }
-          createSession(assistantIdParam, token);
+          // Try to restore existing session first
+          const storedSession = getStoredSession();
+          if (storedSession) {
+            console.log('Restoring existing session:', storedSession.sessionId);
+            validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
+          } else {
+            console.log('Creating new session');
+            createSession(assistantIdParam, token);
+          }
         } else if (authError) {
           setError(authError);
         }
@@ -190,6 +267,7 @@ export default function EmbedClient({
   const createSession = async (assistant: string, token: string) => {
     try {
       console.log('Creating session with locale:', locale);
+      const visitorId = getVisitorId();
       const response = await fetch(`${API_BASE_URL}/sessions/`, {
         method: 'POST',
         headers: {
@@ -198,7 +276,7 @@ export default function EmbedClient({
         },
         body: JSON.stringify({
           assistant_id: assistant,
-          visitor_id: `widget-${Date.now()}`, // Unique visitor ID for the widget
+          visitor_id: visitorId,
           locale: locale,
         }),
       });
@@ -208,6 +286,10 @@ export default function EmbedClient({
       if (response.ok && data.status === 'success') {
         setSessionId(data.data.session_id);
         setError(null);
+        // Store session data in localStorage
+        if (data.data.expires_at) {
+          storeSession(data.data.session_id, data.data.expires_at);
+        }
         // Load messages after session creation
         await loadSessionMessages(data.data.session_id, token, true);
       } else {
@@ -216,6 +298,62 @@ export default function EmbedClient({
     } catch (err) {
       setError(t.networkErrorConnect);
       console.error('Session creation error:', err);
+    }
+  };
+
+  const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string) => {
+    try {
+      console.log('Validating existing session:', sessionId);
+      // Try to load messages from the session to validate it
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          // Session is valid, use it
+          console.log('Session is valid, restoring...');
+          setSessionId(sessionId);
+          setError(null);
+          // Load messages
+          const loadedMessages: Message[] = data.data.messages
+            .filter((msg: any) => {
+              // Filter out assistant greeting messages
+              if (msg.sender === 'assistant') {
+                const userMessages = data.data.messages.filter((m: any) => m.sender === 'user');
+                return userMessages.length > 0;
+              }
+              return true;
+            })
+            .map((msg: any) => ({
+              id: msg.id,
+              text: msg.content,
+              from: msg.sender as 'user' | 'assistant',
+              timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now()
+            }));
+          setMessages(loadedMessages);
+          setIsInitialLoad(false);
+        } else {
+          // Session invalid, create new one
+          console.log('Session validation failed, creating new session');
+          localStorage.removeItem(getSessionStorageKey());
+          createSession(assistantId, token);
+        }
+      } else {
+        // Session not found or expired, create new one
+        console.log('Session not found, creating new session');
+        localStorage.removeItem(getSessionStorageKey());
+        createSession(assistantId, token);
+      }
+    } catch (err) {
+      console.error('Session validation error:', err);
+      // On error, create new session
+      localStorage.removeItem(getSessionStorageKey());
+      createSession(assistantId, token);
     }
   };
 
@@ -358,7 +496,13 @@ export default function EmbedClient({
         // Reload all messages from the server to keep them in sync (this will replace the temp message)
         await loadSessionMessages(sessionId, authToken);
       } else {
-        setError(data.detail || t.failedToSendMessage);
+        // If session expired, clear it and show error
+        if (data.detail?.toLowerCase().includes('expired') || data.detail?.toLowerCase().includes('session')) {
+          localStorage.removeItem(getSessionStorageKey());
+          setError(t.sessionOrAuthError);
+        } else {
+          setError(data.detail || t.failedToSendMessage);
+        }
         // Remove the temporary message and re-add the input since the API call failed
         setMessages(prev => prev.filter(m => m.id !== userMessage.id));
         setInput(message);
