@@ -6,5 +6,14 @@
   "sessionOrAuthError": "Sitzung oder Authentifizierungstoken nicht verfügbar. Bitte überprüfen Sie Ihre Widget-Konfiguration.",
   "networkErrorConnect": "Netzwerkfehler: Konnte nicht mit der API verbinden",
   "failedToCreateSession": "Sitzung konnte nicht erstellt werden",
-  "chat": "Chat"
+  "chat": "Chat",
+  "rateConversation": "Wie war Ihre Erfahrung?",
+  "feedbackPositive": "Gut",
+  "feedbackNeutral": "Okay",
+  "feedbackNegative": "Schlecht",
+  "feedbackCommentPlaceholder": "Weitere Kommentare? (optional)",
+  "submitFeedback": "Feedback senden",
+  "skipFeedback": "Überspringen",
+  "thankYouFeedback": "Vielen Dank für Ihr Feedback!",
+  "feedbackSubmitted": "Feedback erfolgreich gesendet"
 }
