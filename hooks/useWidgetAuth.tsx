@@ -9,7 +9,6 @@ export function useWidgetAuth() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const getAuthToken = async (clientId: string): Promise<string | null> => {
-    console.log('WIDGET: Getting auth token for clientId:', clientId);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/widget-token`, {
         method: 'POST',
@@ -18,10 +17,8 @@ export function useWidgetAuth() {
         },
         body: JSON.stringify({ client_id: clientId }),
       });
-      console.log('WIDGET: Auth token response:', response.status, response.ok);
 
       const data = await response.json();
-      console.log('WIDGET: Auth token data:', data);
 
       if (response.ok && data.token) {
         setAuthToken(data.token);

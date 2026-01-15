@@ -79,10 +79,6 @@ export default function EmbedShell({
 }: Props) {
   const { translations: t } = useWidgetTranslation();
 
-  // Log widget config and flow responses for debugging
-  console.log('EmbedShell - Widget Config:', widgetConfig);
-  console.log('EmbedShell - Flow Responses:', flowResponses);
-
   // State to track clicked buttons
   const [clickedButtons, setClickedButtons] = useState<Set<string>>(new Set());
 

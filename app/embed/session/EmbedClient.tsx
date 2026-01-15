@@ -169,7 +169,6 @@ export default function EmbedClient({
       const stored = getStoredSession();
       if (!stored && sessionId) {
         // Session expired in localStorage, clear the state
-        console.log('Session expired, clearing state');
         setSessionId(null);
         setMessages([]);
         setFlowResponses([]);
@@ -198,10 +197,8 @@ export default function EmbedClient({
           // Try to restore existing session first
           const storedSession = getStoredSession();
           if (storedSession) {
-            console.log('Restoring existing session:', storedSession.sessionId);
             validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
           } else {
-            console.log('Creating new session');
             createSession(assistantIdParam, token);
           }
         } else if (authError) {
@@ -269,7 +266,6 @@ export default function EmbedClient({
 
   const createSession = async (assistant: string, token: string) => {
     try {
-      console.log('Creating session with locale:', locale);
       const visitorId = getVisitorId();
       const response = await fetch(`${API_BASE_URL}/sessions/`, {
         method: 'POST',
@@ -306,7 +302,6 @@ export default function EmbedClient({
 
   const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string) => {
     try {
-      console.log('Validating existing session:', sessionId);
       // Try to load messages from the session to validate it
       const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
         method: 'GET',
@@ -319,7 +314,6 @@ export default function EmbedClient({
         const data = await response.json();
         if (data.status === 'success') {
           // Session is valid, use it
-          console.log('Session is valid, restoring...');
           setSessionId(sessionId);
           setError(null);
           // Load messages
@@ -347,13 +341,11 @@ export default function EmbedClient({
           }
         } else {
           // Session invalid, create new one
-          console.log('Session validation failed, creating new session');
           localStorage.removeItem(getSessionStorageKey());
           createSession(assistantId, token);
         }
       } else {
         // Session not found or expired, create new one
-        console.log('Session not found, creating new session');
         localStorage.removeItem(getSessionStorageKey());
         createSession(assistantId, token);
       }
@@ -491,20 +483,16 @@ export default function EmbedClient({
     }
 
     const flows = widgetConfig?.greeting_message?.flows || [];
-    console.log('Processing flow for action:', action);
-    console.log('Available flows:', flows);
     const flow = flows.find((candidate: any) => candidate.trigger === action);
-    console.log('Found flow:', flow);
+
     if (!flow) {
       return false;
     }
 
     const responses = flow.responses || [];
-    console.log('Flow responses:', responses);
+
     responses.forEach((response: any, index: number) => {
       const responseText = getLocalizedText(response.text);
-      console.log('Response text:', responseText);
-      console.log('Response buttons:', response.buttons);
 
       if (responseText || (response.buttons && response.buttons.length > 0)) {
         // Add flow response as a grouped object with text and buttons
@@ -585,14 +573,10 @@ export default function EmbedClient({
   };
 
   const handleFollowUpButtonClick = (button: any) => {
-    console.log('handleFollowUpButtonClick called with button:', button);
-    console.log('Button action:', button.action);
     if (!sessionId || !authToken) return;
 
     const maybeText = getLocalizedText(button.response?.text);
     const maybeButtons = button.response?.buttons || [];
-
-    console.log('Follow-up button response text:', maybeText);
 
     // Add response as a grouped flow response
     if (maybeText || maybeButtons.length > 0) {
@@ -604,7 +588,6 @@ export default function EmbedClient({
     }
 
     const flowHandled = processWidgetFlow(button.action, true);
-    console.log('Flow handled:', flowHandled, 'for action:', button.action);
 
     if (!flowHandled) {
       handleSubmit(new Event('submit') as any, button.action);
@@ -612,13 +595,11 @@ export default function EmbedClient({
   };
 
   const handleInteractionButtonClick = async (button: any) => {
-    console.log('handleInteractionButtonClick called with button:', button);
     if (!sessionId || !authToken) return;
 
     const maybeText = getLocalizedText(button.response?.text);
     const maybeButtons = button.response?.buttons || [];
 
-    console.log('Interaction button response text:', maybeText);
 
     if (maybeText || maybeButtons.length > 0) {
       setIsTyping(true);
@@ -634,7 +615,6 @@ export default function EmbedClient({
     }
 
     const flowHandled = processWidgetFlow(button.action);
-    console.log('Interaction flow handled:', flowHandled);
 
     if (!maybeText && !flowHandled) {
       handleSubmit(new Event('submit') as any, button.action);
@@ -704,7 +684,6 @@ export default function EmbedClient({
     });
   };
 
-  console.log('Render check:', { shouldRender, widgetConfig: widgetConfig?.id });
 
   if (!widgetConfig) {
     return null; // Wait for widget config to load before rendering anything
