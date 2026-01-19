@@ -100,6 +100,8 @@ export default function EmbedClient({
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(0);
   const [messageFeedbackSubmitted, setMessageFeedbackSubmitted] = useState<Set<string>>(new Set());
+  const [unsureMessages, setUnsureMessages] = useState<Array<{userMessage: string, assistantMessage: string, timestamp: number}>>([]);
+  const [showUnsureModal, setShowUnsureModal] = useState(false);
 
   // Helper function to get localStorage key for this widget instance
   const getSessionStorageKey = () => {
@@ -580,6 +582,17 @@ export default function EmbedClient({
       const data = await response.json();
 
       if (response.ok && data.status === 'success') {
+        // Check if assistant was unsure and log the message
+        if (data.data?.assistant_message?.metadata?.assistant_unsure) {
+          const userMsg = data.data.user_message?.content || message;
+          const assistantMsg = data.data.assistant_message?.content || '';
+          setUnsureMessages(prev => [...prev, {
+            userMessage: userMsg,
+            assistantMessage: assistantMsg,
+            timestamp: Date.now()
+          }]);
+        }
+
         // Reload all messages from the server to keep them in sync (this will replace the temp message)
         await loadSessionMessages(sessionId, authToken);
       } else {
@@ -760,6 +773,89 @@ export default function EmbedClient({
           />
         ) : undefined
       }
+      unsureModal={
+        showUnsureModal ? (
+          <UnsureMessagesModal
+            messages={unsureMessages}
+            onClose={() => setShowUnsureModal(false)}
+            primaryColor={widgetConfig?.primary_color || '#111827'}
+            backgroundColor={widgetConfig?.background_color || '#ffffff'}
+            textColor={widgetConfig?.text_color || '#1f2937'}
+            borderRadius={widgetConfig?.border_radius || 8}
+          />
+        ) : undefined
+      }
+      unsureMessages={unsureMessages}
+      onShowUnsureModal={() => setShowUnsureModal(true)}
     />
+  );
+}
+type UnsureMessagesModalProps = {
+  messages: Array<{userMessage: string, assistantMessage: string, timestamp: number}>;
+  onClose: () => void;
+  primaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  borderRadius: number;
+};
+
+function UnsureMessagesModal({ messages, onClose, primaryColor, backgroundColor, textColor, borderRadius }: UnsureMessagesModalProps) {
+  return (
+    <div
+      className="rounded-lg shadow-lg max-h-[80vh] overflow-hidden"
+      style={{ backgroundColor, color: textColor, borderRadius: `${borderRadius}px` }}
+    >
+      <div
+        className="p-4 border-b"
+        style={{ borderColor: primaryColor }}
+      >
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Assistant Uncertainty Log</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+        <p className="text-sm text-gray-600 mt-1">
+          Messages where the assistant indicated uncertainty:
+        </p>
+      </div>
+
+      <div className="p-4 max-h-96 overflow-y-auto">
+        {messages.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">No uncertain responses yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((msg, index) => (
+              <div key={index} className="border rounded p-3" style={{ borderColor: primaryColor + "20" }}>
+                <div className="mb-2">
+                  <span className="text-xs text-gray-500">User:</span>
+                  <p className="text-sm mt-1">{msg.userMessage}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Assistant:</span>
+                  <p className="text-sm mt-1 italic">{msg.assistantMessage}</p>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                  {new Date(msg.timestamp).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t" style={{ borderColor: primaryColor + "20" }}>
+        <button
+          onClick={onClose}
+          className="w-full py-2 px-4 rounded text-white hover:opacity-90"
+          style={{ backgroundColor: primaryColor, borderRadius: `${borderRadius}px` }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
   );
 }

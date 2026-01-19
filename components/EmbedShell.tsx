@@ -31,6 +31,9 @@ type Props = {
   feedbackDialog?: React.ReactNode;
   messageFeedbackSubmitted?: Set<string>;
   onSubmitMessageFeedback?: (messageId: string) => void;
+  unsureModal?: React.ReactNode;
+  unsureMessages?: Array<{userMessage: string, assistantMessage: string, timestamp: number}>;
+  onShowUnsureModal?: () => void;
 };
 
 const normalizeHexColor = (color: string | undefined, fallback: string) => {
@@ -80,6 +83,9 @@ export default function EmbedShell({
   feedbackDialog,
   messageFeedbackSubmitted = new Set(),
   onSubmitMessageFeedback,
+  unsureModal,
+  unsureMessages = [],
+  onShowUnsureModal,
 }: Props) {
   const { translations: t } = useWidgetTranslation();
 
@@ -237,17 +243,39 @@ export default function EmbedShell({
                   <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
                   <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={toggleCollapsed}
-                  style={{ backgroundColor: secondaryColor }}
-                  className="ml-3 px-2 py-1 rounded text-sm flex items-center justify-center hover:opacity-90"
-                  aria-label={isCollapsed ? 'Open chat' : 'Close chat'}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6,9 12,15 18,9" />
-                  </svg>
-                </button>
+                <div className="flex items-center space-x-2">
+                  {unsureMessages.length > 0 && onShowUnsureModal && (
+                    <button
+                      type="button"
+                      onClick={onShowUnsureModal}
+                      style={{ backgroundColor: secondaryColor }}
+                      className="px-2 py-1 rounded text-sm flex items-center justify-center hover:opacity-90 relative"
+                      aria-label="View assistant uncertainty log"
+                      title="Assistant has indicated uncertainty in some responses"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="m15 9-6 6"/>
+                        <path d="m9 9 6 6"/>
+                      </svg>
+                      <span className="ml-1 text-xs">{unsureMessages.length}</span>
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                        !
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={toggleCollapsed}
+                    style={{ backgroundColor: secondaryColor }}
+                    className="px-2 py-1 rounded text-sm flex items-center justify-center hover:opacity-90"
+                    aria-label={isCollapsed ? 'Open chat' : 'Close chat'}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6,9 12,15 18,9" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -389,6 +417,15 @@ export default function EmbedShell({
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
                   <div className="max-w-md w-full">
                     {feedbackDialog}
+                  </div>
+                </div>
+              )}
+
+              {/* Unsure Messages Modal Overlay for Embedded View */}
+              {unsureModal && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
+                  <div className="max-w-md w-full">
+                    {unsureModal}
                   </div>
                 </div>
               )}
@@ -613,6 +650,15 @@ export default function EmbedShell({
                   </div>
                 )}
 
+                {/* Unsure Messages Modal Overlay */}
+                {unsureModal && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="max-w-md w-full">
+                      {unsureModal}
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="p-3 border-t">
                   <div className="flex space-x-2">
                     <input
@@ -650,6 +696,7 @@ export default function EmbedShell({
           )}
         </>
       )}
+      {unsureModal}
     </>
   );
 }
