@@ -11,6 +11,7 @@ type Message = {
   text: string;
   from: 'user' | 'assistant';
   timestamp?: number;
+  hasFeedback?: boolean;
 };
 
 type WidgetConfig = {
@@ -98,6 +99,7 @@ export default function EmbedClient({
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(0);
+  const [messageFeedbackSubmitted, setMessageFeedbackSubmitted] = useState<Set<string>>(new Set());
 
   // Helper function to get localStorage key for this widget instance
   const getSessionStorageKey = () => {
@@ -456,6 +458,37 @@ export default function EmbedClient({
     }
   };
 
+  const handleSubmitMessageFeedback = async (messageId: string) => {
+    if (!authToken || messageFeedbackSubmitted.has(messageId)) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/message/${messageId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          feedback_type: 'incorrect',
+        }),
+      });
+
+      if (response.ok) {
+        setMessageFeedbackSubmitted((prev) => new Set(prev).add(messageId));
+        // Show success toast if available
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to submit message feedback:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting message feedback:', error);
+    }
+  };
+
   const getLocalizedText = (textObj: { [lang: string]: string } | undefined): string => {
     if (!textObj) return '';
 
@@ -711,6 +744,8 @@ export default function EmbedClient({
       flowResponses={flowResponses}
       getLocalizedText={getLocalizedText}
       showFeedbackDialog={showFeedbackDialog}
+      messageFeedbackSubmitted={messageFeedbackSubmitted}
+      onSubmitMessageFeedback={handleSubmitMessageFeedback}
       feedbackDialog={
         showFeedbackDialog && sessionId && authToken ? (
           <FeedbackDialog

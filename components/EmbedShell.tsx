@@ -29,6 +29,8 @@ type Props = {
   getLocalizedText?: (textObj: { [lang: string]: string } | undefined) => string;
   showFeedbackDialog?: boolean;
   feedbackDialog?: React.ReactNode;
+  messageFeedbackSubmitted?: Set<string>;
+  onSubmitMessageFeedback?: (messageId: string) => void;
 };
 
 const normalizeHexColor = (color: string | undefined, fallback: string) => {
@@ -76,6 +78,8 @@ export default function EmbedShell({
   getLocalizedText,
   showFeedbackDialog = false,
   feedbackDialog,
+  messageFeedbackSubmitted = new Set(),
+  onSubmitMessageFeedback,
 }: Props) {
   const { translations: t } = useWidgetTranslation();
 
@@ -291,8 +295,9 @@ export default function EmbedShell({
                 {mergedContent.map((item, index) => {
                   if (item.type === 'message') {
                     const message = item.data;
+                    const hasFeedback = messageFeedbackSubmitted.has(message.id);
                     return (
-                      <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div key={message.id} className={`flex flex-col ${message.from === 'user' ? 'items-end' : 'items-start'}`}>
                         <div
                           className={`max-w-[80%] p-2`}
                           style={{
@@ -304,6 +309,24 @@ export default function EmbedShell({
                         >
                           {message.text}
                         </div>
+                        {message.from === 'assistant' && !hasFeedback && onSubmitMessageFeedback && (
+                          <button
+                            onClick={() => onSubmitMessageFeedback(message.id)}
+                            className="mt-1 text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                            style={{ color: textColor }}
+                            title="Mark as incorrect"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                            </svg>
+                            <span>Report</span>
+                          </button>
+                        )}
+                        {message.from === 'assistant' && hasFeedback && (
+                          <span className="mt-1 text-xs opacity-50" style={{ color: textColor }}>
+                            Feedback submitted
+                          </span>
+                        )}
                       </div>
                     );
                   } else {
