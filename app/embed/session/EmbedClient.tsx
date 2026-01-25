@@ -119,6 +119,24 @@ export default function EmbedClient({
     return visitorId;
   };
 
+  // Helper function to get current page context
+  const getPageContext = () => {
+    try {
+      return {
+        url: window.location.href,
+        title: document.title,
+        referrer: document.referrer || null,
+      };
+    } catch (e) {
+      // Fallback if accessing document fails (e.g., in iframe restrictions)
+      return {
+        url: window.location.href,
+        title: 'Unknown Page',
+        referrer: null,
+      };
+    }
+  };
+
   // Helper function to get stored session data
   const getStoredSession = () => {
     try {
@@ -576,6 +594,7 @@ export default function EmbedClient({
         body: JSON.stringify({
           content: message,
           locale: locale,
+          page_context: getPageContext(),
         }),
       });
 
