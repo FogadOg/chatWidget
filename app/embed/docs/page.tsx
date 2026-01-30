@@ -8,12 +8,13 @@ type Props = {
     locale?: string;
     startOpen?: string;
     suggestions?: string;
+    pagePath?: string;
   }>;
 };
 
 export default async function DocsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const { clientId, assistantId, configId, locale = "en", startOpen = "false", suggestions } = params;
+  const { clientId, assistantId, configId, locale = "en", startOpen = "false", suggestions, pagePath } = params;
 
   // Parse suggestions if provided (comma-separated)
   const parsedSuggestions = suggestions ? suggestions.split(',').map(s => s.trim()).filter(s => s.length > 0) : undefined;
@@ -97,5 +98,6 @@ export default async function DocsPage({ searchParams }: Props) {
     locale={locale}
     startOpen={startOpen === "true"}
     suggestions={parsedSuggestions}
+    pagePath={pagePath}
   />;
 }

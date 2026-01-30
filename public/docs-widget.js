@@ -45,6 +45,7 @@
     configId,
     locale,
     startOpen: startOpen.toString(),
+    pagePath: window.location.pathname,
   });
 
   if (suggestions) {

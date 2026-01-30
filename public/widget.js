@@ -43,6 +43,7 @@
     configId,
     locale,
     startOpen: startOpen.toString(),
+    pagePath: window.location.pathname,
   });
 
   iframe.src = `${baseUrl}/embed/session?${params.toString()}`;

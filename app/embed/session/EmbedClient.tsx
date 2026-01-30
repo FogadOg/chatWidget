@@ -72,6 +72,7 @@ type EmbedClientProps = {
   configId: string;
   locale: string;
   startOpen: boolean;
+  pagePath?: string;
 };
 
 export default function EmbedClient({
@@ -79,7 +80,8 @@ export default function EmbedClient({
   assistantId: initialAssistantId,
   configId: initialConfigId,
   locale: initialLocale,
-  startOpen: initialStartOpen
+  startOpen: initialStartOpen,
+  pagePath: initialPagePath
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [flowResponses, setFlowResponses] = useState<Array<{ text: string; buttons: any[]; timestamp: number }>>([]);
@@ -124,6 +126,7 @@ export default function EmbedClient({
     try {
       return {
         url: window.location.href,
+        pathname: window.location.pathname,
         title: document.title,
         referrer: document.referrer || null,
       };
@@ -131,6 +134,7 @@ export default function EmbedClient({
       // Fallback if accessing document fails (e.g., in iframe restrictions)
       return {
         url: window.location.href,
+        pathname: window.location.pathname,
         title: 'Unknown Page',
         referrer: null,
       };

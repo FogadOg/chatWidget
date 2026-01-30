@@ -83,6 +83,7 @@ type Props = {
   locale: string;
   startOpen: boolean;
   suggestions?: string[];
+  pagePath?: string;
 };
 
 type MessageType = {
@@ -124,7 +125,7 @@ const defaultSuggestions = [
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
 
-export default function DocsClient({ clientId, assistantId, configId, locale: initialLocale, startOpen, suggestions }: Props) {
+export default function DocsClient({ clientId, assistantId, configId, locale: initialLocale, startOpen, suggestions, pagePath }: Props) {
   const currentSuggestions = suggestions || defaultSuggestions;
   const [open, setOpen] = useState(startOpen);
   const [text, setText] = useState<string>("");
@@ -182,6 +183,26 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       localStorage.setItem(visitorKey, visitorId);
     }
     return visitorId;
+  };
+
+  // Helper function to get current page context
+  const getPageContext = () => {
+    try {
+      return {
+        url: window.location.href,
+        pathname: window.location.pathname,
+        title: document.title,
+        referrer: document.referrer || null,
+      };
+    } catch (e) {
+      // Fallback if accessing document fails (e.g., in iframe restrictions)
+      return {
+        url: window.location.href,
+        pathname: window.location.pathname,
+        title: 'Unknown Page',
+        referrer: null,
+      };
+    }
   };
 
   // Helper function to get stored session data
@@ -401,6 +422,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         body: JSON.stringify({
           content: content,
           locale: locale,
+          page_context: getPageContext(),
         }),
       });
 
