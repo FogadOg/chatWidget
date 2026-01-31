@@ -482,8 +482,8 @@ export default function EmbedClient({
     }
   };
 
-  const handleSubmitMessageFeedback = async (messageId: string) => {
-    if (!authToken || messageFeedbackSubmitted.has(messageId)) return;
+  const handleSubmitMessageFeedback = async (messageId: string, feedbackType: string = 'incorrect') => {
+    if (!authToken) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/message/${messageId}/feedback`, {
@@ -493,7 +493,7 @@ export default function EmbedClient({
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          feedback_type: 'incorrect',
+          feedback_type: feedbackType,
         }),
       });
 

@@ -143,6 +143,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [messageFeedbackSubmitted, setMessageFeedbackSubmitted] = useState<Set<string>>(new Set());
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
 
   const scrollToBottom = () => {
@@ -444,6 +445,38 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     }
   }, [sessionId, authToken, locale, loadSessionMessages]);
 
+  // Handle message feedback submission
+  const handleSubmitMessageFeedback = useCallback(async (messageId: string, feedbackType: string = 'thumbs_up') => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/message/${messageId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          feedback_type: feedbackType,
+        }),
+      });
+
+      if (response.ok) {
+        setMessageFeedbackSubmitted((prev) => new Set(prev).add(messageId));
+        // Show success toast if available
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to submit message feedback:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting message feedback:', error);
+    }
+  }, [authToken]);
+
   const streamResponse = useCallback(
     async (messageId: string, content: string) => {
       setStatus("streaming");
@@ -664,6 +697,33 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                       <MessageContent>
                                         <MessageResponse>{version.content}</MessageResponse>
                                       </MessageContent>
+                                      {message.from === 'assistant' && !messageFeedbackSubmitted.has(message.key) && (
+                                        <div className="mt-2 flex gap-2">
+                                          <button
+                                            onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_up')}
+                                            className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                                            title="Thumbs up"
+                                          >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                            </svg>
+                                          </button>
+                                          <button
+                                            onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_down')}
+                                            className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                                            title="Thumbs down"
+                                          >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      )}
+                                      {message.from === 'assistant' && messageFeedbackSubmitted.has(message.key) && (
+                                        <div className="mt-2 text-xs opacity-50">
+                                          Feedback submitted
+                                        </div>
+                                      )}
                                     </div>
                                   </Message>
                                 ))}
