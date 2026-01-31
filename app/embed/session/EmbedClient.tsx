@@ -124,6 +124,36 @@ export default function EmbedClient({
   // Helper function to get current page context
   const getPageContext = () => {
     try {
+      const isEmbedded = (() => {
+        try {
+          return window.top !== window.self;
+        } catch {
+          return true;
+        }
+      })();
+
+      // If embedded, use document.referrer as the host page URL
+      if (isEmbedded && document.referrer) {
+        try {
+          const referrerUrl = new URL(document.referrer);
+          return {
+            url: document.referrer,
+            pathname: referrerUrl.pathname,
+            title: null,    // Still not available from referrer
+            referrer: document.referrer
+          };
+        } catch (e) {
+          // If referrer is not a valid URL, fall back
+          return {
+            url: document.referrer,
+            pathname: null,
+            title: null,
+            referrer: document.referrer
+          };
+        }
+      }
+
+      // Not embedded, or no referrer: use widget's own location
       return {
         url: window.location.href,
         pathname: window.location.pathname,
