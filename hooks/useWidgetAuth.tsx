@@ -11,13 +11,13 @@ import {
   isNetworkError,
 } from '../lib/errorHandling';
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-
 export function useWidgetAuth() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
 
   const getAuthToken = useCallback(async (clientId: string): Promise<string | null> => {
     // Validate input
