@@ -1,10 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 import FeedbackDialog from '../../../components/FeedbackDialog';
+import {
+  createSessionError,
+  createNetworkError,
+  retryWithBackoff,
+  logError,
+  parseApiError,
+  WidgetErrorCode,
+  isNetworkError,
+} from '../../../lib/errorHandling';
 
 type Message = {
   id: string;
@@ -323,42 +332,112 @@ export default function EmbedClient({
   const createSession = async (assistant: string, token: string) => {
     try {
       const visitorId = getVisitorId();
-      const response = await fetch(`${API_BASE_URL}/sessions/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+
+      const sessionData = await retryWithBackoff(
+        async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/sessions/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                assistant_id: assistant,
+                visitor_id: visitorId,
+                locale: locale,
+              }),
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            let data;
+            try {
+              data = await response.json();
+            } catch (parseError) {
+              throw createSessionError(
+                'Invalid response from session server',
+                WidgetErrorCode.SESSION_CREATE_FAILED
+              );
+            }
+
+            if (!response.ok) {
+              const errorMessage = parseApiError(data, 'Failed to create session');
+
+              if (response.status >= 500) {
+                throw createNetworkError(
+                  errorMessage,
+                  WidgetErrorCode.NETWORK_SERVER_ERROR
+                );
+              }
+
+              throw createSessionError(
+                errorMessage,
+                WidgetErrorCode.SESSION_CREATE_FAILED
+              );
+            }
+
+            if (data.status !== 'success' || !data.data?.session_id) {
+              throw createSessionError(
+                'Invalid session response format',
+                WidgetErrorCode.SESSION_CREATE_FAILED
+              );
+            }
+
+            return data.data;
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+
+            if (fetchError.name === 'AbortError') {
+              throw createNetworkError(
+                'Session creation timed out',
+                WidgetErrorCode.NETWORK_TIMEOUT
+              );
+            }
+
+            throw fetchError;
+          }
         },
-        body: JSON.stringify({
-          assistant_id: assistant,
-          visitor_id: visitorId,
-          locale: locale,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.status === 'success') {
-        setSessionId(data.data.session_id);
-        setError(null);
-        // Store session data in localStorage
-        if (data.data.expires_at) {
-          storeSession(data.data.session_id, data.data.expires_at);
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          onRetry: (attempt, error) => {
+            logError(error, { assistant, attempt, action: 'createSession' });
+          },
         }
-        // Load messages after session creation
-        await loadSessionMessages(data.data.session_id, token, true);
-      } else {
-        setError(data.detail || t.failedToCreateSession);
+      );
+
+      setSessionId(sessionData.session_id);
+      setError(null);
+
+      // Store session data in localStorage
+      if (sessionData.expires_at) {
+        storeSession(sessionData.session_id, sessionData.expires_at);
       }
-    } catch (err) {
-      setError(t.networkErrorConnect);
-      console.error('Session creation error:', err);
+
+      // Load messages after session creation
+      await loadSessionMessages(sessionData.session_id, token, true);
+    } catch (err: any) {
+      const errorMessage = err.userMessage || t.failedToCreateSession;
+      setError(errorMessage);
+      logError(err, { assistant, action: 'createSession' });
+
+      // Notify parent window of error
+      if (window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'WIDGET_ERROR', data: { message: errorMessage } },
+          '*'
+        );
+      }
     }
   };
 
   const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string) => {
     try {
-      // Try to load messages from the session to validate it
       const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
         method: 'GET',
         headers: {
@@ -372,6 +451,7 @@ export default function EmbedClient({
           // Session is valid, use it
           setSessionId(sessionId);
           setError(null);
+
           // Load messages
           const loadedMessages: Message[] = data.data.messages
             .filter((msg: any) => {
@@ -388,28 +468,32 @@ export default function EmbedClient({
               from: msg.sender as 'user' | 'assistant',
               timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now()
             }));
+
           setMessages(loadedMessages);
           setIsInitialLoad(false);
 
-          // Check if we should show feedback (if messages exist and no feedback submitted yet)
+          // Check if we should show feedback
           if (loadedMessages.length > 0 && !feedbackSubmitted) {
             checkFeedbackStatus(sessionId, token);
           }
-        } else {
-          // Session invalid, create new one
-          localStorage.removeItem(getSessionStorageKey());
-          createSession(assistantId, token);
+
+          return;
         }
-      } else {
-        // Session not found or expired, create new one
-        localStorage.removeItem(getSessionStorageKey());
-        createSession(assistantId, token);
       }
+
+      // Session invalid or not found, create new one
+      logError(new Error('Session validation failed'), {
+        sessionId,
+        assistantId,
+        status: response.status
+      });
+      localStorage.removeItem(getSessionStorageKey());
+      await createSession(assistantId, token);
     } catch (err) {
-      console.error('Session validation error:', err);
+      logError(err, { sessionId, assistantId, action: 'validateAndRestoreSession' });
       // On error, create new session
       localStorage.removeItem(getSessionStorageKey());
-      createSession(assistantId, token);
+      await createSession(assistantId, token);
     }
   };
 
@@ -424,12 +508,18 @@ export default function EmbedClient({
 
       if (response.ok) {
         const data = await response.json();
-        if (data.status === 'success') {
+        if (data.status === 'success' && data.data?.name) {
           setAssistantName(data.data.name);
         }
+      } else {
+        logError(new Error('Failed to fetch assistant details'), {
+          assistantId,
+          status: response.status,
+        });
       }
     } catch (err) {
-      console.error('Error fetching assistant details:', err);
+      logError(err, { assistantId, action: 'fetchAssistantDetails' });
+      // Non-critical error - continue without assistant name
     }
   };
 
@@ -442,15 +532,28 @@ export default function EmbedClient({
         },
       });
 
+      if (!response.ok) {
+        throw new Error(`Failed to fetch config: ${response.status}`);
+      }
+
       const data = await response.json();
 
-      if (response.ok) {
-        if (data.status === 'success') {
-          setWidgetConfig(data.data);
-        }
+      if (data.status === 'success' && data.data) {
+        setWidgetConfig(data.data);
+      } else {
+        throw new Error('Invalid config response format');
       }
     } catch (err) {
-      console.error('Error fetching widget config:', err);
+      logError(err, { configId, action: 'fetchWidgetConfig' });
+      setError('Failed to load widget configuration');
+
+      // Notify parent window
+      if (window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'WIDGET_ERROR', data: { message: 'Configuration load failed' } },
+          '*'
+        );
+      }
     }
   };
 
@@ -601,7 +704,12 @@ export default function EmbedClient({
 
     // Check if we have a session and auth token
     if (!sessionId || !authToken) {
-      setError(t.sessionOrAuthError);
+      const errorMsg = t.sessionOrAuthError || 'Session or authentication error';
+      setError(errorMsg);
+      logError(new Error('Missing session or auth token'), {
+        hasSession: !!sessionId,
+        hasAuth: !!authToken
+      });
       return;
     }
 
@@ -619,53 +727,112 @@ export default function EmbedClient({
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+      const messageData = await retryWithBackoff(
+        async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({
+                content: message,
+                locale: locale,
+                page_context: getPageContext(),
+              }),
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            let data;
+            try {
+              data = await response.json();
+            } catch (parseError) {
+              throw new Error('Invalid response from message server');
+            }
+
+            if (!response.ok) {
+              const errorMessage = parseApiError(data, 'Failed to send message');
+
+              // Check if session expired
+              if (response.status === 401 || response.status === 404 ||
+                  errorMessage.toLowerCase().includes('expired') ||
+                  errorMessage.toLowerCase().includes('not found')) {
+                localStorage.removeItem(getSessionStorageKey());
+                throw createSessionError(
+                  errorMessage,
+                  WidgetErrorCode.SESSION_EXPIRED
+                );
+              }
+
+              if (response.status >= 500) {
+                throw createNetworkError(
+                  errorMessage,
+                  WidgetErrorCode.NETWORK_SERVER_ERROR
+                );
+              }
+
+              throw new Error(errorMessage);
+            }
+
+            if (data.status !== 'success') {
+              throw new Error(parseApiError(data, 'Failed to send message'));
+            }
+
+            return data.data;
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+
+            if (fetchError.name === 'AbortError') {
+              throw createNetworkError(
+                'Message send timed out',
+                WidgetErrorCode.NETWORK_TIMEOUT
+              );
+            }
+
+            throw fetchError;
+          }
         },
-        body: JSON.stringify({
-          content: message,
-          locale: locale,
-          page_context: getPageContext(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.status === 'success') {
-        // Check if assistant was unsure and log the message
-        if (data.data?.assistant_message?.metadata?.assistant_unsure) {
-          const userMsg = data.data.user_message?.content || message;
-          const assistantMsg = data.data.assistant_message?.content || '';
-          setUnsureMessages(prev => [...prev, {
-            userMessage: userMsg,
-            assistantMessage: assistantMsg,
-            timestamp: Date.now()
-          }]);
+        {
+          maxRetries: 2,
+          initialDelay: 1000,
+          onRetry: (attempt, error) => {
+            logError(error, { message, attempt, action: 'sendMessage' });
+          },
         }
+      );
 
-        // Reload all messages from the server to keep them in sync (this will replace the temp message)
-        await loadSessionMessages(sessionId, authToken);
-      } else {
-        // If session expired, clear it and show error
-        if (data.detail?.toLowerCase().includes('expired') || data.detail?.toLowerCase().includes('session')) {
-          localStorage.removeItem(getSessionStorageKey());
-          setError(t.sessionOrAuthError);
-        } else {
-          setError(data.detail || t.failedToSendMessage);
-        }
-        // Remove the temporary message and re-add the input since the API call failed
-        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
-        setInput(message);
+      // Check if assistant was unsure
+      if (messageData?.assistant_message?.metadata?.assistant_unsure) {
+        const userMsg = messageData.user_message?.content || message;
+        const assistantMsg = messageData.assistant_message?.content || '';
+        setUnsureMessages(prev => [...prev, {
+          userMessage: userMsg,
+          assistantMessage: assistantMsg,
+          timestamp: Date.now()
+        }]);
       }
-    } catch (err) {
-      setError(t.networkError);
-      console.error('Message send error:', err);
-      // Remove the temporary message and re-add the input since the API call failed
+
+      // Reload all messages from server
+      await loadSessionMessages(sessionId, authToken);
+    } catch (err: any) {
+      const errorMessage = err.userMessage || err.message || t.failedToSendMessage;
+      setError(errorMessage);
+      logError(err, { message, sessionId, action: 'handleSubmit' });
+
+      // Remove temp message and restore input
       setMessages(prev => prev.filter(m => m.id !== userMessage.id));
       setInput(message);
+
+      // Check if session expired
+      if (err.code === WidgetErrorCode.SESSION_EXPIRED) {
+        setSessionId(null);
+      }
     } finally {
       setIsTyping(false);
     }
@@ -729,36 +896,45 @@ export default function EmbedClient({
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === 'success') {
-          // Convert API messages to widget message format
-          const loadedMessages: Message[] = data.data.messages
-            .filter((msg: any) => {
-              // Filter out assistant greeting messages - any assistant message when there are no user messages yet
-              if (msg.sender === 'assistant') {
-                const userMessages = data.data.messages.filter((m: any) => m.sender === 'user');
-                return userMessages.length > 0; // Only show assistant messages if there are user messages
-              }
-              return true;
-            })
-            .map((msg: any) => ({
-              id: msg.id,
-              text: msg.content,
-              from: msg.sender as 'user' | 'assistant',
-              timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now()
-            }));
+      if (!response.ok) {
+        throw new Error(`Failed to load messages: ${response.status}`);
+      }
 
-          setMessages(loadedMessages);
+      const data = await response.json();
 
-          // Only set initial load flag to false after first load
-          if (isInitial) {
-            setIsInitialLoad(false);
-          }
+      if (data.status === 'success' && Array.isArray(data.data?.messages)) {
+        // Convert API messages to widget message format
+        const loadedMessages: Message[] = data.data.messages
+          .filter((msg: any) => {
+            // Filter out assistant greeting messages
+            if (msg.sender === 'assistant') {
+              const userMessages = data.data.messages.filter((m: any) => m.sender === 'user');
+              return userMessages.length > 0;
+            }
+            return true;
+          })
+          .map((msg: any) => ({
+            id: msg.id,
+            text: msg.content,
+            from: msg.sender as 'user' | 'assistant',
+            timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now()
+          }));
+
+        setMessages(loadedMessages);
+
+        // Only set initial load flag to false after first load
+        if (isInitial) {
+          setIsInitialLoad(false);
         }
+      } else {
+        throw new Error('Invalid messages response format');
       }
     } catch (err) {
-      console.error('Error loading session messages:', err);
+      logError(err, { sessionId, isInitial, action: 'loadSessionMessages' });
+      // Non-critical error for non-initial loads
+      if (isInitial) {
+        setError('Failed to load conversation history');
+      }
     } finally {
       setIsTyping(false);
     }

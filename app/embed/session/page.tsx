@@ -1,4 +1,5 @@
 import EmbedClient from './EmbedClient';
+import ErrorBoundary from '../../../components/ErrorBoundary';
 
 type Props = {
   searchParams: Promise<{
@@ -86,13 +87,22 @@ export default async function EmbedPage({ searchParams }: Props) {
     );
   }
 
-  // Pass validated params to client component
-  return <EmbedClient
-    clientId={clientId}
-    assistantId={assistantId}
-    configId={configId}
-    locale={locale}
-    startOpen={startOpen === "true"}
-    pagePath={pagePath}
-  />;
+  // Pass validated params to client component wrapped in error boundary
+  return (
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        // Log to console or send to error tracking service
+        console.error('Widget Error Boundary:', error, errorInfo);
+      }}
+    >
+      <EmbedClient
+        clientId={clientId}
+        assistantId={assistantId}
+        configId={configId}
+        locale={locale}
+        startOpen={startOpen === "true"}
+        pagePath={pagePath}
+      />
+    </ErrorBoundary>
+  );
 }
