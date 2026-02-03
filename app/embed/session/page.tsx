@@ -89,12 +89,7 @@ export default async function EmbedPage({ searchParams }: Props) {
 
   // Pass validated params to client component wrapped in error boundary
   return (
-    <ErrorBoundary
-      onError={(error, errorInfo) => {
-        // Log to console or send to error tracking service
-        console.error('Widget Error Boundary:', error, errorInfo);
-      }}
-    >
+    <ErrorBoundary>
       <EmbedClient
         clientId={clientId}
         assistantId={assistantId}

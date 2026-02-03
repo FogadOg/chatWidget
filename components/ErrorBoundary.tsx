@@ -5,7 +5,6 @@ import React from 'react';
 type ErrorBoundaryProps = {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 };
 
 type ErrorBoundaryState = {
@@ -27,9 +26,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to console in development
     console.error('Widget Error Boundary caught an error:', error, errorInfo);
-
-    // Call optional error handler
-    this.props.onError?.(error, errorInfo);
 
     this.setState({ errorInfo });
   }

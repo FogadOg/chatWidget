@@ -49,19 +49,22 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Custom error message')).toBeInTheDocument();
   });
 
-  it('calls onError callback when an error occurs', () => {
-    const onError = jest.fn();
+  it('logs error when an error occurs', () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     render(
-      <ErrorBoundary onError={onError}>
+      <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
     );
 
-    expect(onError).toHaveBeenCalledWith(
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Widget Error Boundary caught an error:',
       expect.any(Error),
       expect.any(Object)
     );
+
+    consoleSpy.mockRestore();
   });
 
   it('resets error state when Try Again button is clicked', () => {

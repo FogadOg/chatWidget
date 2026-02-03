@@ -414,6 +414,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     }
 
     try {
+      setStatus("streaming");
       const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: {
@@ -442,6 +443,8 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       console.error('Error sending message:', err);
       setError('Network error: Unable to send message');
       setStatus("error");
+    } finally {
+      setStatus("ready");
     }
   }, [sessionId, authToken, locale, loadSessionMessages]);
 
@@ -537,7 +540,6 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       setStatus("submitted");
 
       await sendMessageToAPI(content);
-      setStatus("ready");
     },
     [sendMessageToAPI, sessionId, authToken]
   );
@@ -737,6 +739,17 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                               )}
                             </MessageBranch>
                           ))}
+                          {status === "streaming" && (
+                            <div className="flex justify-start">
+                              <div className="p-3" style={{ backgroundColor: '#e5e7eb', borderRadius: '8px' }}>
+                                <div className="flex space-x-1">
+                                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+                                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </ConversationContent>
                         <ConversationScrollButton />
                       </Conversation>
