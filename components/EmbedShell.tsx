@@ -3,11 +3,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 
+type SourceData = {
+  type: string;
+  title: string;
+  snippet?: string;
+  url?: string;
+  reference_id?: string;
+};
+
 type Message = {
   id: string;
   text: string;
   from: 'user' | 'assistant';
   timestamp?: number;
+  sources?: SourceData[];
 };
 
 type Props = {
@@ -324,6 +333,7 @@ export default function EmbedShell({
                   if (item.type === 'message') {
                     const message = item.data;
                     const hasFeedback = messageFeedbackSubmitted.has(message.id);
+                    const hasSources = message.from === 'assistant' && message.sources && message.sources.length > 0;
                     return (
                       <div key={message.id} className={`flex flex-col ${message.from === 'user' ? 'items-end' : 'items-start'}`}>
                         <div
@@ -335,7 +345,47 @@ export default function EmbedShell({
                             ...fontStyles
                           }}
                         >
-                          {message.text}
+                          <div>{message.text}</div>
+                          {hasSources && (
+                            <div className="mt-2 pt-2 border-t border-gray-300">
+                              <div className="text-xs font-semibold mb-1 opacity-70">
+                                📚 Sources ({message.sources!.length}):
+                              </div>
+                              <div className="space-y-1">
+                                {message.sources!.map((source, idx) => (
+                                  <div key={idx} className="text-xs">
+                                    {source.url ? (
+                                      <a
+                                        href={source.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:underline flex items-start gap-1"
+                                        style={{ color: textColor }}
+                                      >
+                                        <span className="opacity-70">•</span>
+                                        <span className="flex-1">
+                                          <span className="font-medium">{source.title}</span>
+                                          {source.snippet && (
+                                            <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                          )}
+                                        </span>
+                                      </a>
+                                    ) : (
+                                      <div className="flex items-start gap-1">
+                                        <span className="opacity-70">•</span>
+                                        <span className="flex-1">
+                                          <span className="font-medium">{source.title}</span>
+                                          {source.snippet && (
+                                            <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         {message.from === 'assistant' && !hasFeedback && onSubmitMessageFeedback && (
                           <div className="mt-1 flex gap-2">
@@ -582,6 +632,7 @@ export default function EmbedShell({
                   {mergedContent.map((item, index) => {
                     if (item.type === 'message') {
                       const message = item.data;
+                      const hasSources = message.from === 'assistant' && message.sources && message.sources.length > 0;
                       return (
                         <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                           <div
@@ -593,7 +644,47 @@ export default function EmbedShell({
                               ...fontStyles
                             }}
                           >
-                            {message.text}
+                            <div>{message.text}</div>
+                            {hasSources && (
+                              <div className="mt-2 pt-2 border-t border-gray-300">
+                                <div className="text-xs font-semibold mb-1 opacity-70">
+                                  📚 Sources ({message.sources!.length}):
+                                </div>
+                                <div className="space-y-1">
+                                  {message.sources!.map((source, idx) => (
+                                    <div key={idx} className="text-xs">
+                                      {source.url ? (
+                                        <a
+                                          href={source.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="hover:underline flex items-start gap-1"
+                                          style={{ color: textColor }}
+                                        >
+                                          <span className="opacity-70">•</span>
+                                          <span className="flex-1">
+                                            <span className="font-medium">{source.title}</span>
+                                            {source.snippet && (
+                                              <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                            )}
+                                          </span>
+                                        </a>
+                                      ) : (
+                                        <div className="flex items-start gap-1">
+                                          <span className="opacity-70">•</span>
+                                          <span className="flex-1">
+                                            <span className="font-medium">{source.title}</span>
+                                            {source.snippet && (
+                                              <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                            )}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

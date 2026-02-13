@@ -15,12 +15,21 @@ import {
   isNetworkError,
 } from '../../../lib/errorHandling';
 
+type SourceData = {
+  type: string;
+  title: string;
+  snippet?: string;
+  url?: string;
+  reference_id?: string;
+};
+
 type Message = {
   id: string;
   text: string;
   from: 'user' | 'assistant';
   timestamp?: number;
   hasFeedback?: boolean;
+  sources?: SourceData[];
 };
 
 type WidgetConfig = {
@@ -917,7 +926,8 @@ export default function EmbedClient({
             id: msg.id,
             text: msg.content,
             from: msg.sender as 'user' | 'assistant',
-            timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now()
+            timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now(),
+            sources: msg.sources || [],  // Include sources from API
           }));
 
         setMessages(loadedMessages);
