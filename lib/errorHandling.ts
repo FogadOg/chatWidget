@@ -172,10 +172,11 @@ export const retryWithBackoff = async <T>(
 export const logError = (error: any, context?: Record<string, any>) => {
   const errorInfo = {
     timestamp: new Date().toISOString(),
-    message: error?.message || 'Unknown error',
+    message: error?.message || error?.userMessage || 'Unknown error',
     stack: error?.stack,
-    code: error instanceof WidgetError ? error.code : undefined,
-    type: error instanceof WidgetError ? error.type : undefined,
+    code: error instanceof WidgetError ? error.code : error?.code || undefined,
+    type: error instanceof WidgetError ? error.type : error?.type || undefined,
+    name: error?.name || undefined,
     context,
   };
 

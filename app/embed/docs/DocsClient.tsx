@@ -15,6 +15,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth'
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation'
+import { API } from '../../../lib/api'
 import {
   MessageBranch,
   MessageBranchContent,
@@ -123,8 +124,6 @@ const defaultSuggestions = [
   "How do I troubleshoot issues?",
 ];
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-
 export default function DocsClient({ clientId, assistantId, configId, locale: initialLocale, startOpen, suggestions, pagePath }: Props) {
   const currentSuggestions = suggestions || defaultSuggestions;
   const [open, setOpen] = useState(startOpen);
@@ -145,6 +144,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [messageFeedbackSubmitted, setMessageFeedbackSubmitted] = useState<Set<string>>(new Set());
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
+  const [parentOrigin, setParentOrigin] = useState<string>('*');
 
   const scrollToBottom = () => {
     if (conversationEndRef.current) {
@@ -253,7 +253,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         locale: locale,
       };
 
-      const response = await fetch(`${API_BASE_URL}/sessions/`, {
+      const response = await fetch(API.sessions(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -288,7 +288,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   // Validate and restore existing session
   const validateAndRestoreSession = useCallback(async (sessionId: string, token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+      const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -337,7 +337,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   // Load session messages
   const loadSessionMessages = useCallback(async (sessionId: string, token: string, isNewSession = false) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+      const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -375,7 +375,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   // Fetch widget config
   const fetchWidgetConfig = useCallback(async (configId: string, token: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/widget-config/${configId}`, {
+      const response = await fetch(API.widgetConfig(configId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -415,7 +415,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
     try {
       setStatus("streaming");
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+      const response = await fetch(API.sessionMessages(sessionId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -453,7 +453,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     if (!authToken) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/message/${messageId}/feedback`, {
+      const response = await fetch(API.messageFeedback(messageId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -612,6 +612,24 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     return () => clearInterval(interval);
   }, [sessionId]);
 
+  // Detect parent origin
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        // Try to get parent origin from document.referrer
+        if (document.referrer) {
+          const url = new URL(document.referrer);
+          setParentOrigin(url.origin);
+        } else if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+          // Safari and some other browsers support ancestorOrigins
+          setParentOrigin(window.location.ancestorOrigins[0]);
+        }
+      } catch (e) {
+        console.warn('Could not determine parent origin, using wildcard');
+      }
+    }
+  }, []);
+
   // Listen for messages from parent to open/close dialog
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -638,13 +656,13 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         window.parent.postMessage({
           type: 'WIDGET_RESIZE',
           data: { width: '100vw', height: '100vh' }
-        }, '*');
+        }, parentOrigin);
       } else {
         // Back to original size and position when dialog closes
         window.parent.postMessage({
           type: 'WIDGET_RESIZE',
           data: { width: 0, height: 0, hide: true }
-        }, '*');
+        }, parentOrigin);
       }
     }
   };

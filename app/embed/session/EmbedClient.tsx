@@ -14,6 +14,7 @@ import {
   WidgetErrorCode,
   isNetworkError,
 } from '../../../lib/errorHandling';
+import { API } from '../../../lib/api';
 
 type SourceData = {
   type: string;
@@ -81,8 +82,6 @@ const getButtonPixelSize = (buttonSize: string) => {
   };
   return sizeMap[buttonSize as keyof typeof sizeMap] || 56;
 };
-
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`
 
 type EmbedClientProps = {
   clientId: string;
@@ -205,7 +204,7 @@ export default function EmbedClient({
         }
       }
     } catch (e) {
-      console.error('Error reading stored session:', e);
+      logError(e as Error, { context: 'getStoredSession', clientId: initialClientId });
     }
     return null;
   };
@@ -220,7 +219,7 @@ export default function EmbedClient({
         createdAt: new Date().toISOString()
       }));
     } catch (e) {
-      console.error('Error storing session:', e);
+      logError(e as Error, { context: 'storeSession', sessionId, clientId: initialClientId });
     }
   };
 
@@ -262,18 +261,29 @@ export default function EmbedClient({
 
     // Get auth token if we have required parameters
     if (clientIdParam && assistantIdParam) {
-      getAuthToken(clientIdParam).then((token) => {
+      getAuthToken(clientIdParam).then(async (token) => {
         if (token) {
-          fetchAssistantDetails(assistantIdParam, token);
-          if (configIdParam) {
-            fetchWidgetConfig(configIdParam, token);
-          }
-          // Try to restore existing session first
-          const storedSession = getStoredSession();
-          if (storedSession) {
-            validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
-          } else {
-            createSession(assistantIdParam, token);
+          try {
+            // Validate assistant exists
+            await fetchAssistantDetails(assistantIdParam, token);
+
+            // Validate config exists if provided
+            if (configIdParam) {
+              await fetchWidgetConfig(configIdParam, token);
+            }
+
+            // Try to restore existing session first
+            const storedSession = getStoredSession();
+            if (storedSession) {
+              validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
+            } else {
+              createSession(assistantIdParam, token);
+            }
+          } catch (err) {
+            // If validation fails, set error
+            const errorMessage = err.userMessage || t.failedToLoadWidget;
+            setError(errorMessage);
+            logError(err, { clientId: clientIdParam, assistantId: assistantIdParam, configId: configIdParam, action: 'validateWidget' });
           }
         } else if (authError) {
           setError(authError);
@@ -348,7 +358,7 @@ export default function EmbedClient({
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           try {
-            const response = await fetch(`${API_BASE_URL}/sessions/`, {
+            const response = await fetch(API.sessions(), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -447,7 +457,7 @@ export default function EmbedClient({
 
   const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+      const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -508,7 +518,7 @@ export default function EmbedClient({
 
   const fetchAssistantDetails = async (assistantId: string, token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}`, {
+      const response = await fetch(API.assistant(assistantId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -519,22 +529,22 @@ export default function EmbedClient({
         const data = await response.json();
         if (data.status === 'success' && data.data?.name) {
           setAssistantName(data.data.name);
+        } else {
+          throw createAuthError('Invalid assistant response', WidgetErrorCode.AUTH_TOKEN_FAILED);
         }
       } else {
-        logError(new Error('Failed to fetch assistant details'), {
-          assistantId,
-          status: response.status,
-        });
+        const errorMessage = `Assistant not found or access denied (${response.status})`;
+        throw createAuthError(errorMessage, WidgetErrorCode.AUTH_TOKEN_FAILED);
       }
     } catch (err) {
       logError(err, { assistantId, action: 'fetchAssistantDetails' });
-      // Non-critical error - continue without assistant name
+      throw err; // Re-throw so it can be caught by the caller
     }
   };
 
   const fetchWidgetConfig = async (configId: string, token: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/widget-config/${configId}`, {
+      const response = await fetch(API.widgetConfig(configId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -542,7 +552,8 @@ export default function EmbedClient({
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch config: ${response.status}`);
+        const errorMessage = `Widget config not found or access denied (${response.status})`;
+        throw createAuthError(errorMessage, WidgetErrorCode.INVALID_CONFIG);
       }
 
       const data = await response.json();
@@ -550,25 +561,17 @@ export default function EmbedClient({
       if (data.status === 'success' && data.data) {
         setWidgetConfig(data.data);
       } else {
-        throw new Error('Invalid config response format');
+        throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
       }
     } catch (err) {
       logError(err, { configId, action: 'fetchWidgetConfig' });
-      setError('Failed to load widget configuration');
-
-      // Notify parent window
-      if (window.parent !== window) {
-        window.parent.postMessage(
-          { type: 'WIDGET_ERROR', data: { message: 'Configuration load failed' } },
-          '*'
-        );
-      }
+      throw err; // Re-throw so it can be caught by the caller
     }
   };
 
   const checkFeedbackStatus = async (sessionId: string, token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/feedback`, {
+      const response = await fetch(API.sessionFeedback(sessionId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -628,7 +631,7 @@ export default function EmbedClient({
     if (!authToken) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/message/${messageId}/feedback`, {
+      const response = await fetch(API.messageFeedback(messageId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -742,7 +745,7 @@ export default function EmbedClient({
           const timeoutId = setTimeout(() => controller.abort(), 30000);
 
           try {
-            const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+            const response = await fetch(API.sessionMessages(sessionId), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -898,7 +901,7 @@ export default function EmbedClient({
 
   const loadSessionMessages = async (sessionId: string, token: string, isInitial: boolean = false) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
+      const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

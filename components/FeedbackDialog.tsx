@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { ThumbsUp, ThumbsDown, Minus, X } from 'lucide-react';
+import { API } from '../lib/api';
 
 type FeedbackRating = 'positive' | 'neutral' | 'negative';
 
@@ -40,7 +41,7 @@ export default function FeedbackDialog({
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/feedback`, {
+      const response = await fetch(API.sessionFeedback(sessionId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

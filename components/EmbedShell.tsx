@@ -2,22 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
-
-type SourceData = {
-  type: string;
-  title: string;
-  snippet?: string;
-  url?: string;
-  reference_id?: string;
-};
-
-type Message = {
-  id: string;
-  text: string;
-  from: 'user' | 'assistant';
-  timestamp?: number;
-  sources?: SourceData[];
-};
+import { logWarn } from '../lib/logger';
+import { DEFAULT_COLORS, DEFAULTS, SHADOW_INTENSITY } from '../lib/constants';
+import type { Message, WidgetConfig, FlowButton, FlowResponse, UnsureMessage } from '../types/widget';
 
 type Props = {
   isEmbedded: boolean;
@@ -31,17 +18,17 @@ type Props = {
   error?: string | null;
   title?: string;
   assistantName?: string;
-  widgetConfig?: any;
-  onInteractionButtonClick?: (button: any) => void;
-  onFollowUpButtonClick?: (button: any) => void;
-  flowResponses?: Array<{ text: string; buttons: any[]; timestamp: number }>;
-  getLocalizedText?: (textObj: { [lang: string]: string } | undefined) => string;
+  widgetConfig?: WidgetConfig;
+  onInteractionButtonClick?: (button: FlowButton) => void;
+  onFollowUpButtonClick?: (button: FlowButton) => void;
+  flowResponses?: FlowResponse[];
+  getLocalizedText?: (textObj: Record<string, string> | undefined) => string;
   showFeedbackDialog?: boolean;
   feedbackDialog?: React.ReactNode;
   messageFeedbackSubmitted?: Set<string>;
   onSubmitMessageFeedback?: (messageId: string, feedbackType?: string) => void;
   unsureModal?: React.ReactNode;
-  unsureMessages?: Array<{userMessage: string, assistantMessage: string, timestamp: number}>;
+  unsureMessages?: UnsureMessage[];
   onShowUnsureModal?: () => void;
 };
 
@@ -54,14 +41,8 @@ const normalizeHexColor = (color: string | undefined, fallback: string) => {
     return trimmed;
   }
 
-  // Try to repair truncated hex colors (4 or 5 characters after #)
-  if (/^#[0-9a-fA-F]{4,5}$/.test(trimmed)) {
-    // Pad with zeros to make it 6 characters
-    const hex = trimmed.slice(1);
-    const padded = hex.padEnd(6, '0');
-    return `#${padded}`;
-  }
-
+  // Invalid or truncated color - return fallback instead of guessing
+  logWarn(`Invalid color value "${color}", using fallback "${fallback}"`);
   return fallback;
 };
 
@@ -112,35 +93,28 @@ export default function EmbedShell({
   }, [messages, flowResponses, isTyping]);
 
   // Use widget config colors or defaults
-  const primaryColor = normalizeHexColor(widgetConfig?.primary_color, '#111827');
-  const secondaryColor = normalizeHexColor(widgetConfig?.secondary_color, '#374151');
-  const backgroundColor = normalizeHexColor(widgetConfig?.background_color, '#ffffff');
-  const textColor = normalizeHexColor(widgetConfig?.text_color, '#1f2937');
-  const borderRadius = widgetConfig?.border_radius || 8;
+  const primaryColor = normalizeHexColor(widgetConfig?.primary_color, DEFAULT_COLORS.PRIMARY);
+  const secondaryColor = normalizeHexColor(widgetConfig?.secondary_color, DEFAULT_COLORS.SECONDARY);
+  const backgroundColor = normalizeHexColor(widgetConfig?.background_color, DEFAULT_COLORS.BACKGROUND);
+  const textColor = normalizeHexColor(widgetConfig?.text_color, DEFAULT_COLORS.TEXT);
+  const borderRadius = widgetConfig?.border_radius || DEFAULTS.BORDER_RADIUS;
 
   // New appearance values
-  const fontFamily = widgetConfig?.font_family || 'Inter';
-  const fontSize = widgetConfig?.font_size || 14;
-  const fontWeight = widgetConfig?.font_weight || 'normal';
-  const shadowIntensity = widgetConfig?.shadow_intensity || 'md';
-  const shadowColor = normalizeHexColor(widgetConfig?.shadow_color, '#000000');
-  const widgetWidth = widgetConfig?.widget_width || 400;
-  const widgetHeight = widgetConfig?.widget_height || 600;
-  const buttonSize = widgetConfig?.button_size || 'md';
+  const fontFamily = widgetConfig?.font_family || DEFAULTS.FONT_FAMILY;
+  const fontSize = widgetConfig?.font_size || DEFAULTS.FONT_SIZE;
+  const fontWeight = widgetConfig?.font_weight || DEFAULTS.FONT_WEIGHT;
+  const shadowIntensity = widgetConfig?.shadow_intensity || DEFAULTS.SHADOW_INTENSITY;
+  const shadowColor = normalizeHexColor(widgetConfig?.shadow_color, DEFAULT_COLORS.SHADOW);
+  const widgetWidth = widgetConfig?.widget_width || DEFAULTS.WIDGET_WIDTH;
+  const widgetHeight = widgetConfig?.widget_height || DEFAULTS.WIDGET_HEIGHT;
+  const buttonSize = widgetConfig?.button_size || DEFAULTS.BUTTON_SIZE;
   const messageBubbleRadius = widgetConfig?.message_bubble_radius || borderRadius;
   const buttonBorderRadius = widgetConfig?.button_border_radius || borderRadius;
-  const backgroundOpacity = widgetConfig?.opacity || 1.0;
+  const backgroundOpacity = widgetConfig?.opacity || DEFAULTS.OPACITY;
 
   // Helper function to get shadow styles
   const getShadowStyle = () => {
-    const intensityMap = {
-      none: 'none',
-      sm: '0 1px 2px 0',
-      md: '0 4px 6px -1px',
-      lg: '0 10px 15px -3px',
-      xl: '0 20px 25px -5px'
-    };
-    const shadowValue = intensityMap[shadowIntensity as keyof typeof intensityMap] || intensityMap.md;
+    const shadowValue = SHADOW_INTENSITY[shadowIntensity as keyof typeof SHADOW_INTENSITY] || SHADOW_INTENSITY.md;
     return shadowValue !== 'none' ? `${shadowValue} ${shadowColor}40` : 'none';
   };
 

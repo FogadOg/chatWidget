@@ -10,14 +10,14 @@ import {
   WidgetErrorCode,
   isNetworkError,
 } from '../lib/errorHandling';
+import { TIMEOUTS } from '../lib/constants';
+import { API, isApiConfigured, getApiBaseUrl } from '../lib/api';
 
 export function useWidgetAuth() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-
-  const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
 
   const getAuthToken = useCallback(async (clientId: string): Promise<string | null> => {
     // Validate input
@@ -32,13 +32,13 @@ export function useWidgetAuth() {
     }
 
     // Check if API base URL is configured
-    if (!API_BASE_URL || API_BASE_URL.includes('undefined')) {
+    if (!isApiConfigured()) {
       const error = createAuthError(
         'Widget API base URL is not configured',
         WidgetErrorCode.AUTH_TOKEN_FAILED
       );
       setAuthError('Configuration error. Please contact support.');
-      logError(error, { API_BASE_URL });
+      logError(error, { apiBaseUrl: getApiBaseUrl() });
       return null;
     }
 
@@ -50,10 +50,10 @@ export function useWidgetAuth() {
       const token = await retryWithBackoff(
         async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.AUTH_REQUEST);
 
           try {
-            const response = await fetch(`${API_BASE_URL}/auth/widget-token`, {
+            const response = await fetch(API.widgetToken(), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

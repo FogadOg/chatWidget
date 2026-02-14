@@ -11,6 +11,10 @@ const config = {
 
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^lib/(.*)$': '<rootDir>/lib/$1',
+    '^types/(.*)$': '<rootDir>/types/$1',
+    '^components/(.*)$': '<rootDir>/components/$1',
+    '^hooks/(.*)$': '<rootDir>/hooks/$1',
   },
 
   // Ignore specific files from test runs

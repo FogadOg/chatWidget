@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { logError } from '../lib/logger';
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
@@ -24,8 +25,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to console in development
-    console.error('Widget Error Boundary caught an error:', error, errorInfo);
+    // Log error using production-safe logger
+    logError('Widget Error Boundary caught an error', {
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
 
     this.setState({ errorInfo });
   }

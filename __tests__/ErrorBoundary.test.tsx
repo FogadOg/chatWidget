@@ -1,19 +1,22 @@
 import React from 'react';
-import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ErrorBoundary from '../components/ErrorBoundary';
 
-// Mock console.error to avoid cluttering test output
-const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+// Mock the logger
+jest.mock('../lib/logger', () => ({
+  logError: jest.fn(),
+}));
 
-afterEach(() => {
-  consoleError.mockClear();
-});
+const mockLogError = require('../lib/logger').logError;
 
 describe('ErrorBoundary', () => {
   const ThrowError = () => {
     throw new Error('Test error');
   };
+
+  beforeEach(() => {
+    mockLogError.mockClear();
+  });
 
   it('renders children when no error occurs', () => {
     render(
@@ -50,21 +53,20 @@ describe('ErrorBoundary', () => {
   });
 
   it('logs error when an error occurs', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
     render(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
     );
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Widget Error Boundary caught an error:',
-      expect.any(Error),
-      expect.any(Object)
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Widget Error Boundary caught an error',
+      expect.objectContaining({
+        error: expect.any(String),
+        stack: expect.any(String),
+        componentStack: expect.any(String),
+      })
     );
-
-    consoleSpy.mockRestore();
   });
 
   it('resets error state when Try Again button is clicked', () => {

@@ -201,8 +201,13 @@
 
         function handleMessage(event) {
           try {
-            // Verify origin in production
-            if (!isDev && !event.origin.includes("companin.tech")) {
+            // Verify origin - always validate, even in dev mode
+            const isValidOrigin = isDev
+              ? (event.origin === baseUrl || event.origin.includes('localhost') || event.origin.includes('127.0.0.1'))
+              : event.origin.includes("companin.tech");
+
+            if (!isValidOrigin) {
+              logError("Message from unauthorized origin", { origin: event.origin });
               return;
             }
 

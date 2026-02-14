@@ -9,12 +9,13 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
+            // ⚠️ PRODUCTION WARNING: This allows embedding from ANY domain.
+            // Before deploying to production, restrict to specific domains:
+            // value: "frame-ancestors 'self' https://yourdomain.com https://partner.com;",
             value: "frame-ancestors *;",
           },
-          {
-            key: "X-Frame-Options",
-            value: "ALLOWALL",
-          },
+          // X-Frame-Options removed - CSP frame-ancestors is the modern standard
+          // and takes precedence. X-Frame-Options: ALLOWALL is not a valid value.
         ],
       },
     ];
