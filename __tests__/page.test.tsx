@@ -7,50 +7,35 @@ describe('Home Page', () => {
   it('renders the main heading', () => {
     render(<Home />);
 
-    expect(screen.getByText('To get started, edit the page.tsx file.')).toBeInTheDocument();
+    expect(screen.getByText('Companin Chat Widget')).toBeInTheDocument();
   });
 
-  it('renders Next.js logo', () => {
+  it('renders the description', () => {
     render(<Home />);
 
-    const logo = screen.getByAltText('Next.js logo');
-    expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute('src', '/next.svg');
+    expect(screen.getByText('AI-powered chat widget for your website. Embed intelligent conversations anywhere with just a few lines of code.')).toBeInTheDocument();
   });
 
-  it('renders Vercel logo', () => {
+  it('renders Get Started button', () => {
     render(<Home />);
 
-    const logo = screen.getByAltText('Vercel logomark');
-    expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute('src', '/vercel.svg');
+    const getStartedLink = screen.getByText('Get Started').closest('a');
+    expect(getStartedLink).toHaveAttribute('href', '/docs/getting-started');
   });
 
-  it('renders description text', () => {
+  it('renders View Demo button', () => {
     render(<Home />);
 
-    expect(screen.getByText(/Looking for a starting point/)).toBeInTheDocument();
+    const viewDemoLink = screen.getByText('View Demo').closest('a');
+    expect(viewDemoLink).toHaveAttribute('href', '/preview');
   });
 
-  it('renders action buttons', () => {
+  it('renders feature cards', () => {
     render(<Home />);
 
-    expect(screen.getByText('Deploy Now')).toBeInTheDocument();
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
-  });
-
-  it('has correct link attributes', () => {
-    render(<Home />);
-
-    const deployLink = screen.getByText('Deploy Now').closest('a');
-    expect(deployLink).toHaveAttribute('href', expect.stringContaining('vercel.com'));
-    expect(deployLink).toHaveAttribute('target', '_blank');
-    expect(deployLink).toHaveAttribute('rel', 'noopener noreferrer');
-
-    const docsLink = screen.getByText('Documentation').closest('a');
-    expect(docsLink).toHaveAttribute('href', expect.stringContaining('nextjs.org'));
-    expect(docsLink).toHaveAttribute('target', '_blank');
-    expect(docsLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByText('Easy Integration')).toBeInTheDocument();
+    expect(screen.getByText('Customizable')).toBeInTheDocument();
+    expect(screen.getByText('Multi-language')).toBeInTheDocument();
   });
 
   it('renders with correct layout structure', () => {

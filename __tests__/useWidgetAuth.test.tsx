@@ -49,6 +49,15 @@ jest.mock('../lib/errorHandling', () => ({
   }),
 }));
 
+// Mock API module
+jest.mock('../lib/api', () => ({
+  API: {
+    widgetToken: jest.fn(() => 'https://api.test.com/api/v1/auth/widget-token'),
+  },
+  isApiConfigured: jest.fn(() => true),
+  getApiBaseUrl: jest.fn(() => 'https://api.test.com'),
+}));
+
 const {
   createAuthError,
   createNetworkError,
@@ -91,8 +100,10 @@ describe('useWidgetAuth', () => {
   });
 
   it('handles missing API base URL configuration', async () => {
-    // Temporarily set API base URL to undefined to simulate misconfiguration
-    process.env.NEXT_PUBLIC_API_BASE_URL = 'undefined';
+    // Mock API as not configured
+    const { isApiConfigured, getApiBaseUrl } = require('../lib/api');
+    (isApiConfigured as jest.Mock).mockReturnValueOnce(false);
+    (getApiBaseUrl as jest.Mock).mockReturnValueOnce('');
 
     const { result } = renderHook(() => useWidgetAuth());
 
@@ -109,12 +120,9 @@ describe('useWidgetAuth', () => {
     );
     expect(logError).toHaveBeenCalledWith(
       expect.any(Object),
-      { API_BASE_URL: 'undefined/api/v1' }
+      { apiBaseUrl: '' }
     );
     expect(result.current.isLoading).toBe(false);
-
-    // Restore
-    process.env.NEXT_PUBLIC_API_BASE_URL = 'https://api.test.com';
   });
 
   it('successfully gets auth token', async () => {
