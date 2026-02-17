@@ -26,9 +26,11 @@ const getInitialLocale = (): Locale => {
   }
 };
 
+export { getInitialLocale };
+
 export function useWidgetTranslation() {
-  const [locale, setLocale] = useState<Locale>(getInitialLocale);
-  const [translations, setTranslations] = useState(getTranslations(getInitialLocale()));
+  const [locale, setLocale] = useState<Locale>(() => getInitialLocale());
+  const [translations, setTranslations] = useState(() => getTranslations(getInitialLocale()));
 
   useEffect(() => {
     // Ensure locale is updated on client if initially set to 'en' due to SSR
@@ -39,7 +41,7 @@ export function useWidgetTranslation() {
         setTranslations(getTranslations(correctLocale));
       }
     }
-  }, [locale]);
+  }, []); // Empty dependency array - only run once on mount
 
   return { translations, locale };
 }

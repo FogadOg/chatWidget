@@ -14,6 +14,7 @@ import {
   MessageResponse,
   MessageAttachment,
   MessageAttachments,
+  useMessageBranch,
 } from '../src/components/ai-elements/message';
 
 // Mock the UI components
@@ -231,6 +232,19 @@ describe('Message Components', () => {
 
       const branchDiv = container.firstChild;
       expect(branchDiv).toHaveClass('custom-branch');
+    });
+
+    it('throws error when useMessageBranch is used outside MessageBranch', () => {
+      // Create a test component that uses the hook outside of MessageBranch
+      const TestComponent = () => {
+        useMessageBranch();
+        return <div>Test</div>;
+      };
+
+      // Expect the error to be thrown
+      expect(() => {
+        render(<TestComponent />);
+      }).toThrow('MessageBranch components must be used within MessageBranch');
     });
   });
 
@@ -535,6 +549,19 @@ describe('Message Components', () => {
 
       const img = screen.getByAltText('attachment');
       expect(img).toBeInTheDocument();
+    });
+
+    it('uses "Attachment" label for file without filename', () => {
+      const data = {
+        type: 'file' as const,
+        filename: '',
+        mediaType: 'application/pdf',
+        url: 'https://example.com/test.pdf',
+      };
+
+      render(<MessageAttachment data={data} />);
+
+      expect(screen.getByText('Attachment')).toBeInTheDocument();
     });
 
     it('renders file attachment with remove button', () => {

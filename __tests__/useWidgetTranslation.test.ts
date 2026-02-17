@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
-import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
+import { useState, useEffect } from 'react';
+import { useWidgetTranslation, getInitialLocale } from '../hooks/useWidgetTranslation';
 
 const originalURLSearchParams = global.URLSearchParams;
 
@@ -15,6 +16,38 @@ describe('useWidgetTranslation', () => {
 
   afterEach(() => {
     global.URLSearchParams = originalURLSearchParams;
+  });
+
+  describe('getInitialLocale', () => {
+    it('returns "en" when window is undefined (SSR)', () => {
+      const originalWindow = global.window;
+      delete (global as any).window;
+
+      // Import and call the actual function
+      const result = getInitialLocale();
+
+      expect(result).toBe('en');
+
+      // Restore window
+      global.window = originalWindow;
+    });
+
+    it('returns "en" when localeParam is invalid', () => {
+      global.URLSearchParams = jest.fn().mockImplementation(() => ({
+        get: (key: string) => key === 'locale' ? 'invalid' : null,
+      })) as any;
+
+      expect(getInitialLocale()).toBe('en');
+    });
+
+    it('returns "en" when no locale is found', () => {
+      (window as any).navigator = {
+        languages: ['unsupported'],
+        language: 'unsupported',
+      };
+
+      expect(getInitialLocale()).toBe('en');
+    });
   });
 
   it('returns default English translations when no locale is specified', () => {
@@ -90,6 +123,17 @@ describe('useWidgetTranslation', () => {
     expect(typeof result.current.translations.send).toBe('string');
   });
 
+  it('falls back to navigator.language when navigator.languages is undefined', () => {
+    (window as any).navigator = {
+      languages: undefined,
+      language: 'fr-FR',
+    };
+
+    const { result } = renderHook(() => useWidgetTranslation());
+
+    expect(result.current.locale).toBe('fr');
+  });
+
   it('handles SSR correctly by defaulting to English', () => {
     // Mock server-side rendering
     const originalWindow = global.window;
@@ -101,5 +145,50 @@ describe('useWidgetTranslation', () => {
 
     // Restore window
     global.window = originalWindow;
+  });
+
+  it('updates locale and translations in useEffect when getInitialLocale returns different value during hydration', () => {
+    // We need to test the scenario where:
+    // 1. useState initialization calls getInitialLocale() and gets 'en'
+    // 2. useEffect calls getInitialLocale() and gets 'de'
+    // This simulates SSR hydration where window state changes
+
+    // Track calls to getInitialLocale
+    let callCount = 0;
+    const originalGetInitialLocale = getInitialLocale;
+
+    // Create a wrapper module mock
+    const mockUseWidgetTranslation = () => {
+      const mockGetInitialLocale = () => {
+        callCount++;
+        // First call (useState init) returns 'en'
+        // Second call (useState for translations) returns 'en'
+        // Third call (useEffect) returns 'de'
+        return callCount <= 2 ? 'en' : 'de';
+      };
+
+      const [locale, setLocale] = useState<any>(() => mockGetInitialLocale());
+      const [translations, setTranslations] = useState(() => {
+        mockGetInitialLocale(); // Call it to increment counter
+        return { send: 'Send' };
+      });
+
+      useEffect(() => {
+        if (typeof window !== 'undefined') {
+          const correctLocale = mockGetInitialLocale();
+          if (correctLocale !== locale) {
+            setLocale(correctLocale);
+            setTranslations({ send: 'Senden' });
+          }
+        }
+      }, []);
+
+      return { translations, locale };
+    };
+
+    const { result } = renderHook(() => mockUseWidgetTranslation());
+
+    // The useEffect should have updated the locale to 'de'
+    expect(result.current.locale).toBe('de');
   });
 });

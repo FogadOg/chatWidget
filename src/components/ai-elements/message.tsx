@@ -131,6 +131,8 @@ const useMessageBranch = () => {
   return context;
 };
 
+export { useMessageBranch };
+
 export type MessageBranchProps = HTMLAttributes<HTMLDivElement> & {
   defaultBranch?: number;
   onBranchChange?: (branchIndex: number) => void;
