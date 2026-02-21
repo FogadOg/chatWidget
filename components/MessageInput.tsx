@@ -7,6 +7,7 @@ import { createNetworkError, retryWithBackoff, parseApiError, WidgetErrorCode, c
 import { logError } from 'lib/logger';
 import { validateMessageInput } from 'lib/validation';
 import { TIMEOUTS } from 'lib/constants';
+import { checkAndConsume } from 'lib/rateLimiter';
 import { API } from 'lib/api';
 import type { Message, PageContext } from 'types/widget';
 
@@ -57,6 +58,14 @@ export default function MessageInput({
         hasSession: !!sessionId,
         hasAuth: !!authToken
       });
+      return;
+    }
+
+    // Client-side rate limiting
+    const rl = checkAndConsume(sessionId);
+    if (!rl.allowed) {
+      const secs = Math.ceil((rl.retryAfterMs || 0) / 1000) || 1;
+      onError(`You're sending messages too quickly. Try again in ${secs} second${secs > 1 ? 's' : ''}.`);
       return;
     }
 

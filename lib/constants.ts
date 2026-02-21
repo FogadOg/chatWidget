@@ -75,6 +75,11 @@ export const INPUT_LIMITS = {
   MIN_MESSAGE_LENGTH: 1,
 } as const;
 
+// Client-side rate limiting for message sends
+export const RATE_LIMIT = {
+  MAX_MESSAGES: 5,      // max messages allowed
+  WINDOW_MS: 10_000,    // time window in milliseconds
+} as const;
 // API endpoints
 export const API_ENDPOINTS = {
   AUTH_TOKEN: '/auth/widget-token',
