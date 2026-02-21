@@ -7,7 +7,6 @@ import {
   type ElementType,
   type JSX,
   memo,
-  useMemo,
 } from "react";
 
 export type TextShimmerProps = {
@@ -25,9 +24,15 @@ const ShimmerComponent = ({
   duration = 2,
   spread = 2,
 }: TextShimmerProps) => {
-  const MotionComponent = motion.create(
-    Component as keyof JSX.IntrinsicElements
-  );
+  // Use pre-created motion element types for common intrinsic elements to
+  // avoid creating components during render (lint: react-hooks/static-components).
+  const MotionP = motion.p;
+  const MotionSpan = motion.span;
+  const MotionDiv = motion.div;
+
+  const MotionComponent =
+    (Component === "p" ? MotionP : Component === "span" ? MotionSpan : MotionDiv) as
+    ElementType;
 
   const dynamicSpread = useMemo(
     () => (children?.length ?? 0) * spread,

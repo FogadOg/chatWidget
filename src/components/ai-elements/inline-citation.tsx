@@ -162,13 +162,26 @@ export const InlineCitationCarouselIndex = ({
     if (!api) {
       return;
     }
-
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap() + 1);
-
-    api.on("select", () => {
+    const update = () => {
+      setCount(api.scrollSnapList().length);
       setCurrent(api.selectedScrollSnap() + 1);
-    });
+    };
+
+    // Defer the initial update to avoid synchronous setState in effect
+    const id = window.setTimeout(update, 0);
+
+    api.on("select", update);
+
+    return () => {
+      window.clearTimeout(id);
+      // attempt to remove listener if supported
+      try {
+        // @ts-expect-error - guard for api.off
+        if (typeof api.off === "function") api.off("select", update);
+      } catch (e) {
+        /* ignore */
+      }
+    };
   }, [api]);
 
   return (

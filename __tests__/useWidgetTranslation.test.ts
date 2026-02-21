@@ -160,7 +160,7 @@ describe('useWidgetTranslation', () => {
     const originalGetInitialLocale = getInitialLocale;
 
     // Create a wrapper module mock
-    const mockUseWidgetTranslation = () => {
+    const useMockWidgetTranslation = () => {
       const mockGetInitialLocale = () => {
         callCount++;
         // First call (useState init) returns 'en'
@@ -188,7 +188,7 @@ describe('useWidgetTranslation', () => {
       return { translations, locale };
     };
 
-    const { result } = renderHook(() => mockUseWidgetTranslation());
+    const { result } = renderHook(() => useMockWidgetTranslation());
 
     // The useEffect should have updated the locale to 'de'
     expect(result.current.locale).toBe('de');

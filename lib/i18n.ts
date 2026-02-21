@@ -8,7 +8,7 @@ import nl from "../locales/nl.json";
 import nb from "../locales/nb.json";
 import it from "../locales/it.json";
 
-const LOCALES: Record<string, Record<string, any>> = {
+const LOCALES: Record<string, Record<string, string>> = {
   en,
   de,
   es,
@@ -30,7 +30,7 @@ export function t(locale: Locale, key: string): string {
   return String(val ?? key);
 }
 
-export function getTranslations(locale: string): Record<string, any> {
+export function getTranslations(locale: string): Record<string, string> {
   // Check if the requested locale exists in LOCALES
   if (locale in LOCALES) {
     return LOCALES[locale as Locale];

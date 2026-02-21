@@ -37,11 +37,15 @@ export function useWidgetTranslation() {
     if (typeof window !== 'undefined') {
       const correctLocale = getInitialLocale();
       if (correctLocale !== locale) {
-        setLocale(correctLocale);
-        setTranslations(getTranslations(correctLocale));
+        // Defer state updates to avoid synchronous setState inside effect
+        const id = window.setTimeout(() => {
+          setLocale(correctLocale);
+          setTranslations(getTranslations(correctLocale));
+        }, 0);
+        return () => window.clearTimeout(id);
       }
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, [locale]); // run when locale changes
 
   return { translations, locale };
 }
