@@ -32,6 +32,7 @@ type Props = {
   unsureModal?: React.ReactNode;
   unsureMessages?: UnsureMessage[];
   onShowUnsureModal?: () => void;
+  unreadCount?: number;
 };
 
 const normalizeHexColor = (color: string | undefined, fallback: string) => {
@@ -78,6 +79,7 @@ export default function EmbedShell({
   unsureModal,
   unsureMessages = [],
   onShowUnsureModal,
+  unreadCount = 0,
 }: Props) {
   const { translations: t } = useWidgetTranslation();
 
@@ -98,6 +100,11 @@ export default function EmbedShell({
   const primaryColor = normalizeHexColor(widgetConfig?.primary_color, DEFAULT_COLORS.PRIMARY);
   const secondaryColor = normalizeHexColor(widgetConfig?.secondary_color, DEFAULT_COLORS.SECONDARY);
   const backgroundColor = normalizeHexColor(widgetConfig?.background_color, DEFAULT_COLORS.BACKGROUND);
+
+  // Behavior flags (default to true if not specified)
+  const showTimestamps = widgetConfig?.show_timestamps ?? true;
+  const showTypingIndicator = widgetConfig?.show_typing_indicator ?? true;
+  const showMessageAvatars = widgetConfig?.show_message_avatars ?? true;
   const textColor = normalizeHexColor(widgetConfig?.text_color, DEFAULT_COLORS.TEXT);
   const borderRadius = widgetConfig?.border_radius || DEFAULTS.BORDER_RADIUS;
 
@@ -113,6 +120,8 @@ export default function EmbedShell({
   const messageBubbleRadius = widgetConfig?.message_bubble_radius || borderRadius;
   const buttonBorderRadius = widgetConfig?.button_border_radius || borderRadius;
   const backgroundOpacity = widgetConfig?.opacity || DEFAULTS.OPACITY;
+  const showUnreadBadge = widgetConfig?.show_unread_badge ?? true; // Default to true
+  console.log('[UNREAD_BADGE_DEBUG] EmbedShell render: widgetConfig?.show_unread_badge =', widgetConfig?.show_unread_badge, ', showUnreadBadge =', showUnreadBadge, ', unreadCount =', unreadCount);
 
   // Helper function to get shadow styles
   const getShadowStyle = () => {
@@ -192,7 +201,7 @@ export default function EmbedShell({
                 borderRadius: `${buttonBorderRadius * 2}px`,
                 ...fontStyles
               }}
-              className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
+              className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90 relative`}
               title="Open Chat"
             >
                 {widgetConfig?.bot_avatar ? (
@@ -203,6 +212,30 @@ export default function EmbedShell({
                   <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
                   </svg>
+                )}
+                {showUnreadBadge && unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: unreadCount > 9 ? '24px' : '20px',
+                      height: unreadCount > 9 ? '24px' : '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: unreadCount > 9 ? '11px' : '12px',
+                      fontWeight: 'bold',
+                      border: '2px solid white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                    className="animate-pulse"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
                 )}
             </button>
           ) : (
@@ -284,7 +317,7 @@ export default function EmbedShell({
                 {showGreeting && (
                   <div className="flex flex-col items-start w-full">
                     <div className="flex items-start gap-2">
-                       {widgetConfig?.bot_avatar && (
+                       {showMessageAvatars && widgetConfig?.bot_avatar && (
                          <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                        )}
                        <div className="max-w-[80%] p-2 rounded-lg bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
@@ -295,7 +328,7 @@ export default function EmbedShell({
                 )}
 
                 {showButtons && (
-                  <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                  <div className="flex flex-col gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
                     {interactionButtons.map((button: any) => {
                       const buttonId = button.id || button.button_id;
                       const isClicked = clickedButtons.has(buttonId);
@@ -331,7 +364,7 @@ export default function EmbedShell({
                         {message.from === 'assistant' ? (
                           <div className="flex flex-col items-start w-full">
                             <div className="flex items-start gap-2">
-                              {widgetConfig?.bot_avatar && (
+                              {showMessageAvatars && widgetConfig?.bot_avatar && (
                                 <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                               )}
                               <div
@@ -387,7 +420,7 @@ export default function EmbedShell({
                               </div>
                             </div>
                             {!hasFeedback && onSubmitMessageFeedback && (
-                              <div className="mt-1 flex gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                              <div className="mt-1 flex gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
                                 <button
                                   onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')}
                                   className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
@@ -411,22 +444,34 @@ export default function EmbedShell({
                               </div>
                             )}
                             {hasFeedback && (
-                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
                                 Feedback submitted
+                              </span>
+                            )}
+                            {showTimestamps && message.timestamp && (
+                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
+                                {new Date(message.timestamp).toLocaleTimeString()}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <div
-                            className={`max-w-[80%] p-2`}
-                            style={{
-                              backgroundColor: primaryColor,
-                              color: '#ffffff',
-                              borderRadius: `${messageBubbleRadius}px`,
-                              ...fontStyles
-                            }}
-                          >
-                            <div>{message.text}</div>
+                          <div className="flex flex-col items-end w-full">
+                            <div
+                              className={`max-w-[80%] p-2`}
+                              style={{
+                                backgroundColor: primaryColor,
+                                color: '#ffffff',
+                                borderRadius: `${messageBubbleRadius}px`,
+                                ...fontStyles
+                              }}
+                            >
+                              <div>{message.text}</div>
+                            </div>
+                            {showTimestamps && message.timestamp && (
+                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor }}>
+                                {new Date(message.timestamp).toLocaleTimeString()}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -438,7 +483,7 @@ export default function EmbedShell({
                         {flowResponse.text && (
                           <div className="flex flex-col items-start w-full">
                             <div className="flex items-start gap-2">
-                              {widgetConfig?.bot_avatar && (
+                              {showMessageAvatars && widgetConfig?.bot_avatar && (
                                 <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                               )}
                               <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
@@ -448,7 +493,7 @@ export default function EmbedShell({
                           </div>
                         )}
                         {flowResponse.buttons.length > 0 && (
-                          <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                          <div className="flex flex-col gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
                             {flowResponse.buttons.map((button: any) => {
                               const buttonId = button.id || button.button_id;
                               const isClicked = clickedButtons.has(buttonId);
@@ -478,13 +523,18 @@ export default function EmbedShell({
                   }
                 })}
 
-                {isTyping && (
+                {showTypingIndicator && isTyping && (
                   <div className="flex justify-start">
-                    <div className="p-3" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px` }}>
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                    <div className="flex items-start gap-2">
+                      {showMessageAvatars && widgetConfig?.bot_avatar && (
+                        <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      )}
+                      <div className="p-3" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px` }}>
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
@@ -130,10 +130,23 @@ export default function EmbedClient({
   const [messageFeedbackSubmitted, setMessageFeedbackSubmitted] = useState<Set<string>>(new Set());
   const [unsureMessages, setUnsureMessages] = useState<Array<{userMessage: string, assistantMessage: string, timestamp: number}>>([]);
   const [showUnsureModal, setShowUnsureModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
+  const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
 
   // Helper function to get localStorage key for this widget instance
   const getSessionStorageKey = () => {
     return `companin-session-${initialClientId}-${initialAssistantId}`;
+  };
+
+  // Helper function to get localStorage key for unread count
+  const getUnreadStorageKey = () => {
+    return `companin-unread-${initialClientId}-${initialAssistantId}`;
+  };
+
+  // Helper function to get localStorage key for last read message
+  const getLastReadStorageKey = () => {
+    return `companin-lastread-${initialClientId}-${initialAssistantId}`;
   };
 
   // Helper function to get or create visitor ID
@@ -233,7 +246,38 @@ export default function EmbedClient({
   };
 
   useEffect(() => {
-    // Detect mobile device
+    // Listen for initial config posted from the host page (embed script)
+    const handleInitConfig = (event: MessageEvent) => {
+      try {
+        const { type, data } = event.data || {};
+        if (type !== 'WIDGET_INIT_CONFIG' || !data) return;
+
+        console.log('[UNREAD_BADGE_DEBUG] Received WIDGET_INIT_CONFIG:', data);
+
+        // Store the posted show_unread_badge flag so it persists across API config loads
+        if (typeof (data.showUnreadBadge) !== 'undefined') {
+          postedShowUnreadBadge.current = Boolean(data.showUnreadBadge);
+          console.log('[UNREAD_BADGE_DEBUG] Stored postedShowUnreadBadge.current =', postedShowUnreadBadge.current);
+
+          // Apply it immediately if config already exists
+          setWidgetConfig((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, show_unread_badge: postedShowUnreadBadge.current } as WidgetConfig;
+            console.log('[UNREAD_BADGE_DEBUG] Applied to existing config, show_unread_badge =', updated.show_unread_badge);
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.error('[UNREAD_BADGE_DEBUG] Error in handleInitConfig:', err);
+      }
+    };
+
+    window.addEventListener('message', handleInitConfig);
+    return () => window.removeEventListener('message', handleInitConfig);
+  }, []);
+
+  // Detect mobile device
+  useEffect(() => {
     const checkIsMobile = () => {
       const isMobileDevice = window.innerWidth <= 768 && /Android|iPhone|Mobile|Mobi/i.test(navigator.userAgent);
       setIsMobile(isMobileDevice);
@@ -329,7 +373,63 @@ export default function EmbedClient({
     }
   }, [widgetConfig, initialStartOpen]);
 
-  // Send initial widget size and positioning to parent when config is loaded
+  // Load unread count and last read message from localStorage on mount
+  useEffect(() => {
+    try {
+      const storedUnread = localStorage.getItem(getUnreadStorageKey());
+      const storedLastRead = localStorage.getItem(getLastReadStorageKey());
+
+      if (storedUnread) {
+        setUnreadCount(parseInt(storedUnread, 10) || 0);
+      }
+      if (storedLastRead) {
+        setLastReadMessageId(storedLastRead);
+      }
+    } catch (error) {
+      logError(error as Error, { context: 'loadUnreadCount' });
+    }
+  }, []);
+
+  // Track unread messages when new assistant messages arrive and widget is collapsed
+  useEffect(() => {
+    // Only track unread if the feature is enabled
+    const showUnreadBadge = widgetConfig?.show_unread_badge ?? true; // Default to true
+
+    if (!showUnreadBadge) {
+      return;
+    }
+
+    if (isCollapsed && messages.length > 0) {
+      // Get the last assistant message
+      const lastMessage = messages[messages.length - 1];
+
+      if (lastMessage?.from === 'assistant' && lastMessage?.id) {
+        // Only count as unread if this message is after the last read message
+        if (!lastReadMessageId || lastMessage.id !== lastReadMessageId) {
+          // Count unread assistant messages after the last read message
+          const lastReadIndex = lastReadMessageId
+            ? messages.findIndex(m => m.id === lastReadMessageId)
+            : -1;
+
+          const unreadMessages = messages.filter((m, idx) =>
+            m.from === 'assistant' &&
+            idx > lastReadIndex &&
+            !m.id.startsWith('greeting-') // Don't count greeting messages
+          );
+
+          const newUnreadCount = unreadMessages.length;
+          setUnreadCount(newUnreadCount);
+
+          // Persist to localStorage
+          try {
+            localStorage.setItem(getUnreadStorageKey(), newUnreadCount.toString());
+          } catch (error) {
+            logError(error as Error, { context: 'saveUnreadCount' });
+          }
+        }
+      }
+    }
+  }, [messages, isCollapsed, lastReadMessageId, widgetConfig?.show_unread_badge]);
   useEffect(() => {
     if (widgetConfig && window.parent !== window) {
       const positionData = {
@@ -584,7 +684,16 @@ export default function EmbedClient({
         console.log('Widget config loaded:', data.data);
         console.log('Logo URL:', data.data.logo);
         console.log('Bot avatar URL:', data.data.bot_avatar);
-        setWidgetConfig(data.data);
+        console.log('[UNREAD_BADGE_DEBUG] API config show_unread_badge =', data.data.show_unread_badge);
+        console.log('[UNREAD_BADGE_DEBUG] postedShowUnreadBadge.current =', postedShowUnreadBadge.current);
+
+        // Merge posted show_unread_badge if it was set via embed snippet
+        const configData = { ...data.data };
+        if (typeof postedShowUnreadBadge.current !== 'undefined') {
+          configData.show_unread_badge = postedShowUnreadBadge.current;
+          console.log('[UNREAD_BADGE_DEBUG] Merged show_unread_badge =', configData.show_unread_badge);
+        }
+        setWidgetConfig(configData);
       } else {
         throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
       }
@@ -982,6 +1091,31 @@ export default function EmbedClient({
     setIsCollapsed((prev) => {
       const newCollapsed = !prev;
 
+      // Reset unread count when opening the widget
+      if (!newCollapsed) {
+        setUnreadCount(0);
+
+        // Update last read message to the most recent one
+        if (messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage?.id) {
+            setLastReadMessageId(lastMessage.id);
+            try {
+              localStorage.setItem(getLastReadStorageKey(), lastMessage.id);
+            } catch (error) {
+              logError(error as Error, { context: 'saveLastRead' });
+            }
+          }
+        }
+
+        // Clear unread count from localStorage
+        try {
+          localStorage.setItem(getUnreadStorageKey(), '0');
+        } catch (error) {
+          logError(error as Error, { context: 'clearUnreadCount' });
+        }
+      }
+
       // Notify parent window about collapse state change
       if (window.parent !== window) {
         window.parent.postMessage(
@@ -1026,6 +1160,7 @@ export default function EmbedClient({
       showFeedbackDialog={showFeedbackDialog}
       messageFeedbackSubmitted={messageFeedbackSubmitted}
       onSubmitMessageFeedback={handleSubmitMessageFeedback}
+      unreadCount={unreadCount}
       feedbackDialog={
         showFeedbackDialog && sessionId && authToken ? (
           <FeedbackDialog

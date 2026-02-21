@@ -78,6 +78,11 @@ export type WidgetConfig = {
   // Optional images
   logo?: string;
   bot_avatar?: string;
+  // Behavior flags
+  show_timestamps?: boolean;
+  show_typing_indicator?: boolean;
+  show_message_avatars?: boolean;
+  show_unread_badge?: boolean;
 };
 
 export type ApiResponse<T> = {

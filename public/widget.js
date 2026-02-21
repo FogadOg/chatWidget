@@ -123,6 +123,17 @@
         iframe.onload = () => {
           iframeLoaded = true;
           clearTimeout(loadTimeout);
+          try {
+            // If the host page provided an inline ChatWidgetConfig, forward it into the iframe
+            if (window.ChatWidgetConfig && iframe.contentWindow) {
+              iframe.contentWindow.postMessage(
+                { type: 'WIDGET_INIT_CONFIG', data: window.ChatWidgetConfig },
+                baseUrl
+              );
+            }
+          } catch (err) {
+            logError('Failed to post initial config to iframe', { error: err && err.message });
+          }
         };
 
         iframe.onerror = (error) => {
