@@ -14,7 +14,7 @@ jest.mock('../hooks/useWidgetTranslation', () => ({
 }));
 
 describe('EmbedShell - Unread Badge', () => {
-  const mockWidgetConfig: any = {
+  const mockWidgetConfig = {
     title: { en: 'Test Bot' },
     subtitle: { en: 'Test Subtitle' },
     primary_color: '#111111',
