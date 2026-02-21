@@ -1,4 +1,5 @@
 import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent } from '@testing-library/react';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -7,7 +8,7 @@ jest.mock('../lib/logger', () => ({
   logError: jest.fn(),
 }));
 
-const mockLogError = require('../lib/logger').logError;
+let mockLogError: jest.Mock;
 
 describe('ErrorBoundary', () => {
   const ThrowError = () => {
@@ -15,7 +16,10 @@ describe('ErrorBoundary', () => {
   };
 
   beforeEach(() => {
-    mockLogError.mockClear();
+    return import('../lib/logger').then((mod) => {
+      mockLogError = mod.logError as jest.Mock;
+      mockLogError.mockClear();
+    });
   });
 
   it('renders children when no error occurs', () => {

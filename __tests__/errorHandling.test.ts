@@ -17,6 +17,7 @@ import {
 const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 const consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 afterEach(() => {
   consoleError.mockClear();
   consoleWarn.mockClear();

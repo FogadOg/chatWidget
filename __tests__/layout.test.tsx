@@ -8,6 +8,7 @@ jest.mock('next/font/google', () => ({
   Geist_Mono: () => ({ variable: '--font-geist-mono' }),
 }));
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe('RootLayout', () => {
   let RootLayout: React.ComponentType<{ children: React.ReactNode }>;
   let metadata: { title: string; description: string };
@@ -17,15 +18,15 @@ describe('RootLayout', () => {
     jest.resetModules();
 
     // Import the component and metadata
-    const module = require('../app/layout');
-    RootLayout = module.default;
-    metadata = module.metadata;
+    const modulePromise = import('../app/layout');
+    return modulePromise.then((module) => {
+      RootLayout = module.default;
+      metadata = module.metadata;
+    });
   });
 
-  it('can be imported without errors', () => {
-    expect(() => {
-      require('../app/layout');
-    }).not.toThrow();
+  it('can be imported without errors', async () => {
+    await expect(import('../app/layout')).resolves.toBeDefined();
   });
 
   it('has expected structure', () => {
@@ -75,9 +76,10 @@ describe('RootLayout', () => {
     }
   });
 
-  it('includes Geist font configurations', () => {
+  it('includes Geist font configurations', async () => {
     // Test that the font mocks are working correctly
-    const { Geist, Geist_Mono } = require('next/font/google');
+    const fontModule = await import('next/font/google');
+    const { Geist, Geist_Mono } = fontModule as any;
 
     const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
     const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });

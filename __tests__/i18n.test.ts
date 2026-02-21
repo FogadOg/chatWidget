@@ -1,5 +1,7 @@
 import { t, getTranslations, LOCALES, type Locale } from '../lib/i18n';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 describe('i18n', () => {
   describe('t function', () => {
     it('returns translation for existing key in specified locale', () => {

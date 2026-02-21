@@ -122,6 +122,7 @@ export const retryWithBackoff = async <T>(
     initialDelay?: number;
     maxDelay?: number;
     backoffMultiplier?: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onRetry?: (attempt: number, error: any) => void;
   } = {}
 ): Promise<T> => {
@@ -133,6 +134,7 @@ export const retryWithBackoff = async <T>(
     onRetry,
   } = options;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -169,6 +171,7 @@ export const retryWithBackoff = async <T>(
 };
 
 // Error logger
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const logError = (error: any, context?: Record<string, any>) => {
   const errorInfo = {
     timestamp: new Date().toISOString(),
@@ -190,6 +193,7 @@ export const logError = (error: any, context?: Record<string, any>) => {
 };
 
 // Check if error is network-related
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isNetworkError = (error: any): boolean => {
   if (error instanceof WidgetError) {
     return error.type === WidgetErrorType.NETWORK_ERROR;
@@ -208,6 +212,7 @@ export const isNetworkError = (error: any): boolean => {
 };
 
 // Check if error is retryable
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isRetryableError = (error: any): boolean => {
   if (error instanceof WidgetError) {
     return error.retryable;
@@ -227,6 +232,7 @@ export const isRetryableError = (error: any): boolean => {
 };
 
 // Parse API error response
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const parseApiError = (response: any, defaultMessage: string = 'An error occurred'): string => {
   try {
     if (typeof response === 'string') {

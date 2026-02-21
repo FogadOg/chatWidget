@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState } from 'react';
 import { createNetworkError, retryWithBackoff, parseApiError, WidgetErrorCode, createSessionError } from 'lib/errorHandling';
 import { logError } from 'lib/logger';

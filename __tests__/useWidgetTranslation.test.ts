@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { renderHook, act } from '@testing-library/react';
 import { useState, useEffect } from 'react';
 import { useWidgetTranslation, getInitialLocale } from '../hooks/useWidgetTranslation';

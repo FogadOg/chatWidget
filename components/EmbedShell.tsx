@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { logWarn } from '../lib/logger';

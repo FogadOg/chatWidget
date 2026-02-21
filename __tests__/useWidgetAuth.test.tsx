@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWidgetAuth } from '../hooks/useWidgetAuth';
 
@@ -58,20 +60,26 @@ jest.mock('../lib/api', () => ({
   getApiBaseUrl: jest.fn(() => 'https://api.test.com'),
 }));
 
-const {
-  createAuthError,
-  createNetworkError,
-  retryWithBackoff,
-  logError,
-  parseApiError,
-  isNetworkError,
-} = require('../lib/errorHandling');
+let createAuthError: jest.Mock;
+let createNetworkError: jest.Mock;
+let retryWithBackoff: jest.Mock;
+let logError: jest.Mock;
+let parseApiError: jest.Mock;
+let isNetworkError: jest.Mock;
 
 describe('useWidgetAuth', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     mockFetch.mockClear();
     process.env.NEXT_PUBLIC_API_BASE_URL = 'https://api.test.com';
+
+    const mod = await import('../lib/errorHandling');
+    createAuthError = mod.createAuthError as jest.Mock;
+    createNetworkError = mod.createNetworkError as jest.Mock;
+    retryWithBackoff = mod.retryWithBackoff as jest.Mock;
+    logError = mod.logError as jest.Mock;
+    parseApiError = mod.parseApiError as jest.Mock;
+    isNetworkError = mod.isNetworkError as jest.Mock;
   });
 
   it('returns initial state', () => {
@@ -101,7 +109,7 @@ describe('useWidgetAuth', () => {
 
   it('handles missing API base URL configuration', async () => {
     // Mock API as not configured
-    const { isApiConfigured, getApiBaseUrl } = require('../lib/api');
+    const { isApiConfigured, getApiBaseUrl } = await import('../lib/api');
     (isApiConfigured as jest.Mock).mockReturnValueOnce(false);
     (getApiBaseUrl as jest.Mock).mockReturnValueOnce('');
 
@@ -666,7 +674,7 @@ describe('useWidgetAuth', () => {
 
   // Tests that actually execute the fetch logic inside retryWithBackoff
   describe('direct fetch execution tests', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       jest.clearAllMocks();
       mockFetch.mockReset();
       (retryWithBackoff as jest.Mock).mockReset();
@@ -684,8 +692,10 @@ describe('useWidgetAuth', () => {
         return error;
       });
 
+      const actualErrorHandling = await import('../lib/errorHandling');
+      const WidgetError = actualErrorHandling.WidgetError;
+
       (createNetworkError as jest.Mock).mockImplementation((message, code) => {
-        const WidgetError = jest.requireActual('../lib/errorHandling').WidgetError;
         return new WidgetError(
           message,
           code,
