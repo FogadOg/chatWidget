@@ -327,16 +327,25 @@ export default function EmbedClient({
     }
   }, [widgetConfig, initialStartOpen]);
 
-  // Send initial widget size to parent when config is loaded
+  // Send initial widget size and positioning to parent when config is loaded
   useEffect(() => {
     if (widgetConfig && window.parent !== window) {
+      const positionData = {
+        position: widgetConfig.position || 'bottom-right',
+        edge_offset: widgetConfig.edge_offset || 20
+      };
+
       if (isCollapsed) {
         // Send button size when collapsed
         const buttonSize = getButtonPixelSize(widgetConfig.button_size || 'md');
         window.parent.postMessage(
           {
             type: 'WIDGET_RESIZE',
-            data: { width: buttonSize, height: buttonSize }
+            data: {
+              width: buttonSize,
+              height: buttonSize,
+              ...positionData
+            }
           },
           '*'
         );
@@ -347,7 +356,11 @@ export default function EmbedClient({
         window.parent.postMessage(
           {
             type: 'WIDGET_RESIZE',
-            data: { width, height }
+            data: {
+              width,
+              height,
+              ...positionData
+            }
           },
           '*'
         );

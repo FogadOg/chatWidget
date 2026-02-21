@@ -215,12 +215,35 @@
             if (!type) return;
 
             switch (type) {
-              case "WIDGET_RESIZE":
+            case "WIDGET_RESIZE":
                 if (data?.height) {
                   container.style.height = `${data.height}px`;
                 }
                 if (data?.width) {
                   container.style.width = `${data.width}px`;
+                }
+                
+                // Handle dynamic positioning if provided
+                if (data?.position) {
+                  const offset = typeof data.edge_offset === 'number' ? data.edge_offset : 20;
+                  
+                  // Reset all corner properties
+                  container.style.bottom = '';
+                  container.style.top = '';
+                  container.style.right = '';
+                  container.style.left = '';
+                  
+                  if (data.position.includes('bottom')) {
+                    container.style.bottom = `${offset}px`;
+                  } else {
+                    container.style.top = `${offset}px`;
+                  }
+                  
+                  if (data.position.includes('right')) {
+                    container.style.right = `${offset}px`;
+                  } else {
+                    container.style.left = `${offset}px`;
+                  }
                 }
                 break;
 

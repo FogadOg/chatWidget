@@ -60,6 +60,8 @@ export const DEFAULTS = {
   BUTTON_SIZE: 'md',
   OPACITY: 1.0,
   LOCALE: 'en',
+  POSITION: 'bottom-right',
+  EDGE_OFFSET: 20,
 } as const;
 
 // Supported locales
