@@ -193,9 +193,15 @@ export default function EmbedShell({
               className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
               title="Open Chat"
             >
-              <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
-              </svg>
+                {widgetConfig?.bot_avatar ? (
+                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${getButtonSize().icon} rounded-full object-cover`} />
+                ) : widgetConfig?.logo ? (
+                  <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className={`${getButtonSize().icon} object-contain`} />
+                ) : (
+                  <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+                  </svg>
+                )}
             </button>
           ) : (
             <div
@@ -222,9 +228,14 @@ export default function EmbedShell({
                 }}
               >
               <div className="text-white p-3 flex items-center justify-between" style={{ backgroundColor: primaryColor }}>
-                <div className="flex flex-col">
-                  <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
-                  <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
+                <div className="flex items-center gap-3">
+                  {widgetConfig?.logo && (
+                    <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className="w-10 h-10 object-contain rounded" />
+                  )}
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
+                    <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {unsureMessages.length > 0 && onShowUnsureModal && (
@@ -269,15 +280,20 @@ export default function EmbedShell({
 
               <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
                 {showGreeting && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[80%] p-2 rounded-lg bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                      {greetingText}
+                  <div className="flex flex-col items-start w-full">
+                    <div className="flex items-start gap-2">
+                       {widgetConfig?.bot_avatar && (
+                         <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                       )}
+                       <div className="max-w-[80%] p-2 rounded-lg bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+                         {greetingText}
+                       </div>
                     </div>
                   </div>
                 )}
 
                 {showButtons && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                     {interactionButtons.map((button: any) => {
                       const buttonId = button.id || button.button_id;
                       const isClicked = clickedButtons.has(buttonId);
@@ -309,86 +325,107 @@ export default function EmbedShell({
                     const hasFeedback = messageFeedbackSubmitted.has(message.id);
                     const hasSources = message.from === 'assistant' && message.sources && message.sources.length > 0;
                     return (
-                      <div key={message.id} className={`flex flex-col ${message.from === 'user' ? 'items-end' : 'items-start'}`}>
-                        <div
-                          className={`max-w-[80%] p-2`}
-                          style={{
-                            backgroundColor: message.from === 'user' ? primaryColor : '#e5e7eb',
-                            color: message.from === 'user' ? '#ffffff' : textColor,
-                            borderRadius: `${messageBubbleRadius}px`,
-                            ...fontStyles
-                          }}
-                        >
-                          <div>{message.text}</div>
-                          {hasSources && (
-                            <div className="mt-2 pt-2 border-t border-gray-300">
-                              <div className="text-xs font-semibold mb-1 opacity-70">
-                                📚 Sources ({message.sources!.length}):
-                              </div>
-                              <div className="space-y-1">
-                                {message.sources!.map((source, idx) => (
-                                  <div key={idx} className="text-xs">
-                                    {source.url ? (
-                                      <a
-                                        href={source.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:underline flex items-start gap-1"
-                                        style={{ color: textColor }}
-                                      >
-                                        <span className="opacity-70">•</span>
-                                        <span className="flex-1">
-                                          <span className="font-medium">{source.title}</span>
-                                          {source.snippet && (
-                                            <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                      <div key={message.id} className={`flex w-full ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {message.from === 'assistant' ? (
+                          <div className="flex flex-col items-start w-full">
+                            <div className="flex items-start gap-2">
+                              {widgetConfig?.bot_avatar && (
+                                <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                              )}
+                              <div
+                                className={`max-w-[80%] p-2`}
+                                style={{
+                                  backgroundColor: '#e5e7eb',
+                                  color: textColor,
+                                  borderRadius: `${messageBubbleRadius}px`,
+                                  ...fontStyles
+                                }}
+                              >
+                                <div>{message.text}</div>
+                                {hasSources && (
+                                  <div className="mt-2 pt-2 border-t border-gray-300">
+                                    <div className="text-xs font-semibold mb-1 opacity-70">
+                                      📚 Sources ({message.sources!.length}):
+                                    </div>
+                                    <div className="space-y-1">
+                                      {message.sources!.map((source, idx) => (
+                                        <div key={idx} className="text-xs">
+                                          {source.url ? (
+                                            <a
+                                              href={source.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="hover:underline flex items-start gap-1"
+                                              style={{ color: textColor }}
+                                            >
+                                              <span className="opacity-70">•</span>
+                                              <span className="flex-1">
+                                                <span className="font-medium">{source.title}</span>
+                                                {source.snippet && (
+                                                  <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                                )}
+                                              </span>
+                                            </a>
+                                          ) : (
+                                            <div className="flex items-start gap-1">
+                                              <span className="opacity-70">•</span>
+                                              <span className="flex-1">
+                                                <span className="font-medium">{source.title}</span>
+                                                {source.snippet && (
+                                                  <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                                )}
+                                              </span>
+                                            </div>
                                           )}
-                                        </span>
-                                      </a>
-                                    ) : (
-                                      <div className="flex items-start gap-1">
-                                        <span className="opacity-70">•</span>
-                                        <span className="flex-1">
-                                          <span className="font-medium">{source.title}</span>
-                                          {source.snippet && (
-                                            <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                ))}
+                                )}
                               </div>
                             </div>
-                          )}
-                        </div>
-                        {message.from === 'assistant' && !hasFeedback && onSubmitMessageFeedback && (
-                          <div className="mt-1 flex gap-2">
-                            <button
-                              onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')}
-                              className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                              style={{ color: textColor }}
-                              title="Thumbs up"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_down')}
-                              className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                              style={{ color: textColor }}
-                              title="Thumbs down"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />
-                              </svg>
-                            </button>
+                            {!hasFeedback && onSubmitMessageFeedback && (
+                              <div className="mt-1 flex gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                                <button
+                                  onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')}
+                                  className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                                  style={{ color: textColor }}
+                                  title="Thumbs up"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_down')}
+                                  className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                                  style={{ color: textColor }}
+                                  title="Thumbs down"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                            {hasFeedback && (
+                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                                Feedback submitted
+                              </span>
+                            )}
                           </div>
-                        )}
-                        {message.from === 'assistant' && hasFeedback && (
-                          <span className="mt-1 text-xs opacity-50" style={{ color: textColor }}>
-                            Feedback submitted
-                          </span>
+                        ) : (
+                          <div
+                            className={`max-w-[80%] p-2`}
+                            style={{
+                              backgroundColor: primaryColor,
+                              color: '#ffffff',
+                              borderRadius: `${messageBubbleRadius}px`,
+                              ...fontStyles
+                            }}
+                          >
+                            <div>{message.text}</div>
+                          </div>
                         )}
                       </div>
                     );
@@ -397,14 +434,19 @@ export default function EmbedShell({
                     return (
                       <div key={`flow-${index}`} className="space-y-2">
                         {flowResponse.text && (
-                          <div className="flex justify-start">
-                            <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                              {flowResponse.text}
+                          <div className="flex flex-col items-start w-full">
+                            <div className="flex items-start gap-2">
+                              {widgetConfig?.bot_avatar && (
+                                <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                              )}
+                              <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+                                {flowResponse.text}
+                              </div>
                             </div>
                           </div>
                         )}
                         {flowResponse.buttons.length > 0 && (
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                             {flowResponse.buttons.map((button: any) => {
                               const buttonId = button.id || button.button_id;
                               const isClicked = clickedButtons.has(buttonId);
@@ -520,9 +562,15 @@ export default function EmbedShell({
               className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
               title="Open Chat"
             >
-              <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
-              </svg>
+                {widgetConfig?.bot_avatar ? (
+                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${getButtonSize().icon} rounded-full object-cover`} />
+                ) : widgetConfig?.logo ? (
+                  <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className={`${getButtonSize().icon} object-contain`} />
+                ) : (
+                  <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+                  </svg>
+                )}
             </button>
           ) : (
             <div
@@ -543,9 +591,14 @@ export default function EmbedShell({
             >
               <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: `rgba(${hexToRgb(backgroundColor)}, ${backgroundOpacity})`, ...fontStyles }}>
                 <div className="text-white p-3 flex items-center justify-between" style={{ backgroundColor: primaryColor, borderRadius: `${borderRadius}px` }}>
-                  <div className="flex flex-col">
-                    <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
-                    <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
+                  <div className="flex items-center gap-3">
+                    {widgetConfig?.logo && (
+                      <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className="w-10 h-10 object-contain rounded" />
+                    )}
+                    <div className="flex flex-col">
+                      <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
+                      <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -569,15 +622,20 @@ export default function EmbedShell({
                 <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
 
                   {showGreeting && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[80%] p-2 bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                        {greetingText}
+                    <div className="flex flex-col items-start w-full">
+                      <div className="flex items-start gap-2">
+                        {widgetConfig?.bot_avatar && (
+                          <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                        )}
+                        <div className="max-w-[80%] p-2 bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+                          {greetingText}
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {showButtons && (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                       {interactionButtons.map((button: any) => {
                         const buttonId = button.id || button.button_id;
                         const isClicked = clickedButtons.has(buttonId);
@@ -608,58 +666,108 @@ export default function EmbedShell({
                       const message = item.data;
                       const hasSources = message.from === 'assistant' && message.sources && message.sources.length > 0;
                       return (
-                        <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div
-                            className="max-w-[80%] p-2"
-                            style={{
-                              backgroundColor: message.from === 'user' ? primaryColor : '#e5e7eb',
-                              color: message.from === 'user' ? '#ffffff' : textColor,
-                              borderRadius: `${messageBubbleRadius}px`,
-                              ...fontStyles
-                            }}
-                          >
-                            <div>{message.text}</div>
-                            {hasSources && (
-                              <div className="mt-2 pt-2 border-t border-gray-300">
-                                <div className="text-xs font-semibold mb-1 opacity-70">
-                                  📚 Sources ({message.sources!.length}):
-                                </div>
-                                <div className="space-y-1">
-                                  {message.sources!.map((source, idx) => (
-                                    <div key={idx} className="text-xs">
-                                      {source.url ? (
-                                        <a
-                                          href={source.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="hover:underline flex items-start gap-1"
-                                          style={{ color: textColor }}
-                                        >
-                                          <span className="opacity-70">•</span>
-                                          <span className="flex-1">
-                                            <span className="font-medium">{source.title}</span>
-                                            {source.snippet && (
-                                              <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                        <div key={message.id} className={`flex w-full ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          {message.from === 'assistant' ? (
+                            <div className="flex flex-col items-start w-full">
+                              <div className="flex items-start gap-2">
+                                {widgetConfig?.bot_avatar && (
+                                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                )}
+                                <div
+                                  className="max-w-[80%] p-2"
+                                  style={{
+                                    backgroundColor: '#e5e7eb',
+                                    color: textColor,
+                                    borderRadius: `${messageBubbleRadius}px`,
+                                    ...fontStyles
+                                  }}
+                                >
+                                  <div>{message.text}</div>
+                                  {hasSources && (
+                                    <div className="mt-2 pt-2 border-t border-gray-300">
+                                      <div className="text-xs font-semibold mb-1 opacity-70">
+                                        📚 Sources ({message.sources!.length}):
+                                      </div>
+                                      <div className="space-y-1">
+                                        {message.sources!.map((source, idx) => (
+                                          <div key={idx} className="text-xs">
+                                            {source.url ? (
+                                              <a
+                                                href={source.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="hover:underline flex items-start gap-1"
+                                                style={{ color: textColor }}
+                                              >
+                                                <span className="opacity-70">•</span>
+                                                <span className="flex-1">
+                                                  <span className="font-medium">{source.title}</span>
+                                                  {source.snippet && (
+                                                    <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                                  )}
+                                                </span>
+                                              </a>
+                                            ) : (
+                                              <div className="flex items-start gap-1">
+                                                <span className="opacity-70">•</span>
+                                                <span className="flex-1">
+                                                  <span className="font-medium">{source.title}</span>
+                                                  {source.snippet && (
+                                                    <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
+                                                  )}
+                                                </span>
+                                              </div>
                                             )}
-                                          </span>
-                                        </a>
-                                      ) : (
-                                        <div className="flex items-start gap-1">
-                                          <span className="opacity-70">•</span>
-                                          <span className="flex-1">
-                                            <span className="font-medium">{source.title}</span>
-                                            {source.snippet && (
-                                              <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
-                                            )}
-                                          </span>
-                                        </div>
-                                      )}
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  ))}
+                                  )}
                                 </div>
                               </div>
-                            )}
-                          </div>
+                              {onSubmitMessageFeedback && !messageFeedbackSubmitted.has(message.id) && (
+                                <div className="mt-1 flex gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                                  <button
+                                    onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')}
+                                    className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                                    style={{ color: textColor }}
+                                    title="Thumbs up"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_down')}
+                                    className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
+                                    style={{ color: textColor }}
+                                    title="Thumbs down"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                              {messageFeedbackSubmitted.has(message.id) && (
+                                <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                                  Feedback submitted
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div
+                              className={`max-w-[80%] p-2`}
+                              style={{
+                                backgroundColor: primaryColor,
+                                color: '#ffffff',
+                                borderRadius: `${messageBubbleRadius}px`,
+                                ...fontStyles
+                              }}
+                            >
+                              <div>{message.text}</div>
+                            </div>
+                          )}
                         </div>
                       );
                     } else {
@@ -667,14 +775,19 @@ export default function EmbedShell({
                       return (
                         <div key={`flow-${index}`} className="space-y-2">
                           {flowResponse.text && (
-                            <div className="flex justify-start">
-                              <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                                {flowResponse.text}
+                            <div className="flex flex-col items-start w-full">
+                              <div className="flex items-start gap-2">
+                                {widgetConfig?.bot_avatar && (
+                                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                )}
+                                <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+                                  {flowResponse.text}
+                                </div>
                               </div>
                             </div>
                           )}
                           {flowResponse.buttons.length > 0 && (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                               {flowResponse.buttons.map((button: any) => {
                                 const buttonId = button.id || button.button_id;
                                 const isClicked = clickedButtons.has(buttonId);

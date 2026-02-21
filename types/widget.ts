@@ -72,6 +72,12 @@ export type WidgetConfig = {
   message_bubble_radius: number;
   button_border_radius: number;
   opacity: number;
+  // Positioning
+  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  edge_offset: number;
+  // Optional images
+  logo?: string;
+  bot_avatar?: string;
 };
 
 export type ApiResponse<T> = {

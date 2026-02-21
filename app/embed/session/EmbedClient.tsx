@@ -8,6 +8,7 @@ import FeedbackDialog from '../../../components/FeedbackDialog';
 import {
   createSessionError,
   createNetworkError,
+  createAuthError,
   retryWithBackoff,
   logError,
   parseApiError,
@@ -60,6 +61,9 @@ type WidgetConfig = {
     flows?: any[];
   };
   default_language: string;
+  // Branding
+  logo?: string;
+  bot_avatar?: string;
   // New appearance fields
   font_family: string;
   font_size: number;
@@ -72,6 +76,9 @@ type WidgetConfig = {
   message_bubble_radius: number;
   button_border_radius: number;
   opacity: number;
+  // Positioning
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  edge_offset?: number;
 };
 
 const getButtonPixelSize = (buttonSize: string) => {
@@ -281,7 +288,7 @@ export default function EmbedClient({
             }
           } catch (err) {
             // If validation fails, set error
-            const errorMessage = err.userMessage || t.failedToLoadWidget;
+            const errorMessage = (err as any)?.userMessage || t.failedToLoadWidget;
             setError(errorMessage);
             logError(err, { clientId: clientIdParam, assistantId: assistantIdParam, configId: configIdParam, action: 'validateWidget' });
           }
@@ -559,6 +566,9 @@ export default function EmbedClient({
       const data = await response.json();
 
       if (data.status === 'success' && data.data) {
+        console.log('Widget config loaded:', data.data);
+        console.log('Logo URL:', data.data.logo);
+        console.log('Bot avatar URL:', data.data.bot_avatar);
         setWidgetConfig(data.data);
       } else {
         throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
