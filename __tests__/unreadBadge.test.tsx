@@ -14,6 +14,7 @@ jest.mock('../hooks/useWidgetTranslation', () => ({
 }));
 
 describe('EmbedShell - Unread Badge', () => {
+  // Allow `any` here for test fixture convenience
   const mockWidgetConfig = {
     title: { en: 'Test Bot' },
     subtitle: { en: 'Test Subtitle' },
@@ -34,7 +35,7 @@ describe('EmbedShell - Unread Badge', () => {
     button_border_radius: 8,
     opacity: 1,
     greeting_message: { text: { en: 'Hello' }, buttons: [] },
-  };
+  } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const messages = [
     { id: 'm1', text: 'Hello from assistant', from: 'assistant' as const, timestamp: 1000 },
