@@ -12,10 +12,16 @@ let mockLogError: jest.Mock;
 
 describe('ErrorBoundary', () => {
   const ThrowError = () => {
-    throw new Error('Test error');
+    if (shouldThrow) {
+      throw new Error('Test error');
+    }
+    return <div>Recovered</div>;
   };
 
+  let shouldThrow = true;
+
   beforeEach(() => {
+    shouldThrow = true;
     return import('../lib/logger').then((mod) => {
       mockLogError = mod.logError as jest.Mock;
       mockLogError.mockClear();
@@ -82,11 +88,12 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
+    // Simulate child recovery before retry
+    shouldThrow = false;
     fireEvent.click(screen.getByRole('button', { name: 'Try Again' }));
 
-    // After reset, it should try to render children again, which will throw again
-    // In a real scenario, you'd have error-free children after reset
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    // After reset and recovery, children should render
+    expect(screen.getByText('Recovered')).toBeInTheDocument();
   });
 
   it('shows error details in development mode', () => {

@@ -56,7 +56,8 @@ describe('EmbedShell - logo and avatar', () => {
     // header logo should be rendered
     expect(screen.getByAltText(/logo/)).toBeInTheDocument();
 
-    // assistant avatar should be rendered
-    expect(screen.getByAltText(/avatar/)).toBeInTheDocument();
+    // assistant avatar should be rendered (there may be multiple avatar images)
+    const avatars = screen.getAllByAltText(/avatar/);
+    expect(avatars.length).toBeGreaterThan(0);
   });
 });
