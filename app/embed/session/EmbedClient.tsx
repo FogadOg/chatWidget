@@ -38,6 +38,7 @@ type Message = {
 
 type WidgetConfig = {
   id: string;
+  show_unread_badge?: boolean;
   primary_color: string;
   secondary_color: string;
   background_color: string;
@@ -260,12 +261,13 @@ export default function EmbedClient({
           console.log('[UNREAD_BADGE_DEBUG] Stored postedShowUnreadBadge.current =', postedShowUnreadBadge.current);
 
           // Apply it immediately if config already exists
-          setWidgetConfig((prev) => {
-            if (!prev) return prev;
-            const updated = { ...prev, show_unread_badge: postedShowUnreadBadge.current } as WidgetConfig;
-            console.log('[UNREAD_BADGE_DEBUG] Applied to existing config, show_unread_badge =', updated.show_unread_badge);
-            return updated;
-          });
+            setWidgetConfig((prev) => {
+              if (!prev) return prev;
+              const updated = { ...prev } as any;
+              updated.show_unread_badge = postedShowUnreadBadge.current;
+              console.log('[UNREAD_BADGE_DEBUG] Applied to existing config, show_unread_badge =', updated.show_unread_badge);
+              return updated as WidgetConfig;
+            });
         }
       } catch (err) {
         console.error('[UNREAD_BADGE_DEBUG] Error in handleInitConfig:', err);
