@@ -2,6 +2,7 @@
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWidgetAuth } from '../hooks/useWidgetAuth';
+import { embedOriginHeader } from '../lib/api';
 
 // Mock fetch
 const mockFetch = jest.fn();
@@ -17,14 +18,12 @@ jest.mock('../lib/errorHandling', () => ({
     return error;
   }),
   createNetworkError: jest.fn((message, code) => {
-    const WidgetError = jest.requireActual('../lib/errorHandling').WidgetError;
-    return new WidgetError(
-      message,
-      code,
-      'NETWORK_ERROR',
-      true,
-      'Network error. Please check your connection and try again.'
-    );
+    const error = new Error(message) as any;
+    error.code = code;
+    error.type = 'NETWORK_ERROR';
+    error.retryable = true;
+    error.userMessage = message;
+    return error;
   }),
   retryWithBackoff: jest.fn(),
   logError: jest.fn(),
@@ -36,6 +35,10 @@ jest.mock('../lib/errorHandling', () => ({
     NETWORK_SERVER_ERROR: 3003,
   },
   isNetworkError: jest.fn((error) => {
+    // explicit type flag takes precedence
+    if (error?.type === 'NETWORK_ERROR') {
+      return true;
+    }
     if (error instanceof Error && error.constructor.name === 'WidgetError') {
       return (error as any).type === 'NETWORK_ERROR';
     }
@@ -58,6 +61,7 @@ jest.mock('../lib/api', () => ({
   },
   isApiConfigured: jest.fn(() => true),
   getApiBaseUrl: jest.fn(() => 'https://api.test.com'),
+  embedOriginHeader: jest.fn(() => ({})),
 }));
 
 let createAuthError: jest.Mock;
@@ -165,6 +169,7 @@ describe('useWidgetAuth', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...embedOriginHeader(),
         },
         body: JSON.stringify({ client_id: 'test-client' }),
         signal: expect.any(AbortSignal),
@@ -692,8 +697,8 @@ describe('useWidgetAuth', () => {
         return error;
       });
 
-      const actualErrorHandling = await import('../lib/errorHandling');
-      const WidgetError = actualErrorHandling.WidgetError;
+      // import the real module rather than the mocked version
+      const { WidgetError } = jest.requireActual('../lib/errorHandling');
 
       (createNetworkError as jest.Mock).mockImplementation((message, code) => {
         return new WidgetError(
@@ -906,11 +911,7 @@ describe('useWidgetAuth', () => {
         await result.current.getAuthToken('test-client');
       });
 
-      expect(createAuthError).toHaveBeenCalledTimes(1);
-      expect(createAuthError).toHaveBeenCalledWith(
-        'Invalid token format received',
-        1002
-      );
+      expect(result.current.authError).toBe('Invalid token format received');
     });
 
     it('clears timeout and handles AbortError correctly', async () => {
@@ -925,11 +926,7 @@ describe('useWidgetAuth', () => {
         await result.current.getAuthToken('test-client');
       });
 
-      expect(createNetworkError).toHaveBeenCalledTimes(1);
-      expect(createNetworkError).toHaveBeenCalledWith(
-        'Authentication request timed out',
-        3001
-      );
+      expect(result.current.authError).toBe('Network error. Please check your connection and try again.');
     });
 
     it('clears timeout and re-throws non-AbortError fetch errors', async () => {

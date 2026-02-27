@@ -96,6 +96,7 @@
           locale,
           startOpen: startOpen.toString(),
           pagePath: window.location.pathname,
+          parentOrigin: window.location.origin,
         });
 
         iframe.src = `${baseUrl}/embed/session?${params.toString()}`;

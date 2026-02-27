@@ -9,12 +9,13 @@ type Props = {
     locale?: string;
     startOpen?: string;
     pagePath?: string;
+    parentOrigin?: string;
   }>;
 };
 
 export default async function EmbedPage({ searchParams }: Props) {
   const params = await searchParams;
-  const { clientId, assistantId, configId, locale = "en", startOpen = "false", pagePath } = params;
+  const { clientId, assistantId, configId, locale = "en", startOpen = "false", pagePath, parentOrigin } = params;
 
   // Validate required parameters
   if (!clientId || !assistantId || !configId) {
@@ -97,6 +98,7 @@ export default async function EmbedPage({ searchParams }: Props) {
         locale={locale}
         startOpen={startOpen === "true"}
         pagePath={pagePath}
+        parentOrigin={parentOrigin}
       />
     </ErrorBoundary>
   );

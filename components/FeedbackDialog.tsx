@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { ThumbsUp, ThumbsDown, Minus, X } from 'lucide-react';
-import { API } from '../lib/api';
+import { API, embedOriginHeader } from '../lib/api';
 
 type FeedbackRating = 'positive' | 'neutral' | 'negative';
 
@@ -46,6 +46,7 @@ export default function FeedbackDialog({
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`,
+          ...embedOriginHeader(),
         },
         body: JSON.stringify({
           rating: selectedRating,

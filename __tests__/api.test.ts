@@ -77,6 +77,29 @@ describe('API utilities', () => {
     });
   });
 
+  describe('embedOriginHeader', () => {
+    it('returns origin when window.location is available', async () => {
+      const { embedOriginHeader } = await mockEnv({ NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com' });
+      // jsdom should provide a window.location.origin
+      expect(embedOriginHeader()).toEqual({ 'X-Embed-Origin': window.location.origin });
+    });
+
+    it('uses explicitOrigin when provided', async () => {
+      const { embedOriginHeader } = await mockEnv({ NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com' });
+      expect(embedOriginHeader('https://parent.example.com')).toEqual({
+        'X-Embed-Origin': 'https://parent.example.com',
+      });
+    });
+
+    it('explicitOrigin takes precedence over window.location.origin', async () => {
+      const { embedOriginHeader } = await mockEnv({ NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com' });
+      // window.location.origin exists in jsdom, but explicit arg must win
+      const result = embedOriginHeader('https://host-page.com');
+      expect(result).toEqual({ 'X-Embed-Origin': 'https://host-page.com' });
+      expect(result['X-Embed-Origin']).not.toBe(window.location.origin);
+    });
+  });
+
   describe('isApiConfigured', () => {
     it('returns true when BASE_URL is set and does not contain undefined', async () => {
       const { isApiConfigured } = await mockEnv({ NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com' });

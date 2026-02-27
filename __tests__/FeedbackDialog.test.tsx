@@ -2,6 +2,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FeedbackDialog from '../components/FeedbackDialog';
+import { embedOriginHeader } from '../lib/api';
 
 // Mock fetch
 const mockFetch = jest.fn();
@@ -115,6 +116,7 @@ describe('FeedbackDialog', () => {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer test-token',
+            ...embedOriginHeader(),
           },
           body: JSON.stringify({
             rating: 'positive',

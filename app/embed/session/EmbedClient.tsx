@@ -100,6 +100,7 @@ type EmbedClientProps = {
   locale: string;
   startOpen: boolean;
   pagePath?: string;
+  parentOrigin?: string;
 };
 
 export default function EmbedClient({
@@ -108,7 +109,8 @@ export default function EmbedClient({
   configId: initialConfigId,
   locale: initialLocale,
   startOpen: initialStartOpen,
-  pagePath: initialPagePath
+  pagePath: initialPagePath,
+  parentOrigin: initialParentOrigin,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [flowResponses, setFlowResponses] = useState<Array<{ text: string; buttons: any[]; timestamp: number }>>([]);
@@ -134,6 +136,7 @@ export default function EmbedClient({
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
+  const [fatalError, setFatalError] = useState<string | null>(null);
 
   // Helper function to get localStorage key for this widget instance
   const getSessionStorageKey = () => {
@@ -278,6 +281,14 @@ export default function EmbedClient({
     return () => window.removeEventListener('message', handleInitConfig);
   }, []);
 
+  // When auth fails before any config loads, surface it as a fatal error
+  // so the widget renders a visible error instead of staying invisible.
+  useEffect(() => {
+    if (authError && !widgetConfig) {
+      setFatalError(authError);
+    }
+  }, [authError, widgetConfig]);
+
   // Detect mobile device
   useEffect(() => {
     const checkIsMobile = () => {
@@ -316,7 +327,7 @@ export default function EmbedClient({
 
     // Get auth token if we have required parameters
     if (clientIdParam && assistantIdParam) {
-      getAuthToken(clientIdParam).then(async (token) => {
+      getAuthToken(clientIdParam, initialParentOrigin).then(async (token) => {
         if (token) {
           try {
             // Validate assistant exists
@@ -340,8 +351,9 @@ export default function EmbedClient({
             setError(errorMessage);
             logError(err, { clientId: clientIdParam, assistantId: assistantIdParam, configId: configIdParam, action: 'validateWidget' });
           }
-        } else if (authError) {
-          setError(authError);
+        } else {
+          // getAuthToken returned null — authError will be set by the hook.
+          // The useEffect below watches authError and sets fatalError.
         }
       });
     }
@@ -683,17 +695,11 @@ export default function EmbedClient({
       const data = await response.json();
 
       if (data.status === 'success' && data.data) {
-        console.log('Widget config loaded:', data.data);
-        console.log('Logo URL:', data.data.logo);
-        console.log('Bot avatar URL:', data.data.bot_avatar);
-        console.log('[UNREAD_BADGE_DEBUG] API config show_unread_badge =', data.data.show_unread_badge);
-        console.log('[UNREAD_BADGE_DEBUG] postedShowUnreadBadge.current =', postedShowUnreadBadge.current);
 
         // Merge posted show_unread_badge if it was set via embed snippet
         const configData = { ...data.data };
         if (typeof postedShowUnreadBadge.current !== 'undefined') {
           configData.show_unread_badge = postedShowUnreadBadge.current;
-          console.log('[UNREAD_BADGE_DEBUG] Merged show_unread_badge =', configData.show_unread_badge);
         }
         setWidgetConfig(configData);
       } else {
@@ -1133,6 +1139,41 @@ export default function EmbedClient({
     });
   };
 
+
+  if (fatalError) {
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        right: 0,
+        left: 0,
+        background: '#fef2f2',
+        border: '1px solid #fca5a5',
+        borderRadius: '12px',
+        padding: '16px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        zIndex: 999999,
+        boxSizing: 'border-box',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+          <div style={{ flexShrink: 0, color: '#dc2626', marginTop: '2px' }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 600, color: '#991b1b' }}>
+              Widget unavailable
+            </p>
+            <p style={{ margin: 0, fontSize: '12px', color: '#6b7280', lineHeight: '1.5', wordBreak: 'break-word' }}>
+              {fatalError}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!widgetConfig) {
     return null; // Wait for widget config to load before rendering anything

@@ -13,7 +13,7 @@ import {
   isNetworkError,
 } from '../lib/errorHandling';
 import { TIMEOUTS } from '../lib/constants';
-import { API, isApiConfigured, getApiBaseUrl } from '../lib/api';
+import { API, isApiConfigured, getApiBaseUrl, embedOriginHeader } from '../lib/api';
 
 export function useWidgetAuth() {
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function useWidgetAuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  const getAuthToken = useCallback(async (clientId: string): Promise<string | null> => {
+  const getAuthToken = useCallback(async (clientId: string, parentOrigin?: string): Promise<string | null> => {
     // Validate input
     if (!clientId || typeof clientId !== 'string' || clientId.trim().length === 0) {
       const error = createAuthError(
@@ -59,6 +59,7 @@ export function useWidgetAuth() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                ...embedOriginHeader(parentOrigin),
               },
               body: JSON.stringify({ client_id: clientId }),
               signal: controller.signal,
@@ -170,9 +171,9 @@ export function useWidgetAuth() {
     setRetryCount(0);
   }, []);
 
-  const refreshToken = useCallback(async (clientId: string): Promise<string | null> => {
+  const refreshToken = useCallback(async (clientId: string, parentOrigin?: string): Promise<string | null> => {
     clearAuth();
-    return getAuthToken(clientId);
+    return getAuthToken(clientId, parentOrigin);
   }, [getAuthToken, clearAuth]);
 
   return {

@@ -51,3 +51,22 @@ export const API = {
 export const isApiConfigured = (): boolean => {
   return Boolean(BASE_URL && !BASE_URL.includes('undefined'));
 };
+
+/**
+ * Returns the X-Embed-Origin header so the backend enforces the host app's
+ * origin rather than the widget iframe's own origin.
+ *
+ * @param explicitOrigin - The parent page's origin passed in via URL param by
+ *   widget.js (window.location.origin on the host page). When provided this is
+ *   always used. Falls back to window.location.origin for non-iframe usage.
+ */
+export const embedOriginHeader = (explicitOrigin?: string): Record<string, string> => {
+  if (explicitOrigin) {
+    return { 'X-Embed-Origin': explicitOrigin };
+  }
+
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return { 'X-Embed-Origin': window.location.origin };
+  }
+  return {};
+};

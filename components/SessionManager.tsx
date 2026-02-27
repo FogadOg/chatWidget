@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode } from 'lib/errorHandling';
+import { embedOriginHeader } from 'lib/api';
 import { logError } from 'lib/logger';
 import { TIMEOUTS } from 'lib/constants';
 import { API } from 'lib/api';
@@ -89,6 +90,7 @@ export default function SessionManager({
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`,
+                ...embedOriginHeader(),
               },
               body: JSON.stringify({
                 assistant_id: assistantId,
@@ -179,6 +181,7 @@ export default function SessionManager({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
+          ...embedOriginHeader(),
         },
       });
 
@@ -233,6 +236,7 @@ export default function SessionManager({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
+          ...embedOriginHeader(),
         },
       });
 
