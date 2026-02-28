@@ -876,20 +876,19 @@ export default function EmbedClient({
 
     const maybeText = getLocalizedText(button.response?.text);
     const maybeButtons = button.response?.buttons || [];
+    const labelText = getLocalizedText(button.label) ||
+      (typeof button.label === 'string' ? button.label : (button.label?.en || ''));
 
-
-    if (maybeText || maybeButtons.length > 0) {
-      setIsTyping(true);
-      setTimeout(() => {
-        // Add as grouped flow response instead of separate message
-        setFlowResponses((prev: FlowResponse[]) => [...prev, {
-          text: maybeText || '',
-          buttons: maybeButtons,
-          timestamp: Date.now()
-        }]);
-        setIsTyping(false);
-      }, 300);
-    }
+    // always show a flow response when button is clicked
+    setIsTyping(true);
+    setTimeout(() => {
+      setFlowResponses((prev: FlowResponse[]) => [...prev, {
+        text: maybeText || labelText || '',
+        buttons: maybeButtons,
+        timestamp: Date.now()
+      }]);
+      setIsTyping(false);
+    }, 300);
 
     const flowHandled = processWidgetFlow(button.action);
 

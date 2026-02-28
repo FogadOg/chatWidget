@@ -1,12 +1,20 @@
 import React from 'react';
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 // Mock the logger
 jest.mock('../lib/logger', () => ({
   logError: jest.fn(),
 }));
+
+// silence React error boundary logs during tests
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+afterAll(() => {
+  (console.error as jest.Mock).mockRestore();
+});
 
 let mockLogError: jest.Mock;
 
@@ -26,6 +34,9 @@ describe('ErrorBoundary', () => {
       mockLogError = mod.logError as jest.Mock;
       mockLogError.mockClear();
     });
+  });
+  afterEach(() => {
+    shouldThrow = true;
   });
 
   it('renders children when no error occurs', () => {
@@ -79,7 +90,7 @@ describe('ErrorBoundary', () => {
     );
   });
 
-  it('resets error state when Try Again button is clicked', () => {
+  it('resets error state when Try Again button is clicked', async () => {
     render(
       <ErrorBoundary>
         <ThrowError />
@@ -88,12 +99,14 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-    // Simulate child recovery before retry
+    // prepare for recovery
     shouldThrow = false;
     fireEvent.click(screen.getByRole('button', { name: 'Try Again' }));
 
-    // After reset and recovery, children should render
-    expect(screen.getByText('Recovered')).toBeInTheDocument();
+    // wait for children to re-render
+    await waitFor(() => {
+      expect(screen.getByText('Recovered')).toBeInTheDocument();
+    });
   });
 
   it('shows error details in development mode', () => {

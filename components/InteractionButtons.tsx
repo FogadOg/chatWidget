@@ -46,7 +46,22 @@ export default function InteractionButtons({
             }`}
           >
             {button.icon && <span>{button.icon}</span>}
-            {getLocalizedText ? getLocalizedText(button.label) || 'Button' : (button.label?.en || button.label || 'Button')}
+            {(() => {
+              if (getLocalizedText) {
+                return getLocalizedText(button.label) || 'Button';
+              }
+              const lbl = button.label;
+              if (typeof lbl === 'string') {
+                return lbl;
+              }
+              if (lbl && typeof lbl === 'object') {
+                // try default language key or first entry
+                if (lbl.en) return lbl.en;
+                const first = Object.values(lbl)[0];
+                if (typeof first === 'string') return first;
+              }
+              return 'Button';
+            })()}
           </button>
         );
       })}
