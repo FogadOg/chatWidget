@@ -54,15 +54,22 @@ export default function FeedbackDialog({
         }),
       });
 
-      const data = await response.json().catch(() => ({}));
+      let data: unknown = {};
+      if (response && response.headers.get('content-type')?.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (_err) {
+          // ignore parsing errors
+        }
+      }
 
-      if (response.ok) {
+      if (response && response.ok) {
         setSubmitted(true);
         setTimeout(() => {
           onSubmit();
         }, 2000);
       } else {
-        console.error('Failed to submit feedback:', response.status, data);
+        console.error('Failed to submit feedback:', response?.status, data as unknown);
         onSubmit(); // Close anyway
       }
     } catch (error) {
