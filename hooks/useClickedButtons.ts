@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 // Generic button-like object that contains at least an `id` or `button_id` property
-export type ButtonLike = { id?: string; button_id?: string } & Record<string, any>;
+export type ButtonLike = { id?: string; button_id?: string } & Record<string, unknown>;
 
 export function useClickedButtons() {
   const [clickedButtons, setClickedButtons] = useState<Set<string>>(new Set());

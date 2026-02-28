@@ -13,11 +13,11 @@ type Message = {
 
 type Props = {
   message: Message;
-  widgetConfig?: any;
+  widgetConfig?: Record<string, unknown>;
   assistantName?: string;
   showMessageAvatars?: boolean;
   textColor?: string;
-  fontStyles?: Record<string, any>;
+  fontStyles?: Record<string, unknown>;
   messageBubbleRadius?: number;
   onSubmitMessageFeedback?: (messageId: string, feedbackType?: string) => void;
   messageFeedbackSubmitted?: Set<string>;

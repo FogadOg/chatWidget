@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useState, useEffect } from 'react';
 import { useWidgetTranslation, getInitialLocale } from '../hooks/useWidgetTranslation';
 
@@ -61,7 +61,7 @@ describe('useWidgetTranslation', () => {
   });
 
   it('detects locale from URL parameters', () => {
-    global.URLSearchParams = jest.fn().mockImplementation((search) => ({
+    global.URLSearchParams = jest.fn().mockImplementation((_search) => ({
       get: (key: string) => key === 'locale' ? 'de' : null,
     })) as any;
 
@@ -82,7 +82,7 @@ describe('useWidgetTranslation', () => {
   });
 
   it('falls back to English for unsupported locale in URL', () => {
-    global.URLSearchParams = jest.fn().mockImplementation((search) => ({
+    global.URLSearchParams = jest.fn().mockImplementation((_search) => ({
       get: (key: string) => key === 'locale' ? 'unsupported' : null,
     })) as any;
 
@@ -107,7 +107,7 @@ describe('useWidgetTranslation', () => {
 
     supportedLocales.forEach(locale => {
       // Mock URLSearchParams for each locale
-      global.URLSearchParams = jest.fn().mockImplementation(() => ({
+      global.URLSearchParams = jest.fn().mockImplementation((_search) => ({
         get: (key: string) => key === 'locale' ? locale : null,
       })) as any;
 
@@ -157,7 +157,7 @@ describe('useWidgetTranslation', () => {
 
     // Track calls to getInitialLocale
     let callCount = 0;
-    const originalGetInitialLocale = getInitialLocale;
+    const _originalGetInitialLocale = getInitialLocale;
 
     // Create a wrapper module mock
     const useMockWidgetTranslation = () => {
@@ -183,6 +183,7 @@ describe('useWidgetTranslation', () => {
             setTranslations({ send: 'Senden' });
           }
         }
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- test intentionally avoids adding locale
       }, []);
 
       return { translations, locale };

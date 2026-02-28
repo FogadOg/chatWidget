@@ -4,7 +4,7 @@ import React from 'react';
 import type { FlowButton } from '../types/widget';
 
 // generic button type, falls back to FlowButton for most widgets
-export type ButtonType = FlowButton & { [key: string]: any };
+export type ButtonType = FlowButton & { [key: string]: unknown };
 
 interface Props {
   buttons: ButtonType[];
@@ -12,7 +12,7 @@ interface Props {
   onButtonClick: (button: ButtonType) => void;
   primaryColor: string;
   buttonBorderRadius: number;
-  fontStyles: Record<string, any>;
+  fontStyles: Record<string, unknown>;
   showMessageAvatars?: boolean;
   getLocalizedText?: (textObj: Record<string, string> | undefined) => string;
 };

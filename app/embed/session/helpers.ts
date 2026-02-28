@@ -135,7 +135,7 @@ export async function loadSessionMessages(sessionId: string, token: string, setM
       });
       setMessages(loaded);
     }
-  } catch (e) {
-    logError((e as Error).message || String(e), { action: 'loadSessionMessages', sessionId });
+  } catch (_e) {
+    logError((_e as Error).message || String(_e), { action: 'loadSessionMessages', sessionId });
   }
 }

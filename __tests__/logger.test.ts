@@ -1,4 +1,5 @@
 // ensure logger treats this as development mode
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (process.env as any).NODE_ENV = 'development';
 
 import { logError, logWarn, logInfo, logDebug, logPerf } from '../lib/logger';
@@ -10,6 +11,7 @@ describe('logger convenience functions', () => {
     jest.spyOn(console, 'info').mockImplementation(() => {});
     jest.spyOn(console, 'debug').mockImplementation(() => {});
     // stub fetch for perf tests
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).fetch = jest.fn().mockResolvedValue({});
   });
 

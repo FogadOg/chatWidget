@@ -112,8 +112,9 @@ export default function EmbedShell({
 
 
   // Get localized text helper
-  const getText = (textObj: any) => {
-    if (getLocalizedText) return getLocalizedText(textObj);
+  const getText = (textObj: Record<string, string> | string | undefined) => {
+    if (getLocalizedText) return getLocalizedText(textObj as Record<string, string>);
+    if (typeof textObj === 'string') return textObj;
     return textObj?.en || '';
   };
 
@@ -335,7 +336,7 @@ export default function EmbedShell({
                         )}
                         {flowResponse.buttons.length > 0 && (
                           <div className="flex flex-col gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
-                            {flowResponse.buttons.map((button: any) => {
+                            {flowResponse.buttons.map((button: FlowButton) => {
                               const buttonId = button.id || button.button_id;
                               const isClicked = clickedButtons.has(buttonId);
                               return (
@@ -578,7 +579,7 @@ export default function EmbedShell({
                           )}
                           {flowResponse.buttons.length > 0 && (
                             <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
-                              {flowResponse.buttons.map((button: any) => {
+                              {flowResponse.buttons.map((button: FlowButton) => {
                                 const buttonId = button.id || button.button_id;
                                 const isClicked = clickedButtons.has(buttonId);
                                 return (

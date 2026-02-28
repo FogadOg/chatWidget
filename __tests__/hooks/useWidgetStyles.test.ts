@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { useWidgetStyles } from '../../hooks/useWidgetStyles';
+import type { WidgetConfig } from '../../types/widget';
 
 const minimalConfig = {
   primary_color: '#112233',
@@ -26,7 +27,7 @@ const minimalConfig = {
 
 describe('useWidgetStyles', () => {
   it('computes style values from config', () => {
-    const { result } = renderHook(() => useWidgetStyles(minimalConfig as any));
+    const { result } = renderHook(() => useWidgetStyles(minimalConfig as unknown as WidgetConfig));
     expect(result.current.primaryColor).toBe('#112233');
     expect(result.current.showTimestamps).toBe(false);
     expect(result.current.fontStyles.fontFamily).toBe('Arial');

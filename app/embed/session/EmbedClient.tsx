@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 
 import { useEffect, useState, useRef } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
