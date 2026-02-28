@@ -1,11 +1,20 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
+import type {
+  Message,
+  WidgetConfig,
+  FlowResponse,
+  FlowButton,
+  Flow,
+  PageContext,
+  UnsureMessage,
+  SourceData,
+} from '../../../types/widget';
+import { logDebug, logPerf } from '../../../lib/logger';
 import FeedbackDialog from '../../../components/FeedbackDialog';
 import {
   createSessionError,
@@ -18,71 +27,20 @@ import {
   isNetworkError,
 } from '../../../lib/errorHandling';
 import { API } from '../../../lib/api';
+import { EMBED_EVENTS, STORAGE_KEYS, targetOrigin } from '../../../lib/embedConstants';
+import * as helpers from './helpers';
+import { onInitConfig } from './events';
 
-type SourceData = {
-  type: string;
-  title: string;
-  snippet?: string;
-  url?: string;
-  reference_id?: string;
+// Small id generator to avoid depending on ESM-only `nanoid` in tests
+const generateId = (len = 9) => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
+      return (crypto as any).randomUUID().replace(/-/g, '').slice(0, len);
+    }
+  } catch {}
+  return Math.random().toString(36).slice(2, 2 + len);
 };
 
-type Message = {
-  id: string;
-  text: string;
-  from: 'user' | 'assistant';
-  timestamp?: number;
-  hasFeedback?: boolean;
-  sources?: SourceData[];
-};
-
-type WidgetConfig = {
-  id: string;
-  show_unread_badge?: boolean;
-  primary_color: string;
-  secondary_color: string;
-  background_color: string;
-  text_color: string;
-  border_radius: number;
-  start_open: boolean;
-  hide_on_mobile: boolean;
-  title: { [lang: string]: string };
-  subtitle: { [lang: string]: string };
-  placeholder: { [lang: string]: string };
-  greeting_message: {
-    text: { [lang: string]: string };
-    buttons?: Array<{
-      id: string;
-      label: { [lang: string]: string };
-      action: string;
-      icon?: string;
-      response?: {
-        text?: { [lang: string]: string };
-        buttons?: any[];
-      };
-    }>;
-    flows?: any[];
-  };
-  default_language: string;
-  // Branding
-  logo?: string;
-  bot_avatar?: string;
-  // New appearance fields
-  font_family: string;
-  font_size: number;
-  font_weight: string;
-  shadow_intensity: string;
-  shadow_color: string;
-  widget_width: number;
-  widget_height: number;
-  button_size: string;
-  message_bubble_radius: number;
-  button_border_radius: number;
-  opacity: number;
-  // Positioning
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  edge_offset?: number;
-};
 
 const getButtonPixelSize = (buttonSize: string) => {
   const sizeMap = {
@@ -113,7 +71,19 @@ export default function EmbedClient({
   parentOrigin: initialParentOrigin,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [flowResponses, setFlowResponses] = useState<Array<{ text: string; buttons: any[]; timestamp: number }>>([]);
+  const [flowResponses, setFlowResponses] = useState<FlowResponse[]>([]);
+
+  // measure mount/render time
+  const mountStart = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+  useEffect(() => {
+    const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - mountStart.current;
+  }, []);
+
+
+  // precompute storage keys for this widget instance
+  const sessionStorageKey = helpers.sessionStorageKey(initialClientId, initialAssistantId);
+  const unreadStorageKey = helpers.unreadStorageKey(initialClientId, initialAssistantId);
+  const lastReadStorageKey = helpers.lastReadStorageKey(initialClientId, initialAssistantId);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -126,7 +96,8 @@ export default function EmbedClient({
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig | null>(null);
   const [shouldRender, setShouldRender] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const { translations: t, locale } = useWidgetTranslation();
+  const { translations: t, locale: hookLocale } = useWidgetTranslation();
+  const activeLocale = initialLocale || hookLocale || 'en';
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(0);
@@ -138,147 +109,25 @@ export default function EmbedClient({
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const [fatalError, setFatalError] = useState<string | null>(null);
 
-  // Helper function to get localStorage key for this widget instance
-  const getSessionStorageKey = () => {
-    return `companin-session-${initialClientId}-${initialAssistantId}`;
-  };
 
-  // Helper function to get localStorage key for unread count
-  const getUnreadStorageKey = () => {
-    return `companin-unread-${initialClientId}-${initialAssistantId}`;
-  };
-
-  // Helper function to get localStorage key for last read message
-  const getLastReadStorageKey = () => {
-    return `companin-lastread-${initialClientId}-${initialAssistantId}`;
-  };
-
-  // Helper function to get or create visitor ID
-  const getVisitorId = () => {
-    const visitorKey = `companin-visitor-${initialClientId}`;
-    let visitorId = localStorage.getItem(visitorKey);
-    if (!visitorId) {
-      visitorId = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem(visitorKey, visitorId);
-    }
-    return visitorId;
-  };
-
-  // Helper function to get current page context
-  const getPageContext = () => {
-    try {
-      const isEmbedded = (() => {
-        try {
-          return window.top !== window.self;
-        } catch {
-          return true;
-        }
-      })();
-
-      // If embedded, use document.referrer as the host page URL
-      if (isEmbedded && document.referrer) {
-        try {
-          const referrerUrl = new URL(document.referrer);
-          return {
-            url: document.referrer,
-            pathname: referrerUrl.pathname,
-            title: null,    // Still not available from referrer
-            referrer: document.referrer
-          };
-        } catch (e) {
-          // If referrer is not a valid URL, fall back
-          return {
-            url: document.referrer,
-            pathname: null,
-            title: null,
-            referrer: document.referrer
-          };
-        }
-      }
-
-      // Not embedded, or no referrer: use widget's own location
-      return {
-        url: window.location.href,
-        pathname: window.location.pathname,
-        title: document.title,
-        referrer: document.referrer || null,
-      };
-    } catch (e) {
-      // Fallback if accessing document fails (e.g., in iframe restrictions)
-      return {
-        url: window.location.href,
-        pathname: window.location.pathname,
-        title: 'Unknown Page',
-        referrer: null,
-      };
-    }
-  };
-
-  // Helper function to get stored session data
-  const getStoredSession = () => {
-    try {
-      const storageKey = getSessionStorageKey();
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const data = JSON.parse(stored);
-        // Check if session is expired (with 5 minute buffer before actual expiry)
-        if (data.expiresAt && new Date(data.expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
-          return data;
-        } else {
-          // Clear expired session
-          localStorage.removeItem(storageKey);
-        }
-      }
-    } catch (e) {
-      logError(e as Error, { context: 'getStoredSession', clientId: initialClientId });
-    }
-    return null;
-  };
-
-  // Helper function to store session data
-  const storeSession = (sessionId: string, expiresAt: string) => {
-    try {
-      const storageKey = getSessionStorageKey();
-      localStorage.setItem(storageKey, JSON.stringify({
-        sessionId,
-        expiresAt,
-        createdAt: new Date().toISOString()
-      }));
-    } catch (e) {
-      logError(e as Error, { context: 'storeSession', sessionId, clientId: initialClientId });
-    }
-  };
 
   useEffect(() => {
     // Listen for initial config posted from the host page (embed script)
-    const handleInitConfig = (event: MessageEvent) => {
-      try {
-        const { type, data } = event.data || {};
-        if (type !== 'WIDGET_INIT_CONFIG' || !data) return;
+    const { remove } = onInitConfig((data) => {
+      // Store the posted show_unread_badge flag so it persists across API config loads
+      if (typeof data.showUnreadBadge !== 'undefined') {
+        postedShowUnreadBadge.current = Boolean(data.showUnreadBadge);
 
-        console.log('[UNREAD_BADGE_DEBUG] Received WIDGET_INIT_CONFIG:', data);
-
-        // Store the posted show_unread_badge flag so it persists across API config loads
-        if (typeof (data.showUnreadBadge) !== 'undefined') {
-          postedShowUnreadBadge.current = Boolean(data.showUnreadBadge);
-          console.log('[UNREAD_BADGE_DEBUG] Stored postedShowUnreadBadge.current =', postedShowUnreadBadge.current);
-
-          // Apply it immediately if config already exists
-            setWidgetConfig((prev) => {
-              if (!prev) return prev;
-              const updated = { ...prev } as any;
-              updated.show_unread_badge = postedShowUnreadBadge.current;
-              console.log('[UNREAD_BADGE_DEBUG] Applied to existing config, show_unread_badge =', updated.show_unread_badge);
-              return updated as WidgetConfig;
-            });
-        }
-      } catch (err) {
-        console.error('[UNREAD_BADGE_DEBUG] Error in handleInitConfig:', err);
+        // Apply it immediately if config already exists
+        setWidgetConfig((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev } as any;
+          updated.show_unread_badge = postedShowUnreadBadge.current;
+          return updated as WidgetConfig;
+        });
       }
-    };
-
-    window.addEventListener('message', handleInitConfig);
-    return () => window.removeEventListener('message', handleInitConfig);
+    });
+    return remove;
   }, []);
 
   // When auth fails before any config loads, surface it as a fatal error
@@ -305,7 +154,7 @@ export default function EmbedClient({
   // Periodic check for expired sessions
   useEffect(() => {
     const checkSessionExpiry = () => {
-      const stored = getStoredSession();
+      const stored = helpers.getStoredSession(sessionStorageKey);
       if (!stored && sessionId) {
         // Session expired in localStorage, clear the state
         setSessionId(null);
@@ -339,7 +188,7 @@ export default function EmbedClient({
             }
 
             // Try to restore existing session first
-            const storedSession = getStoredSession();
+            const storedSession = helpers.getStoredSession(sessionStorageKey);
             if (storedSession) {
               validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
             } else {
@@ -390,8 +239,8 @@ export default function EmbedClient({
   // Load unread count and last read message from localStorage on mount
   useEffect(() => {
     try {
-      const storedUnread = localStorage.getItem(getUnreadStorageKey());
-      const storedLastRead = localStorage.getItem(getLastReadStorageKey());
+      const storedUnread = localStorage.getItem(unreadStorageKey);
+      const storedLastRead = localStorage.getItem(lastReadStorageKey);
 
       if (storedUnread) {
         setUnreadCount(parseInt(storedUnread, 10) || 0);
@@ -436,7 +285,7 @@ export default function EmbedClient({
 
           // Persist to localStorage
           try {
-            localStorage.setItem(getUnreadStorageKey(), newUnreadCount.toString());
+            localStorage.setItem(unreadStorageKey, newUnreadCount.toString());
           } catch (error) {
             logError(error as Error, { context: 'saveUnreadCount' });
           }
@@ -456,14 +305,14 @@ export default function EmbedClient({
         const buttonSize = getButtonPixelSize(widgetConfig.button_size || 'md');
         window.parent.postMessage(
           {
-            type: 'WIDGET_RESIZE',
+            type: EMBED_EVENTS.RESIZE,
             data: {
               width: buttonSize,
               height: buttonSize,
               ...positionData
             }
           },
-          '*'
+          targetOrigin(initialParentOrigin)
         );
       } else {
         // Send widget size when expanded
@@ -471,14 +320,14 @@ export default function EmbedClient({
         const height = widgetConfig.widget_height || 600;
         window.parent.postMessage(
           {
-            type: 'WIDGET_RESIZE',
+            type: EMBED_EVENTS.RESIZE,
             data: {
               width,
               height,
               ...positionData
             }
           },
-          '*'
+          targetOrigin(initialParentOrigin)
         );
       }
     }
@@ -486,7 +335,7 @@ export default function EmbedClient({
 
   const createSession = async (assistant: string, token: string) => {
     try {
-      const visitorId = getVisitorId();
+      const visitorId = helpers.getVisitorId(initialClientId);
 
       const sessionData = await retryWithBackoff(
         async () => {
@@ -501,10 +350,10 @@ export default function EmbedClient({
                 'Authorization': `Bearer ${token}`,
               },
               body: JSON.stringify({
-                assistant_id: assistant,
-                visitor_id: visitorId,
-                locale: locale,
-              }),
+                  assistant_id: assistant,
+                  visitor_id: visitorId,
+                  locale: activeLocale,
+                }),
               signal: controller.signal,
             });
 
@@ -544,10 +393,12 @@ export default function EmbedClient({
             }
 
             return data.data;
-          } catch (fetchError: any) {
+          } catch (fetchError: unknown) {
             clearTimeout(timeoutId);
 
-            if (fetchError.name === 'AbortError') {
+            const fe = fetchError as any;
+
+            if (fe.name === 'AbortError') {
               throw createNetworkError(
                 'Session creation timed out',
                 WidgetErrorCode.NETWORK_TIMEOUT
@@ -571,21 +422,22 @@ export default function EmbedClient({
 
       // Store session data in localStorage
       if (sessionData.expires_at) {
-        storeSession(sessionData.session_id, sessionData.expires_at);
+        helpers.storeSession(sessionStorageKey, sessionData.session_id, sessionData.expires_at);
       }
 
       // Load messages after session creation
       await loadSessionMessages(sessionData.session_id, token, true);
-    } catch (err: any) {
-      const errorMessage = err.userMessage || t.failedToCreateSession;
+    } catch (err: unknown) {
+      const e = err as any;
+      const errorMessage = e.userMessage || t.failedToCreateSession;
       setError(errorMessage);
-      logError(err, { assistant, action: 'createSession' });
+      logError(e, { assistant, action: 'createSession' });
 
       // Notify parent window of error
       if (window.parent !== window) {
         window.parent.postMessage(
-          { type: 'WIDGET_ERROR', data: { message: errorMessage } },
-          '*'
+          { type: EMBED_EVENTS.ERROR, data: { message: errorMessage } },
+          targetOrigin(initialParentOrigin)
         );
       }
     }
@@ -642,17 +494,18 @@ export default function EmbedClient({
         assistantId,
         status: response.status
       });
-      localStorage.removeItem(getSessionStorageKey());
+      localStorage.removeItem(sessionStorageKey);
       await createSession(assistantId, token);
     } catch (err) {
       logError(err, { sessionId, assistantId, action: 'validateAndRestoreSession' });
       // On error, create new session
-      localStorage.removeItem(getSessionStorageKey());
+      localStorage.removeItem(sessionStorageKey);
       await createSession(assistantId, token);
     }
   };
 
   const fetchAssistantDetails = async (assistantId: string, token: string) => {
+    const start = Date.now();
     try {
       const response = await fetch(API.assistant(assistantId), {
         method: 'GET',
@@ -675,10 +528,14 @@ export default function EmbedClient({
     } catch (err) {
       logError(err, { assistantId, action: 'fetchAssistantDetails' });
       throw err; // Re-throw so it can be caught by the caller
+    } finally {
+      const duration = Date.now() - start;
+      logPerf('fetchAssistantDetails', duration, { assistantId });
     }
   };
 
   const fetchWidgetConfig = async (configId: string, token: string) => {
+    const start = Date.now();
     try {
       const response = await fetch(API.widgetConfig(configId), {
         method: 'GET',
@@ -708,6 +565,9 @@ export default function EmbedClient({
     } catch (err) {
       logError(err, { configId, action: 'fetchWidgetConfig' });
       throw err; // Re-throw so it can be caught by the caller
+    } finally {
+      const duration = Date.now() - start;
+      logPerf('fetchWidgetConfig', duration, { configId });
     }
   };
 
@@ -800,11 +660,12 @@ export default function EmbedClient({
     }
   };
 
-  const getLocalizedText = (textObj: { [lang: string]: string } | undefined): string => {
-    if (!textObj) return '';
+  const getLocalizedText = (textObj: { [lang: string]: string } | string | undefined): string => {
+    if (textObj == null) return '';
+    if (typeof textObj === 'string') return textObj;
 
     // Priority: user's locale -> widget's default language -> English -> first available
-    const userLocale = locale || 'en';
+    const userLocale = activeLocale || 'en';
     const defaultLang = widgetConfig?.default_language || 'en';
 
     // Try user's locale first
@@ -827,20 +688,21 @@ export default function EmbedClient({
     }
 
     const flows = widgetConfig?.greeting_message?.flows || [];
-    const flow = flows.find((candidate: any) => candidate.trigger === action);
+    const flow = flows.find((candidate: Flow) => candidate.trigger === action);
 
     if (!flow) {
       return false;
     }
 
-    const responses = flow.responses || [];
+    const responses: (Flow['responses'] extends Array<infer R> ? R : never)[] = flow.responses || [];
+    type RawFlowResp = (Flow['responses'] extends Array<infer R> ? R : never);
 
-    responses.forEach((response: any, index: number) => {
-      const responseText = getLocalizedText(response.text);
+    responses.forEach((response: RawFlowResp, index: number) => {
+      const responseText = getLocalizedText(response.text as any);
 
       if (responseText || (response.buttons && response.buttons.length > 0)) {
         // Add flow response as a grouped object with text and buttons
-        setFlowResponses((prev: any[]) => [...prev, {
+        setFlowResponses((prev: FlowResponse[]) => [...prev, {
           text: responseText || '',
           buttons: response.buttons || [],
           timestamp: Date.now()
@@ -895,8 +757,8 @@ export default function EmbedClient({
               },
               body: JSON.stringify({
                 content: message,
-                locale: locale,
-                page_context: getPageContext(),
+                locale: activeLocale,
+                page_context: helpers.getPageContext(),
               }),
               signal: controller.signal,
             });
@@ -917,7 +779,7 @@ export default function EmbedClient({
               if (response.status === 401 || response.status === 404 ||
                   errorMessage.toLowerCase().includes('expired') ||
                   errorMessage.toLowerCase().includes('not found')) {
-                localStorage.removeItem(getSessionStorageKey());
+                localStorage.removeItem(sessionStorageKey);
                 throw createSessionError(
                   errorMessage,
                   WidgetErrorCode.SESSION_EXPIRED
@@ -939,10 +801,11 @@ export default function EmbedClient({
             }
 
             return data.data;
-          } catch (fetchError: any) {
+          } catch (fetchError: unknown) {
             clearTimeout(timeoutId);
 
-            if (fetchError.name === 'AbortError') {
+            const fe = fetchError as any;
+            if (fe.name === 'AbortError') {
               throw createNetworkError(
                 'Message send timed out',
                 WidgetErrorCode.NETWORK_TIMEOUT
@@ -974,17 +837,18 @@ export default function EmbedClient({
 
       // Reload all messages from server
       await loadSessionMessages(sessionId, authToken);
-    } catch (err: any) {
-      const errorMessage = err.userMessage || err.message || t.failedToSendMessage;
+    } catch (err: unknown) {
+      const e = err as any;
+      const errorMessage = e.userMessage || e.message || t.failedToSendMessage;
       setError(errorMessage);
-      logError(err, { message, sessionId, action: 'handleSubmit' });
+      logError(e, { message, sessionId, action: 'handleSubmit' });
 
       // Remove temp message and restore input
       setMessages(prev => prev.filter(m => m.id !== userMessage.id));
       setInput(message);
 
       // Check if session expired
-      if (err.code === WidgetErrorCode.SESSION_EXPIRED) {
+      if (e.code === WidgetErrorCode.SESSION_EXPIRED) {
         setSessionId(null);
       }
     } finally {
@@ -992,7 +856,7 @@ export default function EmbedClient({
     }
   };
 
-  const handleFollowUpButtonClick = (button: any) => {
+  const handleFollowUpButtonClick = (button: FlowButton) => {
     if (!sessionId || !authToken) return;
 
     const maybeText = getLocalizedText(button.response?.text);
@@ -1000,7 +864,7 @@ export default function EmbedClient({
 
     // Add response as a grouped flow response
     if (maybeText || maybeButtons.length > 0) {
-      setFlowResponses((prev: any[]) => [...prev, {
+      setFlowResponses((prev: FlowResponse[]) => [...prev, {
         text: maybeText || '',
         buttons: maybeButtons,
         timestamp: Date.now()
@@ -1010,11 +874,11 @@ export default function EmbedClient({
     const flowHandled = processWidgetFlow(button.action, true);
 
     if (!flowHandled) {
-      handleSubmit(new Event('submit') as any, button.action);
+      handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
     }
   };
 
-  const handleInteractionButtonClick = async (button: any) => {
+  const handleInteractionButtonClick = async (button: FlowButton) => {
     if (!sessionId || !authToken) return;
 
     const maybeText = getLocalizedText(button.response?.text);
@@ -1025,7 +889,7 @@ export default function EmbedClient({
       setIsTyping(true);
       setTimeout(() => {
         // Add as grouped flow response instead of separate message
-        setFlowResponses((prev: any[]) => [...prev, {
+        setFlowResponses((prev: FlowResponse[]) => [...prev, {
           text: maybeText || '',
           buttons: maybeButtons,
           timestamp: Date.now()
@@ -1037,7 +901,7 @@ export default function EmbedClient({
     const flowHandled = processWidgetFlow(button.action);
 
     if (!maybeText && !flowHandled) {
-      handleSubmit(new Event('submit') as any, button.action);
+      handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
     }
   };
 
@@ -1058,22 +922,34 @@ export default function EmbedClient({
 
       if (data.status === 'success' && Array.isArray(data.data?.messages)) {
         // Convert API messages to widget message format
-        const loadedMessages: Message[] = data.data.messages
-          .filter((msg: any) => {
+        const loadedMessages: Message[] = (data.data.messages as unknown[])
+          .filter((msg: unknown) => {
             // Filter out assistant greeting messages
-            if (msg.sender === 'assistant') {
-              const userMessages = data.data.messages.filter((m: any) => m.sender === 'user');
+            const m = msg as { sender?: string };
+            if (m.sender === 'assistant') {
+              const userMessages = (data.data.messages as unknown[]).filter(
+                (m2: unknown) => (m2 as { sender?: string }).sender === 'user'
+              );
               return userMessages.length > 0;
             }
             return true;
           })
-          .map((msg: any) => ({
-            id: msg.id,
-            text: msg.content,
-            from: msg.sender as 'user' | 'assistant',
-            timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now(),
-            sources: msg.sources || [],  // Include sources from API
-          }));
+          .map((msg: unknown) => {
+            const m = msg as {
+              id: string;
+              content: string;
+              sender: string;
+              created_at?: string;
+              sources?: unknown[];
+            };
+            return {
+              id: m.id,
+              text: m.content,
+              from: m.sender as 'user' | 'assistant',
+              timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+              sources: (m.sources as SourceData[]) || [],  // Include sources from API
+            };
+          });
 
         setMessages(loadedMessages);
 
@@ -1109,7 +985,7 @@ export default function EmbedClient({
           if (lastMessage?.id) {
             setLastReadMessageId(lastMessage.id);
             try {
-              localStorage.setItem(getLastReadStorageKey(), lastMessage.id);
+              localStorage.setItem(lastReadStorageKey, lastMessage.id);
             } catch (error) {
               logError(error as Error, { context: 'saveLastRead' });
             }
@@ -1118,7 +994,7 @@ export default function EmbedClient({
 
         // Clear unread count from localStorage
         try {
-          localStorage.setItem(getUnreadStorageKey(), '0');
+          localStorage.setItem(unreadStorageKey, '0');
         } catch (error) {
           logError(error as Error, { context: 'clearUnreadCount' });
         }
@@ -1128,10 +1004,10 @@ export default function EmbedClient({
       if (window.parent !== window) {
         window.parent.postMessage(
           {
-            type: newCollapsed ? 'WIDGET_MINIMIZE' : 'WIDGET_RESTORE',
+            type: newCollapsed ? EMBED_EVENTS.MINIMIZE : EMBED_EVENTS.RESTORE,
             data: { collapsed: newCollapsed }
           },
-          '*'
+          targetOrigin(initialParentOrigin)
         );
       }
 
@@ -1195,7 +1071,7 @@ export default function EmbedClient({
       handleSubmit={handleSubmit}
       error={error}
       assistantName={assistantName}
-      widgetConfig={widgetConfig}
+      widgetConfig={widgetConfig as WidgetConfig}
       onInteractionButtonClick={handleInteractionButtonClick}
       onFollowUpButtonClick={handleFollowUpButtonClick}
       flowResponses={flowResponses}

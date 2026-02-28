@@ -66,4 +66,37 @@ describe('MessageInput rate limiting', () => {
       expect(msg).toMatch(/too quickly/i);
     });
   });
+
+  it('logs perf metric when message is sent', async () => {
+    const onMessageSent = jest.fn();
+    const onError = jest.fn();
+    const onTypingStart = jest.fn();
+    const onTypingEnd = jest.fn();
+
+    const debugSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
+
+    render(
+      <MessageInput
+        sessionId={sessionId}
+        authToken={authToken}
+        locale="en"
+        onMessageSent={onMessageSent}
+        onError={onError}
+        onTypingStart={onTypingStart}
+        onTypingEnd={onTypingEnd}
+        getPageContext={() => ({})}
+      />
+    );
+
+    const input = screen.getByPlaceholderText('Type your message...') as HTMLInputElement;
+    const button = screen.getByRole('button', { name: /send/i });
+
+    fireEvent.change(input, { target: { value: 'hello' } });
+    fireEvent.click(button);
+
+    await waitFor(() => expect(onMessageSent).toHaveBeenCalled());
+
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('messageSendTotal'), expect.anything());
+    debugSpy.mockRestore();
+  });
 });

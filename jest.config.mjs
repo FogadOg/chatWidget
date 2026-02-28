@@ -26,6 +26,21 @@ const config = {
   coveragePathIgnorePatterns: [
     '<rootDir>/node_modules/',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 85,
+      functions: 90,
+      lines: 90,
+      statements: 90,
+    },
+    // you can add per-folder thresholds if needed
+    './components/': {
+      branches: 80,
+      functions: 85,
+      lines: 85,
+      statements: 85,
+    },
+  },
 }
 
 export default createJestConfig(config)

@@ -3,8 +3,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState } from 'react';
+// Small id generator to avoid depending on ESM-only `nanoid` in tests
+const generateId = (size = 9) => {
+  const alpha = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '';
+  for (let i = 0; i < size; i++) id += alpha[Math.floor(Math.random() * alpha.length)];
+  return id;
+};
 import { createNetworkError, retryWithBackoff, parseApiError, WidgetErrorCode, createSessionError } from 'lib/errorHandling';
-import { logError } from 'lib/logger';
+import { logError, logPerf } from 'lib/logger';
 import { validateMessageInput } from 'lib/validation';
 import { TIMEOUTS } from 'lib/constants';
 import { checkAndConsume } from 'lib/rateLimiter';
@@ -16,6 +23,7 @@ type MessageInputProps = {
   authToken: string;
   locale: string;
   onMessageSent: (message: Message) => void;
+  onMessageFailed?: (tempId: string) => void;
   onError: (error: string) => void;
   onTypingStart: () => void;
   onTypingEnd: () => void;
@@ -38,6 +46,7 @@ export default function MessageInput({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    const start = typeof performance !== 'undefined' ? performance.now() : Date.now();
     e.preventDefault();
     const message = input.trim();
 
@@ -71,7 +80,7 @@ export default function MessageInput({
 
     // Immediately add the user message to the UI
     const userMessage: Message = {
-      id: `temp-${Date.now()}`,
+      id: `temp-${generateId(9)}`,
       text: sanitizedMessage,
       from: 'user',
       timestamp: Date.now()
@@ -169,12 +178,14 @@ export default function MessageInput({
       onError(errorMessage);
       logError(err, { message: sanitizedMessage, sessionId, action: 'handleSubmit' });
 
-      // Remove temp message and restore input
-      onMessageSent({ ...userMessage, id: 'error' }); // This will be filtered out
+      // Remove temp message via explicit failure callback
+      onMessageFailed?.(userMessage.id);
       setInput(sanitizedMessage);
     } finally {
       setIsSubmitting(false);
       onTypingEnd();
+      const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - start;
+      logPerf('messageSendTotal', duration);
     }
   };
 
@@ -242,6 +253,7 @@ export default function MessageInput({
         onChange={(e) => setInput(e.target.value)}
         onKeyPress={handleKeyPress}
         placeholder="Type your message..."
+        aria-label="Type your message"
         disabled={disabled || isSubmitting || !sessionId}
         className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
       />

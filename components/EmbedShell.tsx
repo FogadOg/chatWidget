@@ -1,12 +1,20 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
+import InteractionButtons from './InteractionButtons';
+import MessageBubble from './MessageBubble';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
-import { logWarn } from '../lib/logger';
-import { DEFAULT_COLORS, DEFAULTS, SHADOW_INTENSITY } from '../lib/constants';
-import type { Message, WidgetConfig, FlowButton, FlowResponse, UnsureMessage } from '../types/widget';
+import { logDebug } from '../lib/logger';
+import type {
+  Message,
+  WidgetConfig,
+  FlowButton,
+  FlowResponse,
+  UnsureMessage,
+} from '../types/widget';
+import { useClickedButtons, ButtonLike } from '../hooks/useClickedButtons';
+import { useWidgetStyles } from '../hooks/useWidgetStyles';
+import { hexToRgb } from '../lib/colors';
 
 type Props = {
   isEmbedded: boolean;
@@ -35,25 +43,6 @@ type Props = {
   unreadCount?: number;
 };
 
-const normalizeHexColor = (color: string | undefined, fallback: string) => {
-  if (typeof color !== 'string') return fallback;
-  const trimmed = color.trim();
-
-  // Valid 3 or 6 character hex color
-  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  // Invalid or truncated color - return fallback instead of guessing
-  logWarn(`Invalid color value "${color}", using fallback "${fallback}"`);
-  return fallback;
-};
-
-// Helper function to convert hex to rgb values
-const hexToRgb = (hex: string) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255';
-};
 
 export default function EmbedShell({
   isEmbedded,
@@ -83,8 +72,8 @@ export default function EmbedShell({
 }: Props) {
   const { translations: t } = useWidgetTranslation();
 
-  // State to track clicked buttons
-  const [clickedButtons, setClickedButtons] = useState<Set<string>>(new Set());
+  // track which buttons have been clicked
+  const { clickedButtons, handleClick: onButtonClickInternal } = useClickedButtons();
 
   // Ref for scroll container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -96,55 +85,31 @@ export default function EmbedShell({
     }
   }, [messages, flowResponses, isTyping]);
 
-  // Use widget config colors or defaults
-  const primaryColor = normalizeHexColor(widgetConfig?.primary_color, DEFAULT_COLORS.PRIMARY);
-  const secondaryColor = normalizeHexColor(widgetConfig?.secondary_color, DEFAULT_COLORS.SECONDARY);
-  const backgroundColor = normalizeHexColor(widgetConfig?.background_color, DEFAULT_COLORS.BACKGROUND);
+  // compute colours, sizes and flags from config using a memoized hook
+  const {
+    primaryColor,
+    secondaryColor,
+    backgroundColor,
+    textColor,
+    borderRadius,
+    fontStyles,
+    getShadowStyle,
+    getButtonSizeClasses,
+    widgetWidth,
+    widgetHeight,
+    messageBubbleRadius,
+    buttonBorderRadius,
+    backgroundOpacity,
+    showTimestamps,
+    showTypingIndicator,
+    showMessageAvatars,
+    showUnreadBadge,
+  } = useWidgetStyles(widgetConfig);
 
-  // Behavior flags (default to true if not specified)
-  const showTimestamps = widgetConfig?.show_timestamps ?? true;
-  const showTypingIndicator = widgetConfig?.show_typing_indicator ?? true;
-  const showMessageAvatars = widgetConfig?.show_message_avatars ?? true;
-  const textColor = normalizeHexColor(widgetConfig?.text_color, DEFAULT_COLORS.TEXT);
-  const borderRadius = widgetConfig?.border_radius || DEFAULTS.BORDER_RADIUS;
+  const { width: btnWidth, height: btnHeight, icon: btnIcon } = getButtonSizeClasses;
 
-  // New appearance values
-  const fontFamily = widgetConfig?.font_family || DEFAULTS.FONT_FAMILY;
-  const fontSize = widgetConfig?.font_size || DEFAULTS.FONT_SIZE;
-  const fontWeight = widgetConfig?.font_weight || DEFAULTS.FONT_WEIGHT;
-  const shadowIntensity = widgetConfig?.shadow_intensity || DEFAULTS.SHADOW_INTENSITY;
-  const shadowColor = normalizeHexColor(widgetConfig?.shadow_color, DEFAULT_COLORS.SHADOW);
-  const widgetWidth = widgetConfig?.widget_width || DEFAULTS.WIDGET_WIDTH;
-  const widgetHeight = widgetConfig?.widget_height || DEFAULTS.WIDGET_HEIGHT;
-  const buttonSize = widgetConfig?.button_size || DEFAULTS.BUTTON_SIZE;
-  const messageBubbleRadius = widgetConfig?.message_bubble_radius || borderRadius;
-  const buttonBorderRadius = widgetConfig?.button_border_radius || borderRadius;
-  const backgroundOpacity = widgetConfig?.opacity || DEFAULTS.OPACITY;
-  const showUnreadBadge = widgetConfig?.show_unread_badge ?? true; // Default to true
-  console.log('[UNREAD_BADGE_DEBUG] EmbedShell render: widgetConfig?.show_unread_badge =', widgetConfig?.show_unread_badge, ', showUnreadBadge =', showUnreadBadge, ', unreadCount =', unreadCount);
 
-  // Helper function to get shadow styles
-  const getShadowStyle = () => {
-    const shadowValue = SHADOW_INTENSITY[shadowIntensity as keyof typeof SHADOW_INTENSITY] || SHADOW_INTENSITY.md;
-    return shadowValue !== 'none' ? `${shadowValue} ${shadowColor}40` : 'none';
-  };
 
-  // Helper function to get button size
-  const getButtonSize = () => {
-    const sizeMap = {
-      sm: { width: 'w-12', height: 'h-12', icon: 'w-5 h-5' },
-      md: { width: 'w-14', height: 'h-14', icon: 'w-6 h-6' },
-      lg: { width: 'w-16', height: 'h-16', icon: 'w-7 h-7' }
-    };
-    return sizeMap[buttonSize as keyof typeof sizeMap] || sizeMap.md;
-  };
-
-  // Apply font styles
-  const fontStyles = {
-    fontFamily,
-    fontSize: `${fontSize}px`,
-    fontWeight
-  };
 
   // Get localized text helper
   const getText = (textObj: any) => {
@@ -152,21 +117,13 @@ export default function EmbedShell({
     return textObj?.en || '';
   };
 
-  // Wrapper functions to handle button clicks and prevent multiple clicks
-  const handleInteractionButtonClickWrapper = (button: any) => {
-    const buttonId = button.id || button.button_id;
-    if (clickedButtons.has(buttonId)) return; // Prevent multiple clicks
-
-    setClickedButtons(prev => new Set(prev).add(buttonId));
-    onInteractionButtonClick?.(button);
+  // wrappers that mark buttons clicked and forward the event
+  const handleInteractionButtonClickWrapper = (button: ButtonLike) => {
+    onButtonClickInternal(button, onInteractionButtonClick);
   };
 
-  const handleFollowUpButtonClickWrapper = (button: any) => {
-    const buttonId = button.id || button.button_id;
-    if (clickedButtons.has(buttonId)) return; // Prevent multiple clicks
-
-    setClickedButtons(prev => new Set(prev).add(buttonId));
-    onFollowUpButtonClick?.(button);
+  const handleFollowUpButtonClickWrapper = (button: ButtonLike) => {
+    onButtonClickInternal(button, onFollowUpButtonClick);
   };
 
   // Show greeting message and buttons always (not just when no user messages)
@@ -201,15 +158,15 @@ export default function EmbedShell({
                 borderRadius: `${buttonBorderRadius * 2}px`,
                 ...fontStyles
               }}
-              className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90 relative`}
+              className={`${btnWidth} ${btnHeight} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90 relative`}
               title="Open Chat"
             >
                 {widgetConfig?.bot_avatar ? (
-                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${getButtonSize().icon} rounded-full object-cover`} />
+                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${btnIcon} rounded-full object-cover`} />
                 ) : widgetConfig?.logo ? (
-                  <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className={`${getButtonSize().icon} object-contain`} />
+                  <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className={`${btnIcon} object-contain`} />
                 ) : (
-                  <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className={btnIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
                   </svg>
                 )}
@@ -318,7 +275,7 @@ export default function EmbedShell({
                   <div className="flex flex-col items-start w-full">
                     <div className="flex items-start gap-2">
                        {showMessageAvatars && widgetConfig?.bot_avatar && (
-                         <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                         <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
                        )}
                        <div className="max-w-[80%] p-2 rounded-lg bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
                          {greetingText}
@@ -329,151 +286,35 @@ export default function EmbedShell({
 
                 {showButtons && (
                   <div className="flex flex-col gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
-                    {interactionButtons.map((button: any) => {
-                      const buttonId = button.id || button.button_id;
-                      const isClicked = clickedButtons.has(buttonId);
-                      return (
-                        <button
-                          key={buttonId}
-                          onClick={() => handleInteractionButtonClickWrapper(button)}
-                          disabled={isClicked}
-                          style={{
-                            backgroundColor: isClicked ? '#9ca3af' : primaryColor,
-                            borderRadius: `${buttonBorderRadius}px`,
-                            ...fontStyles
-                          }}
-                          className={`w-fit px-3 py-2 text-white text-sm transition-opacity flex items-center gap-2 ${
-                            isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                          }`}
-                        >
-                          {button.icon && <span>{button.icon}</span>}
-                          {getText(button.label) || 'Button'}
-                        </button>
-                      );
-                    })}
+                    <InteractionButtons
+                      buttons={interactionButtons}
+                      clickedButtons={clickedButtons}
+                      onButtonClick={handleInteractionButtonClickWrapper}
+                      primaryColor={primaryColor}
+                      buttonBorderRadius={buttonBorderRadius}
+                      fontStyles={fontStyles}
+                      getLocalizedText={getText}
+                    />
                   </div>
                 )}
 
                 {mergedContent.map((item, index) => {
                   if (item.type === 'message') {
                     const message = item.data;
-                    const hasFeedback = messageFeedbackSubmitted.has(message.id);
-                    const hasSources = message.from === 'assistant' && message.sources && message.sources.length > 0;
                     return (
                       <div key={message.id} className={`flex w-full ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        {message.from === 'assistant' ? (
-                          <div className="flex flex-col items-start w-full">
-                            <div className="flex items-start gap-2">
-                              {showMessageAvatars && widgetConfig?.bot_avatar && (
-                                <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                              )}
-                              <div
-                                className={`max-w-[80%] p-2`}
-                                style={{
-                                  backgroundColor: '#e5e7eb',
-                                  color: textColor,
-                                  borderRadius: `${messageBubbleRadius}px`,
-                                  ...fontStyles
-                                }}
-                              >
-                                <div>{message.text}</div>
-                                {hasSources && (
-                                  <div className="mt-2 pt-2 border-t border-gray-300">
-                                    <div className="text-xs font-semibold mb-1 opacity-70">
-                                      📚 Sources ({message.sources!.length}):
-                                    </div>
-                                    <div className="space-y-1">
-                                      {message.sources!.map((source, idx) => (
-                                        <div key={idx} className="text-xs">
-                                          {source.url ? (
-                                            <a
-                                              href={source.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="hover:underline flex items-start gap-1"
-                                              style={{ color: textColor }}
-                                            >
-                                              <span className="opacity-70">•</span>
-                                              <span className="flex-1">
-                                                <span className="font-medium">{source.title}</span>
-                                                {source.snippet && (
-                                                  <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
-                                                )}
-                                              </span>
-                                            </a>
-                                          ) : (
-                                            <div className="flex items-start gap-1">
-                                              <span className="opacity-70">•</span>
-                                              <span className="flex-1">
-                                                <span className="font-medium">{source.title}</span>
-                                                {source.snippet && (
-                                                  <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
-                                                )}
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            {!hasFeedback && onSubmitMessageFeedback && (
-                              <div className="mt-1 flex gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
-                                <button
-                                  onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')}
-                                  className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                  style={{ color: textColor }}
-                                  title="Thumbs up"
-                                >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_down')}
-                                  className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                  style={{ color: textColor }}
-                                  title="Thumbs down"
-                                >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />
-                                  </svg>
-                                </button>
-                              </div>
-                            )}
-                            {hasFeedback && (
-                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
-                                Feedback submitted
-                              </span>
-                            )}
-                            {showTimestamps && message.timestamp && (
-                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
-                                {new Date(message.timestamp).toLocaleTimeString()}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-end w-full">
-                            <div
-                              className={`max-w-[80%] p-2`}
-                              style={{
-                                backgroundColor: primaryColor,
-                                color: '#ffffff',
-                                borderRadius: `${messageBubbleRadius}px`,
-                                ...fontStyles
-                              }}
-                            >
-                              <div>{message.text}</div>
-                            </div>
-                            {showTimestamps && message.timestamp && (
-                              <span className="mt-1 text-xs opacity-50" style={{ color: textColor }}>
-                                {new Date(message.timestamp).toLocaleTimeString()}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <MessageBubble
+                          message={message}
+                          widgetConfig={widgetConfig}
+                          assistantName={assistantName}
+                          showMessageAvatars={showMessageAvatars}
+                          textColor={textColor}
+                          fontStyles={fontStyles}
+                          messageBubbleRadius={messageBubbleRadius}
+                          onSubmitMessageFeedback={onSubmitMessageFeedback}
+                          messageFeedbackSubmitted={messageFeedbackSubmitted}
+                          showTimestamps={showTimestamps}
+                        />
                       </div>
                     );
                   } else {
@@ -484,7 +325,7 @@ export default function EmbedShell({
                           <div className="flex flex-col items-start w-full">
                             <div className="flex items-start gap-2">
                               {showMessageAvatars && widgetConfig?.bot_avatar && (
-                                <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
                               )}
                               <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
                                 {flowResponse.text}
@@ -527,7 +368,7 @@ export default function EmbedShell({
                   <div className="flex justify-start">
                     <div className="flex items-start gap-2">
                       {showMessageAvatars && widgetConfig?.bot_avatar && (
-                        <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                        <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
                       )}
                       <div className="p-3" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px` }}>
                         <div className="flex space-x-1">
@@ -611,15 +452,15 @@ export default function EmbedShell({
                 borderRadius: `${buttonBorderRadius * 2}px`,
                 ...fontStyles
               }}
-              className={`${getButtonSize().width} ${getButtonSize().height} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
+              className={`${btnWidth} ${btnHeight} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
               title="Open Chat"
             >
                 {widgetConfig?.bot_avatar ? (
-                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${getButtonSize().icon} rounded-full object-cover`} />
+                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${btnIcon} rounded-full object-cover`} />
                 ) : widgetConfig?.logo ? (
-                  <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className={`${getButtonSize().icon} object-contain`} />
+                  <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className={`${btnIcon} object-contain`} />
                 ) : (
-                  <svg className={getButtonSize().icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className={btnIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
                   </svg>
                 )}
@@ -677,7 +518,7 @@ export default function EmbedShell({
                     <div className="flex flex-col items-start w-full">
                       <div className="flex items-start gap-2">
                         {widgetConfig?.bot_avatar && (
-                          <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                          <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
                         )}
                         <div className="max-w-[80%] p-2 bg-gray-200" style={{ color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
                           {greetingText}
@@ -688,138 +529,35 @@ export default function EmbedShell({
 
                   {showButtons && (
                     <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
-                      {interactionButtons.map((button: any) => {
-                        const buttonId = button.id || button.button_id;
-                        const isClicked = clickedButtons.has(buttonId);
-                        return (
-                          <button
-                            key={buttonId}
-                            onClick={() => handleInteractionButtonClickWrapper(button)}
-                            disabled={isClicked}
-                          style={{
-                            backgroundColor: isClicked ? '#9ca3af' : primaryColor,
-                            borderRadius: `${buttonBorderRadius}px`,
-                            ...fontStyles
-                          }}
-                            className={`w-fit px-3 py-2 text-white text-sm transition-opacity flex items-center gap-2 ${
-                              isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                            }`}
-                          >
-                            {button.icon && <span>{button.icon}</span>}
-                            {getText(button.label) || 'Button'}
-                          </button>
-                        );
-                      })}
+                      <InteractionButtons
+                        buttons={interactionButtons}
+                        clickedButtons={clickedButtons}
+                        onButtonClick={handleInteractionButtonClickWrapper}
+                        primaryColor={primaryColor}
+                        buttonBorderRadius={buttonBorderRadius}
+                        fontStyles={fontStyles}
+                        getLocalizedText={getText}
+                      />
                     </div>
                   )}
 
                   {mergedContent.map((item, index) => {
                     if (item.type === 'message') {
                       const message = item.data;
-                      const hasSources = message.from === 'assistant' && message.sources && message.sources.length > 0;
                       return (
                         <div key={message.id} className={`flex w-full ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {message.from === 'assistant' ? (
-                            <div className="flex flex-col items-start w-full">
-                              <div className="flex items-start gap-2">
-                                {widgetConfig?.bot_avatar && (
-                                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                                )}
-                                <div
-                                  className="max-w-[80%] p-2"
-                                  style={{
-                                    backgroundColor: '#e5e7eb',
-                                    color: textColor,
-                                    borderRadius: `${messageBubbleRadius}px`,
-                                    ...fontStyles
-                                  }}
-                                >
-                                  <div>{message.text}</div>
-                                  {hasSources && (
-                                    <div className="mt-2 pt-2 border-t border-gray-300">
-                                      <div className="text-xs font-semibold mb-1 opacity-70">
-                                        📚 Sources ({message.sources!.length}):
-                                      </div>
-                                      <div className="space-y-1">
-                                        {message.sources!.map((source, idx) => (
-                                          <div key={idx} className="text-xs">
-                                            {source.url ? (
-                                              <a
-                                                href={source.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="hover:underline flex items-start gap-1"
-                                                style={{ color: textColor }}
-                                              >
-                                                <span className="opacity-70">•</span>
-                                                <span className="flex-1">
-                                                  <span className="font-medium">{source.title}</span>
-                                                  {source.snippet && (
-                                                    <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
-                                                  )}
-                                                </span>
-                                              </a>
-                                            ) : (
-                                              <div className="flex items-start gap-1">
-                                                <span className="opacity-70">•</span>
-                                                <span className="flex-1">
-                                                  <span className="font-medium">{source.title}</span>
-                                                  {source.snippet && (
-                                                    <span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>
-                                                  )}
-                                                </span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              {onSubmitMessageFeedback && !messageFeedbackSubmitted.has(message.id) && (
-                                <div className="mt-1 flex gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
-                                  <button
-                                    onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')}
-                                    className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                    style={{ color: textColor }}
-                                    title="Thumbs up"
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_down')}
-                                    className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                    style={{ color: textColor }}
-                                    title="Thumbs down"
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              )}
-                              {messageFeedbackSubmitted.has(message.id) && (
-                                <span className="mt-1 text-xs opacity-50" style={{ color: textColor, marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
-                                  Feedback submitted
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              className={`max-w-[80%] p-2`}
-                              style={{
-                                backgroundColor: primaryColor,
-                                color: '#ffffff',
-                                borderRadius: `${messageBubbleRadius}px`,
-                                ...fontStyles
-                              }}
-                            >
-                              <div>{message.text}</div>
-                            </div>
-                          )}
+                          <MessageBubble
+                            message={message}
+                            widgetConfig={widgetConfig}
+                            assistantName={assistantName}
+                            showMessageAvatars={showMessageAvatars}
+                            textColor={textColor}
+                            fontStyles={fontStyles}
+                            messageBubbleRadius={messageBubbleRadius}
+                            onSubmitMessageFeedback={onSubmitMessageFeedback}
+                            messageFeedbackSubmitted={messageFeedbackSubmitted}
+                            showTimestamps={showTimestamps}
+                          />
                         </div>
                       );
                     } else {
@@ -830,7 +568,7 @@ export default function EmbedShell({
                             <div className="flex flex-col items-start w-full">
                               <div className="flex items-start gap-2">
                                 {widgetConfig?.bot_avatar && (
-                                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
                                 )}
                                 <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
                                   {flowResponse.text}

@@ -14,6 +14,7 @@ interface LogContext {
  */
 class Logger {
   private isDevelopment: boolean;
+  private perfBlacklist: Set<string> = new Set(['fetchAssistantDetails','fetchWidgetConfig']);
   private errorBuffer: Array<{
     level: LogLevel;
     message: string;
@@ -24,7 +25,9 @@ class Logger {
   }> = [];
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV === 'development';
+    // consider anything other than production as "development" for logging purposes
+    // this ensures jest (NODE_ENV="test") will still produce console output in tests
+    this.isDevelopment = process.env.NODE_ENV !== 'production';
   }
 
   /**
@@ -34,8 +37,7 @@ class Logger {
     if (this.isDevelopment) {
       console.error(`[Widget Error] ${message}`, context || '');
     } else {
-      // In production, send to error tracking service
-      // TODO: Integrate with Sentry, LogRocket, or similar
+      // In production, send to a configurable tracking endpoint
       this.sendToErrorTracking('error', message, context);
     }
   }
@@ -63,7 +65,8 @@ class Logger {
    */
   debug(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      console.debug(`[Widget Debug] ${message}`, context || '');
+      // omit prefix to reduce verbosity
+      console.debug(message, context || '');
     }
   }
 
@@ -71,41 +74,50 @@ class Logger {
    * Send error to tracking service (placeholder for production implementation)
    */
   private sendToErrorTracking(level: LogLevel, message: string, context?: LogContext): void {
-    // Placeholder for production error tracking
-    // In production, implement integration with:
-    // - Sentry: Sentry.captureException()
-    // - LogRocket: LogRocket.captureException()
-    // - Custom API endpoint
+    // Endpoint can be configured via environment variable
+    const endpoint = (process.env.NEXT_PUBLIC_LOG_ENDPOINT || '/api/client-errors');
 
-    // For now, store in a buffer that could be sent to backend
     try {
       const errorData = {
         level,
         message,
         context,
         timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
       };
 
-      // You could send this to your backend
-      // fetch('/api/client-errors', {
-      //   method: 'POST',
-      //   body: JSON.stringify(errorData),
-      // });
-
-      // Or store for batch sending
-      if (typeof window !== 'undefined') {
-        const errors = JSON.parse(localStorage.getItem('widget_errors') || '[]');
-        errors.push(errorData);
-        // Keep only last 50 errors
-        if (errors.length > 50) {
-          errors.shift();
-        }
-        localStorage.setItem('widget_errors', JSON.stringify(errors));
-      }
+      // send asynchronously, ignore errors
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(errorData),
+      }).catch(() => {});
     } catch (e) {
       // Fail silently - don't break app due to logging issues
+    }
+  }
+
+  /**
+   * Log a performance metric (duration in ms) for a named event.
+   */
+  perf(name: string, durationMs: number, context?: LogContext): void {
+    // ignore certain internal calls
+    if (this.perfBlacklist.has(name)) return;
+    if (this.isDevelopment) {
+      // log perf without extra prefix
+      console.debug(`${name}: ${durationMs}ms`, context || '');
+    } else {
+      const endpoint = (process.env.NEXT_PUBLIC_LOG_ENDPOINT || '/api/client-errors');
+      const perfData = { name, durationMs, context, timestamp: new Date().toISOString() };
+      // avoid runtime errors in environments without fetch (node/jest)
+      if (typeof fetch !== 'undefined') {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'perf', ...perfData }),
+        }).catch(() => {});
+      }
     }
   }
 }
@@ -118,3 +130,4 @@ export const logError = (message: string, context?: LogContext) => logger.error(
 export const logWarn = (message: string, context?: LogContext) => logger.warn(message, context);
 export const logInfo = (message: string, context?: LogContext) => logger.info(message, context);
 export const logDebug = (message: string, context?: LogContext) => logger.debug(message, context);
+export const logPerf = (name: string, durationMs: number, context?: LogContext) => logger.perf(name, durationMs, context);
