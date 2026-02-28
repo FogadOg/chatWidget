@@ -55,6 +55,33 @@
       ? "http://localhost:3001"
       : "https://widget.companin.tech";
 
+    // performance hint: warm up connection to widget host
+    (function addPreconnectHints() {
+      try {
+        if (document.head) {
+          const pc = document.createElement('link');
+          pc.rel = 'preconnect';
+          pc.href = baseUrl;
+          pc.crossOrigin = 'anonymous';
+          document.head.appendChild(pc);
+
+          const dns = document.createElement('link');
+          dns.rel = 'dns-prefetch';
+          dns.href = baseUrl;
+          document.head.appendChild(dns);
+
+          // optional prefetch of the embed page itself; browser may fetch early
+          const pf = document.createElement('link');
+          pf.rel = 'prefetch';
+          pf.href = baseUrl + '/embed/session';
+          pf.crossOrigin = 'anonymous';
+          document.head.appendChild(pf);
+        }
+      } catch (e) {
+        // silently ignore failures – not critical
+      }
+    })();
+
     // Create container with error handling
     const container = document.createElement("div");
     container.id = "companin-widget-container";
@@ -87,7 +114,7 @@
         document.body.style.margin = "0";
         document.body.style.padding = "0";
 
-        // Create iframe with error handling
+        // we no longer render a placeholder button; build iframe immediately
         const iframe = document.createElement("iframe");
         const params = new URLSearchParams({
           clientId,
@@ -118,42 +145,42 @@
               container,
               "Failed to load widget. Please refresh the page."
             );
+        }
+      }, 15000); // 15 second timeout
+
+      iframe.onload = () => {
+        iframeLoaded = true;
+        clearTimeout(loadTimeout);
+        try {
+          // If the host page provided an inline ChatWidgetConfig, forward it into the iframe
+          if (window.ChatWidgetConfig && iframe.contentWindow) {
+            iframe.contentWindow.postMessage(
+              { type: 'WIDGET_INIT_CONFIG', data: window.ChatWidgetConfig },
+              baseUrl
+            );
           }
-        }, 15000); // 15 second timeout
+        } catch (err) {
+          logError('Failed to post initial config to iframe', { error: err && err.message });
+        }
+      };
 
-        iframe.onload = () => {
-          iframeLoaded = true;
-          clearTimeout(loadTimeout);
-          try {
-            // If the host page provided an inline ChatWidgetConfig, forward it into the iframe
-            if (window.ChatWidgetConfig && iframe.contentWindow) {
-              iframe.contentWindow.postMessage(
-                { type: 'WIDGET_INIT_CONFIG', data: window.ChatWidgetConfig },
-                baseUrl
-              );
-            }
-          } catch (err) {
-            logError('Failed to post initial config to iframe', { error: err && err.message });
-          }
-        };
+      iframe.onerror = (error) => {
+        clearTimeout(loadTimeout);
+        logError("Widget iframe failed to load", { error, src: iframe.src });
+        showErrorInContainer(
+          container,
+          "Failed to load widget. Please check your connection."
+        );
+      };
 
-        iframe.onerror = (error) => {
-          clearTimeout(loadTimeout);
-          logError("Widget iframe failed to load", { error, src: iframe.src });
-          showErrorInContainer(
-            container,
-            "Failed to load widget. Please check your connection."
-          );
-        };
+      container.appendChild(iframe);
+      document.body.appendChild(container);
 
-        container.appendChild(iframe);
-        document.body.appendChild(container);
+      // Listen for widget events with error handling
+      window.addEventListener("message", handleMessage);
 
-        // Listen for widget events with error handling
-        window.addEventListener("message", handleMessage);
-
-        // Expose API for programmatic control
-        window.CompaninWidget = {
+      // Expose API for programmatic control
+      window.CompaninWidget = {
           show: () => {
             try {
               container.style.display = "block";
@@ -281,6 +308,8 @@
             });
           }
         }
+
+        // button logic has been removed; nothing to wire up
       } catch (err) {
         logError("Failed to initialize widget", { error: err.message, stack: err.stack });
         showErrorWidget(
