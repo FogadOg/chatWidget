@@ -135,6 +135,7 @@ describe('FeedbackDialog', () => {
   it('shows thank you message after successful submission', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      headers: { get: () => 'application/json' },
       json: async () => ({ success: true }),
     });
 
@@ -168,6 +169,7 @@ describe('FeedbackDialog', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
+      headers: { get: () => 'application/json' },
       json: async () => ({ error: 'Server error' }),
     });
 

@@ -55,7 +55,7 @@ export default function FeedbackDialog({
       });
 
       let data: unknown = {};
-      if (response && response.headers.get('content-type')?.includes('application/json')) {
+      if (response && response.headers?.get && response.headers.get('content-type')?.includes('application/json')) {
         try {
           data = await response.json();
         } catch (_err) {
