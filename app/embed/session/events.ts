@@ -5,7 +5,7 @@ import { EMBED_EVENTS } from '../../../lib/embedConstants';
  * Attach a listener for INIT_CONFIG events from the host page.
  * callback will receive the `data` payload when a valid event is posted.
  */
-export function onInitConfig(callback: (data: any) => void) {
+export function onInitConfig(callback: (data: Record<string, unknown>) => void) {
   const handler = (event: MessageEvent) => {
     try {
       const { type, data } = event.data || {};

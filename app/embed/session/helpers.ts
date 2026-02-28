@@ -1,6 +1,6 @@
 import { API } from '../../../lib/api';
 import { logError } from '../../../lib/logger';
-import type { Message } from '../../../types/widget';
+import type { Message, SourceData } from '../../../types/widget';
 
 /**
  * Storage keys for widget instances.
@@ -116,13 +116,23 @@ export async function loadSessionMessages(sessionId: string, token: string, setM
 
     const data = await response.json();
     if (data.status === 'success' && Array.isArray(data.data?.messages)) {
-      const loaded: Message[] = (data.data.messages as unknown[]).map((msg: any) => ({
-        id: msg.id,
-        text: msg.content,
-        from: msg.sender === 'user' ? 'user' : 'assistant',
-        timestamp: msg.created_at ? new Date(msg.created_at).getTime() : Date.now(),
-        sources: msg.sources || [],
-      }));
+      type ApiMessage = {
+        id: string;
+        content: string;
+        sender: 'user' | 'assistant';
+        created_at?: string;
+        sources?: unknown[];
+      };
+      const loaded: Message[] = (data.data.messages as unknown[]).map((msg: unknown) => {
+        const m = msg as ApiMessage;
+        return {
+          id: m.id,
+          text: m.content,
+          from: m.sender,
+          timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+          sources: (m.sources as SourceData[]) || [],
+        };
+      });
       setMessages(loaded);
     }
   } catch (e) {
