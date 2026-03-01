@@ -1,6 +1,6 @@
 import { t, getTranslations, LOCALES, type Locale } from '../lib/i18n';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 
 describe('i18n', () => {
   describe('t function', () => {

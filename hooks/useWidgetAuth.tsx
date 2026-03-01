@@ -20,8 +20,7 @@ export function useWidgetAuth() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-
-  const getAuthToken = useCallback(async (clientId: string, parentOrigin?: string): Promise<string | null> => {
+    const getAuthToken = useCallback(async (clientId: string, parentOrigin?: string): Promise<string | null> => {
     // Validate input
     if (!clientId || typeof clientId !== 'string' || clientId.trim().length === 0) {
       const error = createAuthError(
@@ -71,7 +70,7 @@ export function useWidgetAuth() {
             let data;
             try {
               data = await response.json();
-            } catch (parseError) {
+            } catch (_parseError /* eslint-disable-line @typescript-eslint/no-unused-vars */) {
               throw createAuthError(
                 'Invalid response from authentication server',
                 WidgetErrorCode.AUTH_TOKEN_FAILED
@@ -163,7 +162,7 @@ export function useWidgetAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [retryCount]);
 
   const clearAuth = useCallback(() => {
     setAuthToken(null);

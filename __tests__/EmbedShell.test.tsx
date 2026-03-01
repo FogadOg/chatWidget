@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import EmbedShell from '../components/EmbedShell';
+import { useWidgetStyles } from '../hooks/useWidgetStyles';
 
 // stub styles to control showMessageAvatars
 const defaultStyles = {
@@ -25,6 +26,9 @@ const defaultStyles = {
   showMessageAvatars: true,
   showUnreadBadge: false,
 };
+
+// convenience alias to call in tests
+const widgetStylesMock = useWidgetStyles as jest.Mock;
 
 jest.mock('../hooks/useWidgetStyles', () => ({
   useWidgetStyles: jest.fn(() => defaultStyles),
@@ -155,7 +159,7 @@ describe('EmbedShell - logo and avatar', () => {
         button_border_radius: 0,
         opacity: 1,
       };
-      const { getByText, getByPlaceholderText, getByText: getByFlowText } = render(
+      const { getByText, getByPlaceholderText } = render(
         <EmbedShell
           isEmbedded={false}
           isCollapsed={false}
@@ -427,7 +431,7 @@ describe('EmbedShell - logo and avatar', () => {
     });
 
     it('renders only-button flow without avatar when avatars disabled', () => {
-      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue({
+      widgetStylesMock.mockReturnValue({
         ...defaultStyles,
         showMessageAvatars: false,
       });
@@ -486,7 +490,7 @@ describe('EmbedShell - logo and avatar', () => {
         button_border_radius: 0,
         opacity: 1,
       };
-      const { container, queryByText } = render(
+      const { container } = render(
         <EmbedShell
           isEmbedded={false}
           isCollapsed={false}
@@ -556,7 +560,7 @@ describe('EmbedShell - logo and avatar', () => {
 
     it('flows with no avatar when showMessageAvatars false', () => {
       // override mock to disable avatars
-      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue({
+      widgetStylesMock.mockReturnValue({
         ...defaultStyles,
         showMessageAvatars: false,
       });
@@ -589,7 +593,7 @@ describe('EmbedShell - logo and avatar', () => {
 
     it('handles non-embedded collapsed toggle', () => {
       const widgetConfig: any = { primary_color:'#000', background_color:'#fff', text_color:'#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 };
-      const { getByRole, rerender } = render(
+      const { getByRole } = render(
         <EmbedShell
           isEmbedded={false}
           isCollapsed={true}
@@ -608,7 +612,7 @@ describe('EmbedShell - logo and avatar', () => {
     // Embedded mode flow response tests
     it('renders flow responses in embedded mode with text and buttons', () => {
       // Reset mock to default with avatars enabled
-      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue(defaultStyles);
+      widgetStylesMock.mockReturnValue(defaultStyles);
 
       const onFollow = jest.fn();
       const flowResponses = [
@@ -658,7 +662,7 @@ describe('EmbedShell - logo and avatar', () => {
 
     it('renders embedded flow with button icon and fallback label', () => {
       // Reset mock to default
-      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue(defaultStyles);
+      widgetStylesMock.mockReturnValue(defaultStyles);
 
       const onFollow = jest.fn();
       const flowResponses = [
@@ -712,7 +716,7 @@ describe('EmbedShell - logo and avatar', () => {
 
     it('disables embedded flow button after click', () => {
       // Reset mock to default
-      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue(defaultStyles);
+      widgetStylesMock.mockReturnValue(defaultStyles);
 
       const onFollow = jest.fn();
       const flowResponses = [
@@ -760,7 +764,7 @@ describe('EmbedShell - logo and avatar', () => {
     });
 
     it('renders embedded flow without avatar when showMessageAvatars is false', () => {
-      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue({
+      widgetStylesMock.mockReturnValue({
         ...defaultStyles,
         showMessageAvatars: false,
       });

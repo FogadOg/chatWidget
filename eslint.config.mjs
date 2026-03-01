@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // project-specific ignores formerly in .eslintignore
+    "coverage/**",
+    "coverage/lcov-report/**",
   ]),
 ]);
 

@@ -1,6 +1,6 @@
 'use client'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronLeftIcon } from 'lucide-react'

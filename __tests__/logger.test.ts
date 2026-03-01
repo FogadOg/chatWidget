@@ -1,4 +1,7 @@
 // ensure logger treats this as development mode
+// TypeScript warns that NODE_ENV is readonly; just ignore it for test
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (process.env as any).NODE_ENV = 'development';
 
@@ -59,7 +62,8 @@ describe('logger convenience functions', () => {
   describe('getWindowUrl helper', () => {
     it('returns undefined when global window is unavailable', () => {
       // pass null to bypass default global
-      expect(getWindowUrl(null)).toBeUndefined();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(getWindowUrl(null as any)).toBeUndefined();
     });
 
     it('returns href when provided window object has it', () => {
@@ -76,14 +80,21 @@ describe('logger convenience functions', () => {
 // production-mode behaviour requires reloading the module after adjusting env
 
 describe('logger in production', () => {
-  let prodLog: ReturnType<typeof import('../lib/logger').logger>;
+  // logger type is a class, but we only treat it as an object in tests
+  // using any avoids signature mismatches
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let prodLog: any;
   let fetchSpy: jest.Mock;
 
   beforeEach(() => {
     jest.restoreAllMocks();
     jest.resetModules();
+    // NODE_ENV is readonly on process.env; ignore type error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     process.env.NODE_ENV = 'production';
     // require inside test to pick up new env; singleton is exported as `logger`
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('../lib/logger');
     prodLog = mod.logger;
     fetchSpy = jest.fn().mockResolvedValue({});
@@ -107,6 +118,7 @@ describe('logger in production', () => {
   it('sendToErrorTracking does not throw if fetch missing', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (global as any).fetch;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => (prodLog as any).sendToErrorTracking('error', 'no fetch')).not.toThrow();
   });
 

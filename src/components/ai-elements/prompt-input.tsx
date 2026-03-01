@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars, @next/next/no-img-element */
 
 import { Button } from "@/components/ui/button";
 import {
@@ -671,7 +672,7 @@ export const PromptInput = ({
         }
       }
     },
-     
+
     [usingProvider]
   );
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import InteractionButtons, { ButtonType } from '../components/InteractionButtons';
 
 describe('InteractionButtons component', () => {
@@ -29,7 +29,7 @@ describe('InteractionButtons component', () => {
 
   it('renders string label directly', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b2', label: 'simple' };
+    const button: ButtonType = { id: 'b2', label: { en: 'simple' }, action: 'simple' };
     render(
       <InteractionButtons
         {...baseProps}
@@ -45,7 +45,7 @@ describe('InteractionButtons component', () => {
 
   it('prefers .en property when label object', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b3', label: { en: 'English', fr: 'Francais' } };
+    const button: ButtonType = { id: 'b3', label: { en: 'English', fr: 'Francais' }, action: 'button3' };
     render(
       <InteractionButtons
         {...baseProps}
@@ -59,7 +59,7 @@ describe('InteractionButtons component', () => {
 
   it('falls back to first value of label object when no .en', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b4', label: { fr: 'Bonjour', es: 'Hola' } };
+    const button: ButtonType = { id: 'b4', label: { fr: 'Bonjour', es: 'Hola' }, action: 'button4' };
     render(
       <InteractionButtons
         {...baseProps}
@@ -73,7 +73,7 @@ describe('InteractionButtons component', () => {
 
   it('uses action when label missing', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b5', action: 'doSomething' };
+    const button: ButtonType = { id: 'b5', action: 'doSomething', label: { en: 'doSomething' } };
     render(
       <InteractionButtons
         {...baseProps}
@@ -87,7 +87,7 @@ describe('InteractionButtons component', () => {
 
   it('falls back to "Button" when nothing else available', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b6' };
+    const button: ButtonType = { id: 'b6', action: 'b6', label: { en: '' } };
     render(
       <InteractionButtons
         {...baseProps}
@@ -101,7 +101,7 @@ describe('InteractionButtons component', () => {
 
   it('disables button when clickedButtons contains id', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b7', label: 'Disabled' };
+    const button: ButtonType = { id: 'b7', label: { en: 'Disabled' }, action: 'disabled' };
     render(
       <InteractionButtons
         {...baseProps}

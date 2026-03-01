@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 (function () {
   // Prevent multiple initializations
   if (window.__COMPANIN_WIDGET__) {

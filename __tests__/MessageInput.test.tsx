@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -13,7 +14,8 @@ jest.mock('../lib/errorHandling', () => {
   const original = jest.requireActual('../lib/errorHandling');
   return {
     ...original,
-    retryWithBackoff: jest.fn((fn: () => Promise<any>, opts: any) => fn()),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    retryWithBackoff: jest.fn((fn: () => Promise<any>, _opts: any) => fn()),
   };
 });
 
@@ -24,7 +26,8 @@ jest.mock('../lib/rateLimiter', () => ({
 
 import MessageInput from '../components/MessageInput';
 import { logError } from '../lib/logger';
-import { retryWithBackoff } from '../lib/errorHandling';
+import * as errorHandling from '../lib/errorHandling';
+import * as rateLimiter from '../lib/rateLimiter';
 
 // validation is a jest mock so we can override behavior per test
 jest.mock('../lib/validation', () => {
@@ -240,7 +243,6 @@ describe('MessageInput component', () => {
 
   it('onRetry callback invoked when retryWithBackoff retries', async () => {
     // override retryWithBackoff to simulate a retry
-    const errorHandling = require('../lib/errorHandling');
     (errorHandling.retryWithBackoff as jest.Mock).mockImplementation(async (fn: any, opts: any) => {
       // first call throws, invoke onRetry then second call succeeds
       try {
@@ -276,12 +278,10 @@ describe('MessageInput component', () => {
 
   it('handles generic non-ok response and surfaces error message', async () => {
     // restore retryWithBackoff to default behavior (previous test may have changed it)
-    const errorHandling = require('../lib/errorHandling');
     (errorHandling.retryWithBackoff as jest.Mock).mockImplementation((fn: any) => fn());
 
     // ensure rate limiter allows
-    const rate = require('../lib/rateLimiter');
-    (rate.checkAndConsume as jest.Mock).mockReturnValue({ allowed: true });
+    (rateLimiter.checkAndConsume as jest.Mock).mockReturnValue({ allowed: true });
 
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -305,12 +305,10 @@ describe('MessageInput component', () => {
 
   it('throws when response.ok but status not success', async () => {
     // reset retry stub
-    const errorHandling = require('../lib/errorHandling');
     (errorHandling.retryWithBackoff as jest.Mock).mockImplementation((fn: any) => fn());
 
     // rate limiter allow
-    const rate = require('../lib/rateLimiter');
-    (rate.checkAndConsume as jest.Mock).mockReturnValue({ allowed: true });
+    (rateLimiter.checkAndConsume as jest.Mock).mockReturnValue({ allowed: true });
 
     // first call for POST returns non-success
     // second call for loadLatestMessages must succeed to avoid swallow
@@ -337,11 +335,9 @@ describe('MessageInput component', () => {
   });
 
   it('handles invalid JSON from server', async () => {
-    const errorHandling = require('../lib/errorHandling');
     (errorHandling.retryWithBackoff as jest.Mock).mockImplementation((fn: any) => fn());
 
-    const rate = require('../lib/rateLimiter');
-    (rate.checkAndConsume as jest.Mock).mockReturnValue({ allowed: true });
+    (rateLimiter.checkAndConsume as jest.Mock).mockReturnValue({ allowed: true });
 
     mockFetch.mockResolvedValueOnce({
       ok: true,

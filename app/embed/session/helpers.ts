@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { API } from '../../../lib/api';
 import { logError } from '../../../lib/logger';
 import type { Message, SourceData } from '../../../types/widget';

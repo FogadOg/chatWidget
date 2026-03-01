@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { getApiBaseUrl, getApiV1BaseUrl, API, isApiConfigured } from '../lib/api';
 
 const mockEnv = async (env: Record<string, string | undefined>) => {

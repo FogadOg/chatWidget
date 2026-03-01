@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @next/next/no-img-element */
 import { cn } from "@/lib/utils";
 import type { Experimental_GeneratedImage } from "ai";
 

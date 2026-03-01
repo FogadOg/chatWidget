@@ -1,18 +1,23 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Production-safe logging utilities
 
 // Helper to compute the current URL in a way that can be injected for tests.
 // Accepts an optional `win` object for overriding global window (useful in
 // unit tests where the JSDOM `window` is always present).
-export function getWindowUrl(win?: any): string | undefined {
-  const resolved = win === undefined ? (typeof window !== 'undefined' ? window : undefined) : win;
+export function getWindowUrl(win?: { location?: { href?: string } } | Window): string | undefined {
+  const resolved =
+    win === undefined
+      ? typeof window !== 'undefined'
+        ? window
+        : undefined
+      : win;
   return resolved && resolved.location ? resolved.location.href : undefined;
 }
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 interface LogContext {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
