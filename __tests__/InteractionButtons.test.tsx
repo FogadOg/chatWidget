@@ -73,7 +73,8 @@ describe('InteractionButtons component', () => {
 
   it('uses action when label missing', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b5', action: 'doSomething', label: { en: 'doSomething' } };
+    // no label provided at all
+    const button: ButtonType = { id: 'b5', action: 'doSomething' };
     render(
       <InteractionButtons
         {...baseProps}
@@ -85,9 +86,23 @@ describe('InteractionButtons component', () => {
     expect(screen.getByText('doSomething')).toBeInTheDocument();
   });
 
-  it('falls back to "Button" when nothing else available', () => {
+  it('uses action when label is empty string', () => {
     const cb = jest.fn();
     const button: ButtonType = { id: 'b6', action: 'b6', label: { en: '' } };
+    render(
+      <InteractionButtons
+        {...baseProps}
+        buttons={[button]}
+        clickedButtons={new Set()}
+        onButtonClick={cb}
+      />
+    );
+    expect(screen.getByText('b6')).toBeInTheDocument();
+  });
+
+  it('falls back to "Button" when nothing else available', () => {
+    const cb = jest.fn();
+    const button: ButtonType = { id: 'b7', action: '', label: { en: '' } };
     render(
       <InteractionButtons
         {...baseProps}
@@ -101,12 +116,12 @@ describe('InteractionButtons component', () => {
 
   it('disables button when clickedButtons contains id', () => {
     const cb = jest.fn();
-    const button: ButtonType = { id: 'b7', label: { en: 'Disabled' }, action: 'disabled' };
+    const button: ButtonType = { id: 'b8', label: { en: 'Disabled' }, action: 'disabled' };
     render(
       <InteractionButtons
         {...baseProps}
         buttons={[button]}
-        clickedButtons={new Set(['b7'])}
+        clickedButtons={new Set(['b8'])}
         onButtonClick={cb}
       />
     );

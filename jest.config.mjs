@@ -15,6 +15,7 @@ const config = {
     '^types/(.*)$': '<rootDir>/types/$1',
     '^components/(.*)$': '<rootDir>/components/$1',
     '^hooks/(.*)$': '<rootDir>/hooks/$1',
+    '^baseline-browser-mapping$': '<rootDir>/__mocks__/baseline-browser-mapping.js',
   },
 
   // Ignore specific files from test runs
