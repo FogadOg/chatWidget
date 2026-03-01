@@ -40,6 +40,7 @@ export default function MessageInput({
   onTypingStart,
   onTypingEnd,
   getPageContext,
+  onMessageFailed,
   disabled = false
 }: MessageInputProps) {
   const [input, setInput] = useState('');

@@ -1,5 +1,13 @@
 // Production-safe logging utilities
 
+// Helper to compute the current URL in a way that can be injected for tests.
+// Accepts an optional `win` object for overriding global window (useful in
+// unit tests where the JSDOM `window` is always present).
+export function getWindowUrl(win?: any): string | undefined {
+  const resolved = win === undefined ? (typeof window !== 'undefined' ? window : undefined) : win;
+  return resolved && resolved.location ? resolved.location.href : undefined;
+}
+
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 interface LogContext {
@@ -84,7 +92,7 @@ class Logger {
         context,
         timestamp: new Date().toISOString(),
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        url: getWindowUrl(),
       };
 
       // send asynchronously, ignore errors

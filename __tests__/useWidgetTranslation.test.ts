@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { renderHook } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useState, useEffect } from 'react';
-import { useWidgetTranslation, getInitialLocale } from '../hooks/useWidgetTranslation';
+import * as hooks from '../hooks/useWidgetTranslation';
+import { getTranslations } from '../lib/i18n';
+
+const { useWidgetTranslation, getInitialLocale } = hooks; // for convenience
 
 const originalURLSearchParams = global.URLSearchParams;
 
@@ -42,6 +45,15 @@ describe('useWidgetTranslation', () => {
       expect(getInitialLocale()).toBe('en');
     });
 
+    it('returns "en" when localeParam is an empty string (falsy)', () => {
+      global.URLSearchParams = jest.fn().mockImplementation(() => ({
+        get: (key: string) => key === 'locale' ? '' : null,
+      })) as any;
+
+      // navigator will not supply a supported language by default
+      expect(getInitialLocale()).toBe('en');
+    });
+
     it('returns "en" when no locale is found', () => {
       (window as any).navigator = {
         languages: ['unsupported'],
@@ -49,6 +61,14 @@ describe('useWidgetTranslation', () => {
       };
 
       expect(getInitialLocale()).toBe('en');
+    });
+
+    it('returns the localeParam when provided and supported', () => {
+      global.URLSearchParams = jest.fn().mockImplementation((_search) => ({
+        get: (key: string) => key === 'locale' ? 'fr' : null,
+      })) as any;
+
+      expect(getInitialLocale()).toBe('fr');
     });
   });
 
@@ -193,5 +213,83 @@ describe('useWidgetTranslation', () => {
 
     // The useEffect should have updated the locale to 'de'
     expect(result.current.locale).toBe('de');
+  });
+
+  it('defers updates using setTimeout and clears timeout on unmount (real hook)', () => {
+    jest.useFakeTimers();
+
+    const setTimeoutSpy = jest.spyOn(window, 'setTimeout');
+    const clearTimeoutSpy = jest.spyOn(window, 'clearTimeout');
+
+    // track number of times getInitialLocale is invoked via URLSearchParams.get
+    let callCount = 0;
+    jest.spyOn(URLSearchParams.prototype, 'get').mockImplementation(() => {
+      callCount++;
+      // first two calls (initial locale + translations) return null -> fallback to navigator
+      // third call (in effect) return 'de'
+      if (callCount === 3) return 'de';
+      return null;
+    });
+
+    // initial navigator yields en
+    (window as any).navigator = { languages: ['en-US'], language: 'en-US' };
+
+    const { result, unmount } = renderHook(() => useWidgetTranslation());
+
+    // setTimeout should have been scheduled by the effect
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    expect(result.current.locale).toBe('en');
+
+    // unmount triggers cleanup
+    unmount();
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+
+    jest.runAllTimers();
+    expect(result.current.locale).toBe('en');
+
+    jest.useRealTimers();
+  });
+
+  it('executes deferred update and updates locale/translations when timer fires', () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(window, 'setTimeout');
+    const clearTimeoutSpy = jest.spyOn(window, 'clearTimeout');
+
+    let callCount3 = 0;
+    jest.spyOn(URLSearchParams.prototype, 'get').mockImplementation(() => {
+      callCount3++;
+      if (callCount3 === 3) return 'it';
+      return null;
+    });
+    (window as any).navigator = { languages: ['en-US'], language: 'en-US' };
+
+    const { result, unmount } = renderHook(() => useWidgetTranslation());
+    expect(result.current.locale).toBe('en');
+
+    // fire the scheduled timer and wrap in act so React updates flush
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    expect(result.current.locale).toBe('it');
+    expect(result.current.translations).toEqual(getTranslations('it'));
+
+    // cleanup should still clear the timeout
+    unmount();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+
+  // confirm the final else branch of getInitialLocale returns 'en' for unsupported
+  it('getInitialLocale falls back to en when no supported locale found after checks', () => {
+    // no url param, unsupported navigator
+    global.URLSearchParams = jest.fn().mockImplementation(() => ({
+      get: () => null,
+    })) as any;
+    (window as any).navigator = { languages: ['xx-XX'], language: 'xx-XX' };
+
+    expect(getInitialLocale()).toBe('en');
   });
 });

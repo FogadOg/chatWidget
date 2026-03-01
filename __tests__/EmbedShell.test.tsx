@@ -2,8 +2,34 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import EmbedShell from '../components/EmbedShell';
+
+// stub styles to control showMessageAvatars
+const defaultStyles = {
+  primaryColor: '#000',
+  secondaryColor: '#000',
+  backgroundColor: '#fff',
+  textColor: '#000',
+  borderRadius: 0,
+  fontStyles: {},
+  getShadowStyle: () => '',
+  getButtonSizeClasses: () => ({ width: 'w-8', height: 'h-8', icon: 'w-4 h-4' }),
+  widgetWidth: 300,
+  widgetHeight: 500,
+  messageBubbleRadius: 0,
+  buttonBorderRadius: 0,
+  backgroundOpacity: 1,
+  showTimestamps: false,
+  showTypingIndicator: false,
+  showMessageAvatars: true,
+  showUnreadBadge: false,
+};
+
+jest.mock('../hooks/useWidgetStyles', () => ({
+  useWidgetStyles: jest.fn(() => defaultStyles),
+}));
+
 
 jest.mock('../hooks/useWidgetTranslation', () => ({
   useWidgetTranslation: () => ({ translations: { chat: 'Chat', typeYourMessage: 'Type...', send: 'Send' } })
@@ -59,5 +85,728 @@ describe('EmbedShell - logo and avatar', () => {
     // assistant avatar should be rendered (there may be multiple avatar images)
     const avatars = screen.getAllByAltText(/avatar/);
     expect(avatars.length).toBeGreaterThan(0);
+  });
+
+  describe('button click wrappers and input handling', () => {
+    it('invokes interaction callback and disables button after click', () => {
+      const onInteraction = jest.fn();
+      const widgetConfig: any = {
+        greeting_message: { text: { en: 'Hi' }, buttons: [{ id: 'b1', label: { en: 'Click' } }] },
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          onInteractionButtonClick={onInteraction}
+        />
+      );
+      const btn = getByText('Click');
+      expect(btn).not.toBeDisabled();
+      act(() => {
+        btn.click();
+      });
+      expect(onInteraction).toHaveBeenCalledWith(widgetConfig.greeting_message.buttons[0]);
+      // after act, the button should be disabled via clicked state
+      expect(btn).toBeDisabled();
+    });
+
+    it('invokes follow-up callback and clears input on change', () => {
+      const onFollow = jest.fn();
+      const setInput = jest.fn();
+      const flowResponses = [
+        { text: 'flow text', timestamp: 1, buttons: [{ id: 'f1', label: { en: 'FlowBtn' } }] }
+      ];
+      const widgetConfig: any = {
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByText, getByPlaceholderText, getByText: getByFlowText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={setInput}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      // verify flow text rendered
+      expect(screen.getByText('flow text')).toBeInTheDocument();
+
+      const flowBtn = getByText('FlowBtn');
+      act(() => {
+        flowBtn.click();
+      });
+      expect(onFollow).toHaveBeenCalledWith(flowResponses[0].buttons[0]);
+      const inputEl = getByPlaceholderText('Type...');
+      // simulate change
+      act(() => {
+        fireEvent.change(inputEl, { target: { value: 'hello' } });
+      });
+      expect(setInput).toHaveBeenCalledWith('hello');
+    });
+
+    it('does not crash if interaction or follow-up callback is missing', () => {
+      const widgetConfig: any = {
+        greeting_message: { text: { en: 'Hi' }, buttons: [{ id: 'b1', label: { en: 'Click' } }] },
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+        />
+      );
+      const btn = getByText('Click');
+      act(() => {
+        btn.click();
+      });
+      // nothing throws
+    });
+
+    it('renders collapsed toggle with fallback svg/logo/avatar cases', () => {
+      const widgetConfig: any = {
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { rerender } = render(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={true}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={{ ...widgetConfig, bot_avatar: 'a.png' }}
+        />
+      );
+      expect(screen.getByAltText(/assistant avatar/)).toBeInTheDocument();
+      rerender(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={true}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={{ ...widgetConfig, logo: 'l.png' }}
+        />
+      );
+      expect(screen.getByAltText(/logo/)).toBeInTheDocument();
+      rerender(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={true}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+        />
+      );
+      // fallback svg present
+      expect(screen.getByRole('button')).toContainHTML('<svg');
+    });
+
+    it('displays flow response avatar when showMessageAvatars and bot_avatar provided', () => {
+      const onFollow = jest.fn();
+      const setInput = jest.fn();
+      const flowResponses = [
+        { text: 'flow text', timestamp: 1, buttons: [] }
+      ];
+      const widgetConfig: any = {
+        bot_avatar: 'avatar.png',
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByAltText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={setInput}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      expect(getByAltText(/assistant avatar/)).toBeInTheDocument();
+    });
+
+    it('handles flow response with both text and buttons and avatar present', () => {
+      const onFollow = jest.fn();
+      const setInput = jest.fn();
+      const flowResponses = [
+        { text: 'hello flow', timestamp: 1, buttons: [{ id: 'b4', label: { en: 'Btn4' } }] }
+      ];
+      const widgetConfig: any = {
+        bot_avatar: 'avatar.png',
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByText, getByAltText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={setInput}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      expect(getByAltText(/assistant avatar/)).toBeInTheDocument();
+      expect(getByText('hello flow')).toBeInTheDocument();
+      const btn = getByText('Btn4');
+      act(() => {
+        btn.click();
+      });
+      expect(onFollow).toHaveBeenCalled();
+    });
+
+    it('renders a flow with only buttons (no text) and handles click', () => {
+      const onFollow = jest.fn();
+      const setInput = jest.fn();
+      const flowResponses = [
+        { text: '', timestamp: 1, buttons: [{ id: 'only', label: { en: 'OnlyBtn' } }] }
+      ];
+      const widgetConfig: any = {
+        bot_avatar: 'avatar.png',
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { container } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={setInput}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      const flowSection = container.querySelector('div.space-y-2');
+      expect(flowSection).not.toBeNull();
+      const btn = flowSection!.querySelector('button') as HTMLButtonElement;
+      expect(btn).toBeInTheDocument();
+      expect(btn.textContent).toContain('OnlyBtn');
+      act(() => { btn.click(); });
+      expect(onFollow).toHaveBeenCalledWith(flowResponses[0].buttons[0]);
+    });
+
+    it('renders only-button flow without avatar when avatars disabled', () => {
+      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue({
+        ...defaultStyles,
+        showMessageAvatars: false,
+      });
+      const onFollow = jest.fn();
+      const flowResponses = [
+        { text: '', timestamp: 1, buttons: [{ id: 'btn', label: { en: 'Btn' } }] }
+      ];
+      const { queryByAltText, getByText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={{ primary_color: '#000', background_color: '#fff', text_color: '#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 }}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      expect(queryByAltText(/assistant avatar/)).toBeNull();
+      act(() => {
+        getByText('Btn').click();
+      });
+      expect(onFollow).toHaveBeenCalled();
+    });
+
+    // new tests exercising icon, fallback text, and disabled state
+    it('flow buttons render icon and fallback to "Button" when label empty, disabling after click', () => {
+      const onFollow = jest.fn();
+      const flowResponses = [
+        {
+          text: 'flow with icon',
+          timestamp: 1,
+          buttons: [
+            { id: 'b5', icon: '🔥', label: { en: '' } },
+          ],
+        },
+      ];
+      const widgetConfig: any = {
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { container, queryByText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      // locate the button inside the flow container
+      const flowSection = container.querySelector('div.space-y-2');
+      expect(flowSection).not.toBeNull();
+      const btn = flowSection!.querySelector('button') as HTMLButtonElement;
+      expect(btn).toBeInTheDocument();
+      expect(btn).toContainHTML('🔥');
+      // click disables the button
+      act(() => {
+        btn.click();
+      });
+      expect(onFollow).toHaveBeenCalledWith(flowResponses[0].buttons[0]);
+      expect(btn).toBeDisabled();
+    });
+
+    it('renders empty flow block when no text and no buttons', () => {
+      const flowResponses = [{ text: '', timestamp: 1, buttons: [] }];
+      const widgetConfig: any = {
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { container } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+        />
+      );
+      // should render a flow container element (contains space-y-2 class) despite being empty
+      const flowDivs = container.querySelectorAll('div.space-y-2');
+      expect(flowDivs.length).toBeGreaterThan(0);
+      expect(flowDivs[0].textContent).toBe('');
+    });
+
+    it('flows with no avatar when showMessageAvatars false', () => {
+      // override mock to disable avatars
+      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue({
+        ...defaultStyles,
+        showMessageAvatars: false,
+      });
+      const flowResponses = [
+        { text: 'text', timestamp: 1, buttons: [{ id: 'b2', label: { en: 'Btn2' } }] }
+      ];
+      const onFollow = jest.fn();
+      const setInput = jest.fn();
+      const { queryByAltText, getByText } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={setInput}
+          handleSubmit={() => {}}
+          widgetConfig={{ primary_color: '#000', background_color: '#fff', text_color: '#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 }}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      expect(queryByAltText(/assistant avatar/)).toBeNull();
+      act(() => {
+        getByText('Btn2').click();
+      });
+      expect(onFollow).toHaveBeenCalled();
+    });
+
+    it('handles non-embedded collapsed toggle', () => {
+      const widgetConfig: any = { primary_color:'#000', background_color:'#fff', text_color:'#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 };
+      const { getByRole, rerender } = render(
+        <EmbedShell
+          isEmbedded={false}
+          isCollapsed={true}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={{ ...widgetConfig, bot_avatar:'a.png' }}
+        />
+      );
+      expect(getByRole('button')).toBeInTheDocument();
+    });
+
+    // Embedded mode flow response tests
+    it('renders flow responses in embedded mode with text and buttons', () => {
+      // Reset mock to default with avatars enabled
+      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue(defaultStyles);
+
+      const onFollow = jest.fn();
+      const flowResponses = [
+        { text: 'embedded flow', timestamp: 1, buttons: [{ id: 'emb1', label: { en: 'EmbedBtn' } }] }
+      ];
+      const widgetConfig: any = {
+        bot_avatar: 'avatar.png',
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByText, getByAltText } = render(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      expect(getByText('embedded flow')).toBeInTheDocument();
+      expect(getByAltText(/assistant avatar/)).toBeInTheDocument();
+      const btn = getByText('EmbedBtn');
+      act(() => {
+        btn.click();
+      });
+      expect(onFollow).toHaveBeenCalledWith(flowResponses[0].buttons[0]);
+    });
+
+    it('renders embedded flow with button icon and fallback label', () => {
+      // Reset mock to default
+      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue(defaultStyles);
+
+      const onFollow = jest.fn();
+      const flowResponses = [
+        {
+          text: '',
+          timestamp: 1,
+          buttons: [
+            { id: 'icon-btn', icon: '⚡', label: { en: '' } },
+          ],
+        },
+      ];
+      const widgetConfig: any = {
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { container } = render(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      const flowSection = container.querySelector('div.space-y-2');
+      expect(flowSection).not.toBeNull();
+      const btn = flowSection!.querySelector('button') as HTMLButtonElement;
+      expect(btn).toBeInTheDocument();
+      expect(btn).toContainHTML('⚡');
+      expect(btn.textContent).toContain('Button'); // fallback text
+    });
+
+    it('disables embedded flow button after click', () => {
+      // Reset mock to default
+      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue(defaultStyles);
+
+      const onFollow = jest.fn();
+      const flowResponses = [
+        { text: 'click me', timestamp: 1, buttons: [{ id: 'dis-btn', label: { en: 'Click' } }] }
+      ];
+      const widgetConfig: any = {
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { getByText } = render(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      const btn = getByText('Click');
+      expect(btn).not.toBeDisabled();
+      act(() => {
+        btn.click();
+      });
+      expect(onFollow).toHaveBeenCalled();
+      expect(btn).toBeDisabled();
+    });
+
+    it('renders embedded flow without avatar when showMessageAvatars is false', () => {
+      (require('../hooks/useWidgetStyles').useWidgetStyles as jest.Mock).mockReturnValue({
+        ...defaultStyles,
+        showMessageAvatars: false,
+      });
+      const onFollow = jest.fn();
+      const flowResponses = [
+        { text: 'no avatar', timestamp: 1, buttons: [{ id: 'nav', label: { en: 'NoAv' } }] }
+      ];
+      const widgetConfig: any = {
+        bot_avatar: 'avatar.png',
+        primary_color: '#000',
+        background_color: '#fff',
+        text_color: '#000',
+        border_radius: 0,
+        font_family: 'Inter',
+        font_size: 14,
+        font_weight: 'normal',
+        shadow_intensity: 'md',
+        shadow_color: '#000',
+        widget_width: 300,
+        widget_height: 500,
+        button_size: 'md',
+        message_bubble_radius: 0,
+        button_border_radius: 0,
+        opacity: 1,
+      };
+      const { queryByAltText, getByText } = render(
+        <EmbedShell
+          isEmbedded={true}
+          isCollapsed={false}
+          toggleCollapsed={() => {}}
+          messages={[]}
+          isTyping={false}
+          input=""
+          setInput={() => {}}
+          handleSubmit={() => {}}
+          widgetConfig={widgetConfig}
+          flowResponses={flowResponses}
+          onFollowUpButtonClick={onFollow}
+        />
+      );
+      expect(queryByAltText(/assistant avatar/)).toBeNull();
+      expect(getByText('no avatar')).toBeInTheDocument();
+      act(() => {
+        getByText('NoAv').click();
+      });
+      expect(onFollow).toHaveBeenCalled();
+    });
   });
 });

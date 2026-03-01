@@ -2,7 +2,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (process.env as any).NODE_ENV = 'development';
 
-import { logError, logWarn, logInfo, logDebug, logPerf } from '../lib/logger';
+import { logError, logWarn, logInfo, logDebug, logPerf, getWindowUrl } from '../lib/logger';
 
 describe('logger convenience functions', () => {
   beforeEach(() => {
@@ -22,6 +22,11 @@ describe('logger convenience functions', () => {
   it('logError calls console.error in development', () => {
     logError('test error', { foo: 'bar' });
     expect(console.error).toHaveBeenCalledWith('[Widget Error] test error', { foo: 'bar' });
+  });
+
+  it('logError prints empty string when context is undefined', () => {
+    logError('no context');
+    expect(console.error).toHaveBeenLastCalledWith('[Widget Error] no context', '');
   });
 
   it('logWarn calls console.warn in development', () => {
@@ -49,5 +54,89 @@ describe('logger convenience functions', () => {
     logPerf('fetchWidgetConfig', 60);
     // should not call console.debug at all for blacklisted names
     expect(console.debug).toHaveBeenCalledTimes(0);
+  });
+
+  describe('getWindowUrl helper', () => {
+    it('returns undefined when global window is unavailable', () => {
+      // pass null to bypass default global
+      expect(getWindowUrl(null)).toBeUndefined();
+    });
+
+    it('returns href when provided window object has it', () => {
+      const fake = { location: { href: 'http://foo' } };
+      expect(getWindowUrl(fake)).toBe('http://foo');
+    });
+
+    it('returns undefined if provided object lacks location', () => {
+      expect(getWindowUrl({})).toBeUndefined();
+    });
+  });
+});
+
+// production-mode behaviour requires reloading the module after adjusting env
+
+describe('logger in production', () => {
+  let prodLog: ReturnType<typeof import('../lib/logger').logger>;
+  let fetchSpy: jest.Mock;
+
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+    process.env.NODE_ENV = 'production';
+    // require inside test to pick up new env; singleton is exported as `logger`
+    const mod = require('../lib/logger');
+    prodLog = mod.logger;
+    fetchSpy = jest.fn().mockResolvedValue({});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).fetch = fetchSpy;
+  });
+
+  it('sends errors via fetch instead of console', () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    prodLog.error('prod-error', { a: 1 });
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalled();
+    const call = fetchSpy.mock.calls[0];
+    expect(call[1].method).toBe('POST');
+    const body = JSON.parse(call[1].body);
+    expect(body.level).toBe('error');
+    expect(body.message).toBe('prod-error');
+    expect(body.context).toEqual({ a: 1 });
+  });
+
+  it('sendToErrorTracking does not throw if fetch missing', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (global as any).fetch;
+    expect(() => (prodLog as any).sendToErrorTracking('error', 'no fetch')).not.toThrow();
+  });
+
+  it('produces undefined userAgent when navigator.userAgent missing', () => {
+    // redefine navigator.userAgent to undefined
+    Object.defineProperty(global, 'navigator', {
+      value: { userAgent: undefined },
+      configurable: true,
+    });
+
+    prodLog.error('check undefined');
+    expect(fetchSpy).toHaveBeenCalled();
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.userAgent).toBeUndefined();
+    // url may still be populated by jsdom; no assertion here
+  });
+
+
+
+  it('posts perf data via fetch', () => {
+    prodLog.perf('abc', 999, { x: 2 });
+    expect(fetchSpy).toHaveBeenCalled();
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.type).toBe('perf');
+    expect(body.name).toBe('abc');
+    expect(body.durationMs).toBe(999);
+  });
+
+  it('does not post perf for blacklisted name', () => {
+    prodLog.perf('fetchWidgetConfig', 10);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
