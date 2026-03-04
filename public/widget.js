@@ -127,6 +127,12 @@
           parentOrigin: window.location.origin,
         });
 
+        // Add custom CSS if provided
+        const customCss = script.getAttribute("data-custom-css");
+        if (customCss) {
+          params.set('customCss', customCss);
+        }
+
         iframe.src = `${baseUrl}/embed/session?${params.toString()}`;
         iframe.style.cssText = `
           width: 100%;

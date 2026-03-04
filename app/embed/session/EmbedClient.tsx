@@ -29,6 +29,34 @@ import { EMBED_EVENTS, targetOrigin } from '../../../lib/embedConstants';
 import * as helpers from './helpers';
 import { onInitConfig } from './events';
 
+// helpers exposed so tests can call them directly
+export function injectCustomAssets(css?: string) {
+  try {
+    if (css) {
+      const style = document.createElement('style');
+      style.textContent = css;
+      document.head.appendChild(style);
+    }
+  } catch (err) {
+    logError(err as Error, { action: 'injectCustomAssets', css });
+  }
+}
+
+export function applyCustomAssetsFromQuery(search?: string) {
+  try {
+    const src = search ?? window.location.search;
+    console.debug('[widget] applyCustomAssetsFromQuery search=', src);
+    const params = new URLSearchParams(src);
+    const css = params.get('customCss');
+    if (css) {
+      console.debug('[widget] injecting css', { css });
+      injectCustomAssets(css ? decodeURIComponent(css) : undefined);
+    }
+  } catch (err) {
+    console.error('[widget] applyCustomAssetsFromQuery error', err);
+  }
+}
+
 
 
 const getButtonPixelSize = (buttonSize: string) => {
@@ -66,6 +94,12 @@ export default function EmbedClient({
   const mountStart = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
   useEffect(() => {
     const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - mountStart.current;
+  }, []);
+
+  // debug and perform custom css/js injection on mount
+  useEffect(() => {
+    console.debug('[widget] EmbedClient mounted, search=', window.location.search);
+    applyCustomAssetsFromQuery();
   }, []);
 
 
