@@ -59,7 +59,7 @@ export function applyCustomAssetsFromQuery(search?: string) {
 
 
 
-const getButtonPixelSize = (buttonSize: string) => {
+export const getButtonPixelSize = (buttonSize: string) => {
   const sizeMap = {
     sm: 100,
     md: 128,

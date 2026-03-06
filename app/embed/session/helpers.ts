@@ -28,45 +28,48 @@ export function getVisitorId(clientId: string) {
   return visitorId;
 }
 
-export function getPageContext() {
+export function getPageContext(
+  windowObj: Window = window,
+  documentObj: Document = document
+) {
   try {
     const isEmbedded = (() => {
       try {
-        return window.top !== window.self;
+        return windowObj.top !== windowObj.self;
       } catch {
         return true;
       }
     })();
 
-    if (isEmbedded && document.referrer) {
+    if (isEmbedded && documentObj.referrer) {
       try {
-        const referrerUrl = new URL(document.referrer);
+        const referrerUrl = new URL(documentObj.referrer);
         return {
-          url: document.referrer,
+          url: documentObj.referrer,
           pathname: referrerUrl.pathname,
           title: null,
-          referrer: document.referrer,
+          referrer: documentObj.referrer,
         };
       } catch {
         return {
-          url: document.referrer,
+          url: documentObj.referrer,
           pathname: null,
           title: null,
-          referrer: document.referrer,
+          referrer: documentObj.referrer,
         };
       }
     }
 
     return {
-      url: window.location.href,
-      pathname: window.location.pathname,
-      title: document.title,
-      referrer: document.referrer || null,
+      url: windowObj.location.href,
+      pathname: windowObj.location.pathname,
+      title: documentObj.title,
+      referrer: documentObj.referrer || null,
     };
   } catch (e) {
     return {
-      url: window.location.href,
-      pathname: window.location.pathname,
+      url: windowObj.location.href,
+      pathname: windowObj.location.pathname,
       title: 'Unknown Page',
       referrer: null,
     };
