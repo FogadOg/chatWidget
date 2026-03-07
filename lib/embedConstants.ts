@@ -6,6 +6,10 @@ export const EMBED_EVENTS = {
   MINIMIZE: 'WIDGET_MINIMIZE',
   RESTORE: 'WIDGET_RESTORE',
   ERROR: 'WIDGET_ERROR',
+  // Messages from iframe to host
+  MESSAGE: 'WIDGET_MESSAGE',
+  RESPONSE: 'WIDGET_RESPONSE',
+  AUTH_FAILURE: 'WIDGET_AUTH_FAILURE',
 } as const;
 
 export const STORAGE_KEYS = {

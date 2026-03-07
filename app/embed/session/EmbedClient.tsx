@@ -46,11 +46,9 @@ export function injectCustomAssets(css?: string) {
 export function applyCustomAssetsFromQuery(search?: string) {
   try {
     const src = search ?? window.location.search;
-    console.debug('[widget] applyCustomAssetsFromQuery search=', src);
     const params = new URLSearchParams(src);
     const css = params.get('customCss');
     if (css) {
-      console.debug('[widget] injecting css', { css });
       injectCustomAssets(css ? decodeURIComponent(css) : undefined);
     }
   } catch (err) {
@@ -104,7 +102,6 @@ export default function EmbedClient({
 
   // debug and perform custom css/js injection on mount
   useEffect(() => {
-    console.debug('[widget] EmbedClient mounted, search=', window.location.search);
     applyCustomAssetsFromQuery();
   }, []);
 
@@ -189,6 +186,13 @@ export default function EmbedClient({
   useEffect(() => {
     if (authError && !widgetConfig) {
       setFatalError(authError);
+        try {
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: EMBED_EVENTS.AUTH_FAILURE, data: { message: authError } }, targetOrigin(initialParentOrigin));
+          }
+        } catch (e) {
+          // ignore
+        }
     }
   }, [authError, widgetConfig]);
 
@@ -806,6 +810,15 @@ export default function EmbedClient({
     };
     setMessages(prev => [...prev, userMessage]);
 
+    // Notify parent about the sent message
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
+      }
+    } catch (e) {
+      // ignore
+    }
+
     setInput('');
     setIsTyping(true);
     setError(null);
@@ -932,6 +945,7 @@ export default function EmbedClient({
 
     const maybeText = getLocalizedText(button.response?.text);
     const maybeButtons = button.response?.buttons || [];
+    const labelText = getLocalizedText(button.label) || (typeof button.label === 'string' ? button.label : (button.label?.en || ''));
 
     // Add response as a grouped flow response
     if (maybeText || maybeButtons.length > 0) {
@@ -943,6 +957,23 @@ export default function EmbedClient({
     }
 
     const flowHandled = processWidgetFlow(button.action, true);
+
+    // If the flow was handled client-side, notify parent about the interaction
+    if (flowHandled) {
+      try {
+        if (window.parent !== window) {
+          const userMessage = {
+            id: `temp-${Date.now()}`,
+            text: labelText || maybeText || button.action || '',
+            from: 'user',
+            timestamp: Date.now(),
+          };
+          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
 
     if (!flowHandled) {
       handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
@@ -957,6 +988,14 @@ export default function EmbedClient({
     const labelText = getLocalizedText(button.label) ||
       (typeof button.label === 'string' ? button.label : (button.label?.en || ''));
 
+    // immediately add a user message bubble to the conversation
+    const userMsg: Message = {
+      id: `temp-${Date.now()}`,
+      text: labelText || maybeText || '',
+      from: 'user',
+      timestamp: Date.now(),
+    };
+    setMessages(prev => [...prev, userMsg]);
     // always show a flow response when button is clicked
     setIsTyping(true);
     setTimeout(() => {
@@ -974,6 +1013,22 @@ export default function EmbedClient({
 
     if (!maybeText && !flowHandled) {
       handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
+    }
+    else {
+      // also notify parent about the user message
+      try {
+        if (window.parent !== window) {
+          const userMessage = {
+            id: userMsg.id,
+            text: userMsg.text,
+            from: 'user',
+            timestamp: userMsg.timestamp,
+          };
+          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
+        }
+      } catch (e) {
+        // ignore
+      }
     }
   };
 
@@ -1024,6 +1079,24 @@ export default function EmbedClient({
           });
 
         setMessages(loadedMessages);
+
+        // Notify parent window about the latest message(s)
+        try {
+          if (window.parent !== window) {
+            const last = loadedMessages[loadedMessages.length - 1];
+            if (last) {
+              // Post a generic message event for the last message
+              window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: last }, targetOrigin(initialParentOrigin));
+
+              // If the last message is from assistant, also post a response event
+              if (last.from === 'assistant') {
+                window.parent.postMessage({ type: EMBED_EVENTS.RESPONSE, data: last }, targetOrigin(initialParentOrigin));
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
 
         // Only set initial load flag to false after first load
         if (isInitial) {

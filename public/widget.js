@@ -187,10 +187,65 @@
       window.addEventListener("message", handleMessage);
 
       // Expose API for programmatic control
-      window.CompaninWidget = {
+        // Host callback hooks registry
+        const hostHooks = {
+          onOpen: null,
+          onClose: null,
+          onMessage: null,
+          onResponse: null,
+          onAuthFailure: null,
+        };
+
+        // Cache recent events so hosts that register late still receive them
+        let __lastHostMessage = null;
+        let __lastHostResponse = null;
+        let __lastHostAuthFailure = null;
+
+        window.CompaninWidget = {
+          // Hook registration helpers
+          onOpen: (fn) => { try { hostHooks.onOpen = typeof fn === 'function' ? fn : null; } catch (e) { logError('Failed to register onOpen hook', { error: e && e.message }); } },
+          onClose: (fn) => { try { hostHooks.onClose = typeof fn === 'function' ? fn : null; } catch (e) { logError('Failed to register onClose hook', { error: e && e.message }); } },
+          onMessage: (fn) => { try { hostHooks.onMessage = typeof fn === 'function' ? fn : null; if (hostHooks.onMessage && __lastHostMessage) { try { hostHooks.onMessage(__lastHostMessage); } catch (e) { logError('Cached onMessage hook threw', { error: e && e.message }); } } } catch (e) { logError('Failed to register onMessage hook', { error: e && e.message }); } },
+          onResponse: (fn) => { try { hostHooks.onResponse = typeof fn === 'function' ? fn : null; if (hostHooks.onResponse && __lastHostResponse) { try { hostHooks.onResponse(__lastHostResponse); } catch (e) { logError('Cached onResponse hook threw', { error: e && e.message }); } } } catch (e) { logError('Failed to register onResponse hook', { error: e && e.message }); } },
+          onAuthFailure: (fn) => { try { hostHooks.onAuthFailure = typeof fn === 'function' ? fn : null; if (hostHooks.onAuthFailure && __lastHostAuthFailure) { try { hostHooks.onAuthFailure(__lastHostAuthFailure); } catch (e) { logError('Cached onAuthFailure hook threw', { error: e && e.message }); } } } catch (e) { logError('Failed to register onAuthFailure hook', { error: e && e.message }); } },
+
+          // Backwards-compatible registration: accept an object of hooks
+          registerHooks: (hooks = {}) => {
+            try {
+              if (hooks.onOpen) hostHooks.onOpen = typeof hooks.onOpen === 'function' ? hooks.onOpen : hostHooks.onOpen;
+              if (hooks.onClose) hostHooks.onClose = typeof hooks.onClose === 'function' ? hooks.onClose : hostHooks.onClose;
+              if (hooks.onMessage) hostHooks.onMessage = typeof hooks.onMessage === 'function' ? hooks.onMessage : hostHooks.onMessage;
+              if (hooks.onResponse) hostHooks.onResponse = typeof hooks.onResponse === 'function' ? hooks.onResponse : hostHooks.onResponse;
+              if (hooks.onAuthFailure) hostHooks.onAuthFailure = typeof hooks.onAuthFailure === 'function' ? hooks.onAuthFailure : hostHooks.onAuthFailure;
+              // Deliver cached events if present
+              try {
+                if (hostHooks.onMessage && __lastHostMessage) {
+                  hostHooks.onMessage(__lastHostMessage);
+                }
+                if (hostHooks.onResponse && __lastHostResponse) {
+                  hostHooks.onResponse(__lastHostResponse);
+                }
+                if (hostHooks.onAuthFailure && __lastHostAuthFailure) {
+                  hostHooks.onAuthFailure(__lastHostAuthFailure);
+                }
+              } catch (e) {
+                logError('Cached hook delivery via registerHooks threw', { error: e && e.message });
+              }
+
+            } catch (e) {
+              logError('Failed to register hooks object', { error: e && e.message });
+            }
+          },
+
+          // Public API controls
           show: () => {
             try {
               container.style.display = "block";
+              if (hostHooks.onOpen) {
+                try {
+                  hostHooks.onOpen();
+                } catch (e) { logError('onOpen hook threw', { error: e && e.message }); }
+              }
             } catch (err) {
               logError("Failed to show widget", { error: err.message });
             }
@@ -198,6 +253,11 @@
           hide: () => {
             try {
               container.style.display = "none";
+              if (hostHooks.onClose) {
+                try {
+                  hostHooks.onClose();
+                } catch (e) { logError('onClose hook threw', { error: e && e.message }); }
+              }
             } catch (err) {
               logError("Failed to hide widget", { error: err.message });
             }
@@ -216,6 +276,15 @@
           },
           sendMessage: (message) => {
             try {
+              try {
+                // Record last host-initiated message to avoid duplicate delivery
+                __lastHostMessage = message;
+                if (hostHooks.onMessage) {
+                  try {
+                    hostHooks.onMessage(message);
+                  } catch (e) { logError('onMessage hook threw', { error: e && e.message }); }
+                }
+              } catch (e) { logError('onMessage hook threw', { error: e && e.message }); }
               if (!iframe.contentWindow) {
                 throw new Error("iframe not ready");
               }
@@ -295,18 +364,102 @@
 
               case "WIDGET_HIDE":
                 container.style.display = "none";
+                try {
+                  if (hostHooks.onClose) {
+                    try { hostHooks.onClose(data); } catch (e) { logError('onClose hook threw', { error: e && e.message }); }
+                  }
+                } catch (e) { logError('onClose hook threw', { error: e && e.message }); }
+                break;
+
+              case "WIDGET_MINIMIZE":
+                // Widget requested minimize -> show minimized button state
+                // Don't hide container; let the iframe handle its own UI state
+                try {
+                  if (hostHooks.onClose) {
+                    try { hostHooks.onClose(data); } catch (e) { logError('onClose hook threw', { error: e && e.message }); }
+                  }
+                } catch (e) { logError('onClose hook threw', { error: e && e.message }); }
                 break;
 
               case "WIDGET_SHOW":
                 container.style.display = "block";
+                try {
+                  if (hostHooks.onOpen) {
+                    try { hostHooks.onOpen(data); } catch (e) { logError('onOpen hook threw', { error: e && e.message }); }
+                  }
+                } catch (e) { logError('onOpen hook threw', { error: e && e.message }); }
+                break;
+
+              case "WIDGET_RESTORE":
+                // Widget requested restore/expand -> treat as open
+                // Container stays visible; iframe handles its own expanded state
+                try {
+                  if (hostHooks.onOpen) {
+                    try { hostHooks.onOpen(data); } catch (e) { logError('onOpen hook threw', { error: e && e.message }); }
+                  }
+                } catch (e) { logError('onOpen hook threw', { error: e && e.message }); }
                 break;
 
               case "WIDGET_ERROR":
                 logError("Widget reported an error", data);
+                // If error indicates auth failure, call auth hook
+                try {
+                  const code = data && (data.code || data.error || '').toString().toLowerCase();
+                  if (code && code.includes('auth')) {
+                    if (hostHooks.onAuthFailure) {
+                      try { hostHooks.onAuthFailure(data); } catch (e) { logError('onAuthFailure hook threw', { error: e && e.message }); }
+                    }
+                  }
+                } catch (e) {
+                  logError('onAuthFailure hook check failed', { error: e && e.message });
+                }
                 break;
 
               default:
                 break;
+            }
+
+            // Generic hooks: try to detect responses, auth failures, and message events
+            try {
+              const t = (type || '').toString().toLowerCase();
+
+              // Response-like events
+              if (t.includes('response') || t.endsWith('_response')) {
+                try {
+                  __lastHostResponse = data;
+                  if (hostHooks.onResponse) {
+                    try { hostHooks.onResponse(data); } catch (e) { logError('onResponse hook threw', { error: e && e.message }); }
+                  }
+                } catch (e) { logError('onResponse hook threw', { error: e && e.message }); }
+              }
+
+              // Auth failure events
+              if (t.includes('auth') && (t.includes('fail') || t.includes('error') || t.includes('failure'))) {
+                try {
+                  __lastHostAuthFailure = data;
+                  if (hostHooks.onAuthFailure) {
+                    try { hostHooks.onAuthFailure(data); } catch (e) { logError('onAuthFailure hook threw', { error: e && e.message }); }
+                  }
+                } catch (e) { logError('onAuthFailure hook threw', { error: e && e.message }); }
+              }
+
+              // Message events (e.g., widget notifies about a sent message or incoming message)
+              if (t.includes('message') || t.includes('msg')) {
+                try {
+                  // If this message matches the last host-initiated message, skip duplicate delivery
+                  if (__lastHostMessage && data && data.id && __lastHostMessage.id && data.id === __lastHostMessage.id) {
+                    // clear cached last message after skipping
+                    __lastHostMessage = null;
+                  } else {
+                    __lastHostMessage = data;
+                    if (hostHooks.onMessage) {
+                      try { hostHooks.onMessage(data); } catch (e) { logError('onMessage hook threw', { error: e && e.message }); }
+                    }
+                  }
+                } catch (e) { logError('onMessage hook threw', { error: e && e.message }); }
+              }
+            } catch (e) {
+              logError('Failed to process generic hooks', { error: e && e.message, type });
             }
           } catch (err) {
             logError("Error handling message from widget", {
