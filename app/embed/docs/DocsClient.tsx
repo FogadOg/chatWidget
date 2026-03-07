@@ -17,6 +17,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth'
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation'
+import { getLocaleDirection, t as translate } from '../../../lib/i18n'
 import { API } from '../../../lib/api'
 import {
   MessageBranch,
@@ -141,6 +142,9 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { getAuthToken, authToken, authError } = useWidgetAuth();
   const { translations: t, locale } = useWidgetTranslation();
+  const activeLocale = initialLocale || locale || 'en';
+  const [liveMessage, setLiveMessage] = useState<string>('');
+  const lastAnnouncedKey = useRef<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -164,6 +168,29 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = activeLocale;
+      document.documentElement.dir = getLocaleDirection(activeLocale);
+    }
+  }, [activeLocale]);
+
+  useEffect(() => {
+    const latestAssistant = [...messages].reverse().find((msg) => msg.from === 'assistant');
+    if (!latestAssistant) return;
+    const latestContent = latestAssistant.versions?.[latestAssistant.versions.length - 1]?.content || '';
+    const announcementKey = `${latestAssistant.key}-${latestContent}`;
+
+    if (announcementKey !== lastAnnouncedKey.current) {
+      lastAnnouncedKey.current = announcementKey;
+      setLiveMessage(
+        translate(activeLocale, 'newMessageAnnouncement', {
+          vars: { message: latestContent },
+        })
+      );
+    }
+  }, [messages, activeLocale]);
 
   useEffect(() => {
     if (open && messages.length > 0) {
@@ -671,6 +698,13 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
   return (
     <div className="w-full h-full">
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', left: '-9999px', height: '1px', width: '1px', overflow: 'hidden' }}
+      >
+        {liveMessage}
+      </div>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className='mb-8 flex h-[calc(100vh-20vh)] min-w-[calc(100vw-20vw)] flex-col justify-between gap-0 p-0'>
           <ScrollArea ref={scrollAreaRef} className='flex flex-col justify-between overflow-hidden'>
@@ -722,18 +756,22 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                       {message.from === 'assistant' && !messageFeedbackSubmitted.has(message.key) && (
                                         <div className="mt-2 flex gap-2">
                                           <button
+                                            type="button"
                                             onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_up')}
                                             className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
                                             title="Thumbs up"
+                                            aria-label={translate(activeLocale, 'feedbackPositive')}
                                           >
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                                             </svg>
                                           </button>
                                           <button
+                                            type="button"
                                             onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_down')}
                                             className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
                                             title="Thumbs down"
+                                            aria-label={translate(activeLocale, 'feedbackNegative')}
                                           >
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m6-10h-2" />

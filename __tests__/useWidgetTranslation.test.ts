@@ -17,6 +17,14 @@ describe('useWidgetTranslation', () => {
       languages: ['en-US', 'en'],
       language: 'en-US',
     };
+    try {
+      window.localStorage.clear();
+    } catch (_err) {
+      // ignore
+    }
+    if (document?.documentElement) {
+      document.documentElement.lang = '';
+    }
   });
 
   afterEach(() => {
@@ -99,6 +107,14 @@ describe('useWidgetTranslation', () => {
     const { result } = renderHook(() => useWidgetTranslation());
 
     expect(result.current.locale).toBe('de');
+  });
+
+  it('prefers stored locale when available', () => {
+    window.localStorage.setItem('companin-widget-locale', 'es');
+
+    const { result } = renderHook(() => useWidgetTranslation());
+
+    expect(result.current.locale).toBe('es');
   });
 
   it('falls back to English for unsupported locale in URL', () => {

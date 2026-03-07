@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Digite sua mensagem...",
+  "typeYourMessageLabel": "Digite sua mensagem",
   "send": "Enviar",
+  "sending": "Enviando...",
   "failedToSendMessage": "Falha ao enviar mensagem",
+  "failedToLoadWidget": "Falha ao carregar o widget",
   "networkError": "Erro de rede: Não foi possível enviar mensagem",
   "sessionOrAuthError": "Sessão ou token de autenticação não disponível. Por favor verifique a configuração do seu widget.",
   "networkErrorConnect": "Erro de rede: Não foi possível conectar à API",
   "failedToCreateSession": "Falha ao criar sessão",
   "chat": "Chat",
+  "chatMessages": "Mensagens do chat",
+  "chatControl": {
+    "open": "Abrir chat",
+    "close": "Fechar chat",
+    "minimize": "Minimizar chat"
+  },
+  "newMessageAnnouncement": "Nova mensagem: {message}",
+  "unreadMessages": {
+    "one": "{count} mensagem nao lida",
+    "other": "{count} mensagens nao lidas"
+  },
+  "sourcesCount": {
+    "one": "{count} fonte",
+    "other": "{count} fontes"
+  },
+  "assistantTyping": "O assistente esta digitando",
   "rateConversation": "Como foi sua experiência?",
   "feedbackPositive": "Bom",
   "feedbackNeutral": "Ok",

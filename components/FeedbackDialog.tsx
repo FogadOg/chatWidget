@@ -113,9 +113,13 @@ export default function FeedbackDialog({
         borderRadius: `${borderRadius}px`,
         color: textColor,
       }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="feedback-dialog-title"
     >
       {/* Close button */}
       <button
+        type="button"
         onClick={onSkip}
         className="absolute top-4 right-4 p-1 rounded-full hover:opacity-70 transition-opacity"
         style={{ color: textColor }}
@@ -125,11 +129,12 @@ export default function FeedbackDialog({
       </button>
 
       {/* Title */}
-      <h3 className="text-lg font-semibold mb-6 pr-8">{t.rateConversation}</h3>
+      <h3 id="feedback-dialog-title" className="text-lg font-semibold mb-6 pr-8">{t.rateConversation}</h3>
 
       {/* Rating buttons */}
       <div className="flex justify-center gap-4 mb-6">
         <button
+          type="button"
           onClick={() => setSelectedRating('positive')}
           className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all ${
             selectedRating === 'positive' ? 'ring-2' : 'hover:opacity-80'
@@ -139,6 +144,7 @@ export default function FeedbackDialog({
             borderColor: primaryColor,
             color: textColor,
           }}
+          aria-pressed={selectedRating === 'positive'}
         >
           <ThumbsUp
             className="w-8 h-8"
@@ -148,6 +154,7 @@ export default function FeedbackDialog({
         </button>
 
         <button
+          type="button"
           onClick={() => setSelectedRating('neutral')}
           className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all ${
             selectedRating === 'neutral' ? 'ring-2' : 'hover:opacity-80'
@@ -157,6 +164,7 @@ export default function FeedbackDialog({
             borderColor: primaryColor,
             color: textColor,
           }}
+          aria-pressed={selectedRating === 'neutral'}
         >
           <Minus
             className="w-8 h-8"
@@ -166,6 +174,7 @@ export default function FeedbackDialog({
         </button>
 
         <button
+          type="button"
           onClick={() => setSelectedRating('negative')}
           className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all ${
             selectedRating === 'negative' ? 'ring-2' : 'hover:opacity-80'
@@ -175,6 +184,7 @@ export default function FeedbackDialog({
             borderColor: primaryColor,
             color: textColor,
           }}
+          aria-pressed={selectedRating === 'negative'}
         >
           <ThumbsDown
             className="w-8 h-8"
@@ -191,6 +201,7 @@ export default function FeedbackDialog({
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder={t.feedbackCommentPlaceholder}
+            aria-label={t.feedbackCommentPlaceholder}
             className="w-full p-3 rounded-lg border resize-none focus:outline-none focus:ring-2"
             style={{
               backgroundColor: `${primaryColor}05`,
@@ -205,6 +216,7 @@ export default function FeedbackDialog({
       {/* Action buttons */}
       <div className="flex gap-3">
         <button
+          type="button"
           onClick={onSkip}
           className="flex-1 py-2 px-4 rounded-lg font-medium transition-opacity hover:opacity-80"
           style={{

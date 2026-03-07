@@ -1,4 +1,4 @@
-import { t, getTranslations, LOCALES, type Locale } from '../lib/i18n';
+import { t, getTranslations, LOCALES, type SupportedLocale } from '../lib/i18n';
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 
@@ -36,6 +36,20 @@ describe('i18n', () => {
       // Restore
       Object.assign(LOCALES, originalLocales);
     });
+
+    it('handles plural forms with interpolation', () => {
+      const single = t('en', 'unreadMessages', { count: 1, vars: { count: 1 } });
+      const multiple = t('en', 'unreadMessages', { count: 3, vars: { count: 3 } });
+      expect(single).toBe('1 unread message');
+      expect(multiple).toBe('3 unread messages');
+    });
+
+    it('handles context-specific strings', () => {
+      const open = t('en', 'chatControl', { context: 'open' });
+      const close = t('en', 'chatControl', { context: 'close' });
+      expect(open).toBe('Open chat');
+      expect(close).toBe('Close chat');
+    });
   });
 
   describe('getTranslations function', () => {
@@ -62,7 +76,7 @@ describe('i18n', () => {
 
   describe('LOCALES constant', () => {
     it('contains all supported locales', () => {
-      const expectedLocales: Locale[] = ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it'];
+      const expectedLocales: SupportedLocale[] = ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it'];
 
       expectedLocales.forEach(locale => {
         expect(LOCALES).toHaveProperty(locale);
@@ -75,7 +89,7 @@ describe('i18n', () => {
 
       Object.keys(LOCALES).forEach(locale => {
         if (locale !== 'en') {
-          const localeKeys = Object.keys(LOCALES[locale as Locale]);
+          const localeKeys = Object.keys(LOCALES[locale as SupportedLocale]);
           // Should have at least some keys, may not have all English keys
           expect(localeKeys.length).toBeGreaterThan(0);
         }
@@ -85,7 +99,7 @@ describe('i18n', () => {
 
   describe('Locale type', () => {
     it('accepts all supported locale strings', () => {
-      const locales: Locale[] = ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it'];
+      const locales: SupportedLocale[] = ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it'];
 
       locales.forEach(locale => {
         const translations = getTranslations(locale);

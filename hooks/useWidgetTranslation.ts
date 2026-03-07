@@ -1,29 +1,32 @@
 import { useState, useEffect } from 'react';
-import { getTranslations, Locale } from '../lib/i18n';
+import { getTranslations, Locale, resolveLocaleCandidates } from '../lib/i18n';
 
 const getInitialLocale = (): Locale => {
   if (typeof window === 'undefined') {
     return 'en';
   }
+
   const urlParams = new URLSearchParams(window.location.search);
-  let localeParam = urlParams.get('locale') as Locale;
+  const localeParam = urlParams.get('locale');
 
-  if (!localeParam) {
-    const supportedLocales: Locale[] = ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it'];
-    for (const lang of navigator.languages || [navigator.language]) {
-      const shortLang = lang.split('-')[0] as Locale;
-      if (supportedLocales.includes(shortLang)) {
-        localeParam = shortLang;
-        break;
-      }
-    }
+  let storedLocale: string | null = null;
+  try {
+    storedLocale = window.localStorage.getItem('companin-widget-locale');
+  } catch (_err) {
+    storedLocale = null;
   }
 
-  if (localeParam && ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it'].includes(localeParam)) {
-    return localeParam;
-  } else {
-    return 'en';
-  }
+  const docLang = document?.documentElement?.lang;
+  const browserLocales = navigator.languages || [navigator.language];
+
+  const detected = resolveLocaleCandidates([
+    localeParam,
+    storedLocale,
+    docLang,
+    ...browserLocales,
+  ]);
+
+  return detected;
 };
 
 export { getInitialLocale };
@@ -46,6 +49,16 @@ export function useWidgetTranslation() {
       }
     }
   }, [locale]); // run when locale changes
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('companin-widget-locale', locale);
+      } catch (_err) {
+        // ignore storage errors
+      }
+    }
+  }, [locale]);
 
   return { translations, locale };
 }

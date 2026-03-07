@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Tapez votre message...",
+  "typeYourMessageLabel": "Tapez votre message",
   "send": "Envoyer",
+  "sending": "Envoi...",
   "failedToSendMessage": "Échec de l'envoi du message",
+  "failedToLoadWidget": "Echec du chargement du widget",
   "networkError": "Erreur réseau : Impossible de se connecter à l'API",
   "sessionOrAuthError": "Session ou jeton d'authentification non disponible. Veuillez vérifier la configuration de votre widget.",
   "networkErrorConnect": "Erreur réseau : Impossible de se connecter à l'API",
   "failedToCreateSession": "Échec de la création de la session",
   "chat": "Chat",
+  "chatMessages": "Messages du chat",
+  "chatControl": {
+    "open": "Ouvrir le chat",
+    "close": "Fermer le chat",
+    "minimize": "Reduire le chat"
+  },
+  "newMessageAnnouncement": "Nouveau message : {message}",
+  "unreadMessages": {
+    "one": "{count} message non lu",
+    "other": "{count} messages non lus"
+  },
+  "sourcesCount": {
+    "one": "{count} source",
+    "other": "{count} sources"
+  },
+  "assistantTyping": "L'assistant ecrit",
   "rateConversation": "Comment était votre expérience ?",
   "feedbackPositive": "Bien",
   "feedbackNeutral": "Moyen",

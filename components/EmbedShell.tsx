@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import InteractionButtons from './InteractionButtons';
 import MessageBubble from './MessageBubble';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { logDebug } from '../lib/logger';
+import { t as translate } from '../lib/i18n';
 import type {
   Message,
   WidgetConfig,
@@ -71,7 +72,9 @@ export default function EmbedShell({
   onShowUnsureModal,
   unreadCount = 0,
 }: Props) {
-  const { translations: t } = useWidgetTranslation();
+  const { translations: t, locale } = useWidgetTranslation();
+  const [liveMessage, setLiveMessage] = useState('');
+  const lastAnnouncedId = useRef<string | null>(null);
 
   // track which buttons have been clicked
   const { clickedButtons, handleClick: onButtonClickInternal } = useClickedButtons();
@@ -85,6 +88,20 @@ export default function EmbedShell({
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [messages, flowResponses, isTyping]);
+
+  useEffect(() => {
+    const latestAssistant = [...messages]
+      .reverse()
+      .find((msg) => msg.from === 'assistant' && !msg.id.startsWith('greeting-'));
+    if (latestAssistant && latestAssistant.id !== lastAnnouncedId.current) {
+      lastAnnouncedId.current = latestAssistant.id;
+      setLiveMessage(
+        translate(locale, 'newMessageAnnouncement', {
+          vars: { message: latestAssistant.text },
+        })
+      );
+    }
+  }, [messages, locale]);
 
   // compute colours, sizes and flags from config using a memoized hook
   const {
@@ -142,14 +159,28 @@ export default function EmbedShell({
     ...flowResponses.map(flow => ({ type: 'flow' as const, data: flow, timestamp: flow.timestamp || 0 }))
   ].sort((a, b) => a.timestamp - b.timestamp);
 
+  const openChatLabel = unreadCount > 0
+    ? `${translate(locale, 'chatControl', { context: 'open' })}. ${translate(locale, 'unreadMessages', { count: unreadCount, vars: { count: unreadCount } })}`
+    : translate(locale, 'chatControl', { context: 'open' });
+  const closeChatLabel = translate(locale, 'chatControl', { context: 'close' });
+  const minimizeChatLabel = translate(locale, 'chatControl', { context: 'minimize' });
+
   return (
     <>
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', left: '-9999px', height: '1px', width: '1px', overflow: 'hidden' }}
+      >
+        {liveMessage}
+      </div>
       {isEmbedded ? (
         <>
           {isCollapsed ? (
             <button
               type="button"
               onClick={toggleCollapsed}
+              aria-label={openChatLabel}
               style={{
                 position: 'fixed',
                 top: '50%',
@@ -257,7 +288,7 @@ export default function EmbedShell({
                     onClick={toggleCollapsed}
                     style={{ backgroundColor: secondaryColor }}
                     className="px-2 py-1 rounded text-sm flex items-center justify-center hover:opacity-90"
-                    aria-label={isCollapsed ? 'Open chat' : 'Close chat'}
+                    aria-label={closeChatLabel}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="6,9 12,15 18,9" />
@@ -267,12 +298,20 @@ export default function EmbedShell({
               </div>
 
               {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mx-3 mt-3 rounded">
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mx-3 mt-3 rounded" role="alert">
                   <p className="text-sm">{error}</p>
                 </div>
               )}
 
-              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto p-3 space-y-3"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                aria-atomic="false"
+                aria-label={translate(locale, 'chatMessages')}
+              >
                 {showGreeting && (
                   <div className="flex flex-col items-start w-full">
                     <div className="flex items-start gap-2">
@@ -287,7 +326,7 @@ export default function EmbedShell({
                 )}
 
                 {showButtons && (
-                  <div className="flex flex-col gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
+                  <div className="flex flex-col gap-2" style={{ marginInlineStart: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
                     <InteractionButtons
                       buttons={interactionButtons}
                       clickedButtons={clickedButtons}
@@ -336,13 +375,14 @@ export default function EmbedShell({
                           </div>
                         )}
                         {flowResponse.buttons.length > 0 && (
-                          <div className="flex flex-col gap-2" style={{ marginLeft: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
+                          <div className="flex flex-col gap-2" style={{ marginInlineStart: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
                             {flowResponse.buttons.map((button: FlowButton) => {
                               const buttonId = button.id || button.button_id;
                               const isClicked = clickedButtons.has(buttonId);
                               return (
                                 <button
                                   key={buttonId}
+                                  type="button"
                                   onClick={() => handleFollowUpButtonClickWrapper(button)}
                                   disabled={isClicked}
                                   style={{
@@ -367,12 +407,13 @@ export default function EmbedShell({
                 })}
 
                 {showTypingIndicator && isTyping && (
-                  <div className="flex justify-start">
+                  <div className="flex justify-start" role="status" aria-live="polite">
                     <div className="flex items-start gap-2">
                       {showMessageAvatars && widgetConfig?.bot_avatar && (
                         <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
                       )}
                       <div className="p-3" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px` }}>
+                        <span style={{ position: 'absolute', left: '-9999px' }}>{translate(locale, 'assistantTyping')}</span>
                         <div className="flex space-x-1">
                           <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
                           <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
@@ -409,6 +450,7 @@ export default function EmbedShell({
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={getText(widgetConfig?.placeholder) || t.typeYourMessage}
+                    aria-label={translate(locale, 'typeYourMessageLabel')}
                     className="flex-1 p-2 border focus:outline-none focus:ring-2"
                     style={{
                       borderRadius: `${buttonBorderRadius}px`,
@@ -444,6 +486,7 @@ export default function EmbedShell({
             <button
               type="button"
               onClick={toggleCollapsed}
+              aria-label={openChatLabel}
               style={{
                 position: 'fixed',
                 top: '50%',
@@ -501,6 +544,7 @@ export default function EmbedShell({
                     style={{ backgroundColor: secondaryColor }}
                     className="w-6 h-6 rounded flex items-center justify-center transition-opacity hover:opacity-90"
                     title="Minimize Chat"
+                    aria-label={minimizeChatLabel}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="6,9 12,15 18,9" />
@@ -509,12 +553,20 @@ export default function EmbedShell({
                 </div>
 
                 {error && (
-                  <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mx-3 mt-3 rounded">
+                  <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mx-3 mt-3 rounded" role="alert">
                     <p className="text-sm">{error}</p>
                   </div>
                 )}
 
-                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-y-auto p-3 space-y-3"
+                  role="log"
+                  aria-live="polite"
+                  aria-relevant="additions text"
+                  aria-atomic="false"
+                  aria-label={translate(locale, 'chatMessages')}
+                >
 
                   {showGreeting && (
                     <div className="flex flex-col items-start w-full">
@@ -530,7 +582,7 @@ export default function EmbedShell({
                   )}
 
                   {showButtons && (
-                    <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                    <div className="flex flex-col gap-2" style={{ marginInlineStart: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                       <InteractionButtons
                         buttons={interactionButtons}
                         clickedButtons={clickedButtons}
@@ -579,13 +631,14 @@ export default function EmbedShell({
                             </div>
                           )}
                           {flowResponse.buttons.length > 0 && (
-                            <div className="flex flex-col gap-2" style={{ marginLeft: widgetConfig?.bot_avatar ? '40px' : '0' }}>
+                            <div className="flex flex-col gap-2" style={{ marginInlineStart: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                               {flowResponse.buttons.map((button: FlowButton) => {
                                 const buttonId = button.id || button.button_id;
                                 const isClicked = clickedButtons.has(buttonId);
                                 return (
                                   <button
                                     key={buttonId}
+                                    type="button"
                                     onClick={() => handleFollowUpButtonClickWrapper(button)}
                                     disabled={isClicked}
                                     style={{
@@ -610,8 +663,9 @@ export default function EmbedShell({
                   })}
 
                   {isTyping && (
-                    <div className="flex justify-start">
+                    <div className="flex justify-start" role="status" aria-live="polite">
                       <div className="p-3" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px` }}>
+                        <span style={{ position: 'absolute', left: '-9999px' }}>{translate(locale, 'assistantTyping')}</span>
                         <div className="flex space-x-1">
                           <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
                           <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
@@ -647,6 +701,7 @@ export default function EmbedShell({
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder={getText(widgetConfig?.placeholder) || t.typeYourMessage}
+                      aria-label={translate(locale, 'typeYourMessageLabel')}
                       className="flex-1 p-2 border focus:outline-none focus:ring-2"
                       style={{
                         borderRadius: `${buttonBorderRadius}px`,

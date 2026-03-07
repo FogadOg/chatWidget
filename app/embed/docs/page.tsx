@@ -1,4 +1,5 @@
 import DocsClient from "./DocsClient";
+import { getLocaleDirection } from '../../../lib/i18n';
 
 type Props = {
   searchParams: Promise<{
@@ -21,8 +22,9 @@ export default async function DocsPage({ searchParams }: Props) {
 
   // Validate required parameters
   if (!clientId || !assistantId || !configId) {
+    const dir = getLocaleDirection(locale);
     return (
-      <html lang={locale}>
+      <html lang={locale} dir={dir}>
         <head>
           <title>Docs Assistant Configuration Error</title>
           <meta name="viewport" content="width=device-width, initial-scale=1" />

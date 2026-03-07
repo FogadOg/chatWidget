@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Type your message...",
+  "typeYourMessageLabel": "Type your message",
   "send": "Send",
+  "sending": "Sending...",
   "failedToSendMessage": "Failed to send message",
+  "failedToLoadWidget": "Failed to load widget",
   "networkError": "Network error: Could not send message",
   "sessionOrAuthError": "Session or authentication token not available. Please check your widget configuration.",
   "networkErrorConnect": "Network error: Could not connect to API",
   "failedToCreateSession": "Failed to create session",
   "chat": "Chat",
+  "chatMessages": "Chat messages",
+  "chatControl": {
+    "open": "Open chat",
+    "close": "Close chat",
+    "minimize": "Minimize chat"
+  },
+  "newMessageAnnouncement": "New message: {message}",
+  "unreadMessages": {
+    "one": "{count} unread message",
+    "other": "{count} unread messages"
+  },
+  "sourcesCount": {
+    "one": "{count} source",
+    "other": "{count} sources"
+  },
+  "assistantTyping": "Assistant is typing",
   "rateConversation": "How was your experience?",
   "feedbackPositive": "Good",
   "feedbackNeutral": "Okay",

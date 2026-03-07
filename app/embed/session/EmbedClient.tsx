@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
+import { getLocaleDirection } from '../../../lib/i18n';
 import type {
   Message,
   WidgetConfig,
@@ -161,6 +162,13 @@ export default function EmbedClient({
   const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const [fatalError, setFatalError] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = activeLocale;
+      document.documentElement.dir = getLocaleDirection(activeLocale);
+    }
+  }, [activeLocale]);
+
 
 
 
@@ -254,7 +262,7 @@ export default function EmbedClient({
             }
           } catch (err: unknown) {
             // If validation fails, set error
-            const errorMessage = (err as { userMessage?: string })?.userMessage || t.failedToLoadWidget;
+            const errorMessage = (err as { userMessage?: string })?.userMessage || String(t.failedToLoadWidget);
             setError(errorMessage);
             logError(err as Error, { clientId: clientIdParam, assistantId: assistantIdParam, configId: configIdParam, action: 'validateWidget' });
           }
@@ -487,7 +495,7 @@ export default function EmbedClient({
       await loadSessionMessages(sessionData.session_id, token, true);
     } catch (err: unknown) {
       const e = err as unknown as { userMessage?: string; message?: string };
-      const errorMessage = e.userMessage || t.failedToCreateSession;
+      const errorMessage = e.userMessage || String(t.failedToCreateSession);
       setError(errorMessage);
       logError(e, { assistant, action: 'createSession' });
 
@@ -792,7 +800,7 @@ export default function EmbedClient({
 
     // Check if we have a session and auth token
     if (!sessionId || !authToken) {
-      const errorMsg = t.sessionOrAuthError || 'Session or authentication error';
+      const errorMsg = String(t.sessionOrAuthError) || 'Session or authentication error';
       setError(errorMsg);
       logError(new Error('Missing session or auth token'), {
         hasSession: !!sessionId,
@@ -923,7 +931,7 @@ export default function EmbedClient({
       await loadSessionMessages(sessionId, authToken);
     } catch (err: unknown) {
       const e = err as unknown as { userMessage?: string; message?: string; code?: string | WidgetErrorCode };
-      const errorMessage = e.userMessage || e.message || t.failedToSendMessage;
+      const errorMessage = e.userMessage || e.message || String(t.failedToSendMessage);
       setError(errorMessage);
       logError(e, { message, sessionId, action: 'handleSubmit' });
 

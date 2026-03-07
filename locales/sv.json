@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Skriv ditt meddelande...",
+  "typeYourMessageLabel": "Skriv ditt meddelande",
   "send": "Skicka",
+  "sending": "Skickar...",
   "failedToSendMessage": "Misslyckades att skicka meddelande",
+  "failedToLoadWidget": "Kunde inte ladda widgeten",
   "networkError": "Nätverksfel: Kunde inte skicka meddelande",
   "sessionOrAuthError": "Session eller autentiseringstoken inte tillgänglig. Vänligen kontrollera din widget-konfiguration.",
   "networkErrorConnect": "Nätverksfel: Kunde inte ansluta till API",
   "failedToCreateSession": "Misslyckades att skapa session",
   "chat": "Chatt",
+  "chatMessages": "Chattmeddelanden",
+  "chatControl": {
+    "open": "Oppna chatt",
+    "close": "Stang chatt",
+    "minimize": "Minimera chatt"
+  },
+  "newMessageAnnouncement": "Nytt meddelande: {message}",
+  "unreadMessages": {
+    "one": "{count} olast meddelande",
+    "other": "{count} olasta meddelanden"
+  },
+  "sourcesCount": {
+    "one": "{count} kalla",
+    "other": "{count} kallor"
+  },
+  "assistantTyping": "Assistenten skriver",
   "rateConversation": "Hur var din upplevelse?",
   "feedbackPositive": "Bra",
   "feedbackNeutral": "Okej",

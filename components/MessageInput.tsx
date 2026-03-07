@@ -16,6 +16,7 @@ import { validateMessageInput } from 'lib/validation';
 import { TIMEOUTS } from 'lib/constants';
 import { checkAndConsume } from 'lib/rateLimiter';
 import { API } from 'lib/api';
+import { t as translate } from 'lib/i18n';
 import type { Message, PageContext } from 'types/widget';
 
 type MessageInputProps = {
@@ -253,8 +254,8 @@ export default function MessageInput({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyPress={handleKeyPress}
-        placeholder="Type your message..."
-        aria-label="Type your message"
+        placeholder={translate(locale, 'typeYourMessage')}
+        aria-label={translate(locale, 'typeYourMessageLabel')}
         disabled={disabled || isSubmitting || !sessionId}
         className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
       />
@@ -263,7 +264,7 @@ export default function MessageInput({
         disabled={disabled || isSubmitting || !input.trim() || !sessionId}
         className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isSubmitting ? 'Sending...' : 'Send'}
+        {isSubmitting ? translate(locale, 'sending') : translate(locale, 'send')}
       </button>
     </form>
   );

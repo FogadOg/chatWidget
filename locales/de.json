@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Schreiben Sie Ihre Nachricht...",
+  "typeYourMessageLabel": "Schreiben Sie Ihre Nachricht",
   "send": "Senden",
+  "sending": "Wird gesendet...",
   "failedToSendMessage": "Nachricht konnte nicht gesendet werden",
+  "failedToLoadWidget": "Widget konnte nicht geladen werden",
   "networkError": "Netzwerkfehler: Konnte nicht mit der API verbinden",
   "sessionOrAuthError": "Sitzung oder Authentifizierungstoken nicht verfügbar. Bitte überprüfen Sie Ihre Widget-Konfiguration.",
   "networkErrorConnect": "Netzwerkfehler: Konnte nicht mit der API verbinden",
   "failedToCreateSession": "Sitzung konnte nicht erstellt werden",
   "chat": "Chat",
+  "chatMessages": "Chat-Nachrichten",
+  "chatControl": {
+    "open": "Chat öffnen",
+    "close": "Chat schließen",
+    "minimize": "Chat minimieren"
+  },
+  "newMessageAnnouncement": "Neue Nachricht: {message}",
+  "unreadMessages": {
+    "one": "{count} ungelesene Nachricht",
+    "other": "{count} ungelesene Nachrichten"
+  },
+  "sourcesCount": {
+    "one": "{count} Quelle",
+    "other": "{count} Quellen"
+  },
+  "assistantTyping": "Assistent tippt",
   "rateConversation": "Wie war Ihre Erfahrung?",
   "feedbackPositive": "Gut",
   "feedbackNeutral": "Okay",

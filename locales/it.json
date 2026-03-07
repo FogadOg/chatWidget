@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Scrivi il tuo messaggio...",
+  "typeYourMessageLabel": "Scrivi il tuo messaggio",
   "send": "Invia",
+  "sending": "Invio...",
   "failedToSendMessage": "Invio del messaggio fallito",
+  "failedToLoadWidget": "Impossibile caricare il widget",
   "networkError": "Errore di rete: Impossibile inviare il messaggio",
   "sessionOrAuthError": "Sessione o token di autenticazione non disponibile. Si prega di controllare la configurazione del widget.",
   "networkErrorConnect": "Errore di rete: Impossibile connettersi all'API",
   "failedToCreateSession": "Creazione della sessione fallita",
   "chat": "Chat",
+  "chatMessages": "Messaggi della chat",
+  "chatControl": {
+    "open": "Apri chat",
+    "close": "Chiudi chat",
+    "minimize": "Riduci chat"
+  },
+  "newMessageAnnouncement": "Nuovo messaggio: {message}",
+  "unreadMessages": {
+    "one": "{count} messaggio non letto",
+    "other": "{count} messaggi non letti"
+  },
+  "sourcesCount": {
+    "one": "{count} fonte",
+    "other": "{count} fonti"
+  },
+  "assistantTyping": "L'assistente sta scrivendo",
   "rateConversation": "Com'è stata la tua esperienza?",
   "feedbackPositive": "Buono",
   "feedbackNeutral": "Okay",

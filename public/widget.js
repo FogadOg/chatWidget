@@ -30,7 +30,13 @@
     const clientId = script.getAttribute("data-client-id");
     const assistantId = script.getAttribute("data-assistant-id");
     const configId = script.getAttribute("data-config-id");
-    const locale = script.getAttribute("data-locale") || "en";
+    const detectLocale = () => {
+      const explicitLocale = script.getAttribute("data-locale");
+      if (explicitLocale) return explicitLocale;
+      const browserLocale = (navigator.languages && navigator.languages[0]) || navigator.language;
+      return browserLocale || "en";
+    };
+    const locale = detectLocale();
     const startOpen = script.getAttribute("data-start-open") === "true";
 
     // Validate required attributes

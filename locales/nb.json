@@ -1,12 +1,31 @@
 {
   "typeYourMessage": "Skriv meldingen din...",
+  "typeYourMessageLabel": "Skriv meldingen din",
   "send": "Send",
+  "sending": "Sender...",
   "failedToSendMessage": "Kunne ikke sende melding",
+  "failedToLoadWidget": "Kunne ikke laste widgeten",
   "networkError": "Nettverksfeil: Kunne ikke sende melding",
   "sessionOrAuthError": "Økt eller autentiseringstoken ikke tilgjengelig. Vennligst sjekk widget-konfigurasjonen din.",
   "networkErrorConnect": "Nettverksfeil: Kunne ikke koble til API",
   "failedToCreateSession": "Kunne ikke opprette økt",
   "chat": "Chat",
+  "chatMessages": "Chatmeldinger",
+  "chatControl": {
+    "open": "Apne chat",
+    "close": "Lukk chat",
+    "minimize": "Minimer chat"
+  },
+  "newMessageAnnouncement": "Ny melding: {message}",
+  "unreadMessages": {
+    "one": "{count} ulest melding",
+    "other": "{count} uleste meldinger"
+  },
+  "sourcesCount": {
+    "one": "{count} kilde",
+    "other": "{count} kilder"
+  },
+  "assistantTyping": "Assistenten skriver",
   "rateConversation": "Hvordan var opplevelsen din?",
   "feedbackPositive": "Bra",
   "feedbackNeutral": "Greit",
