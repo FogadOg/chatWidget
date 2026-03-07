@@ -52,6 +52,59 @@ export const isApiConfigured = (): boolean => {
   return Boolean(BASE_URL && !BASE_URL.includes('undefined'));
 };
 
+// ---------------------------------------------------------------------------
+// Telemetry helper moved here from separate module
+// ---------------------------------------------------------------------------
+
+interface TelemetryPayload {
+  event_type: string;
+  assistant?: string;
+  user_id?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Emit a telemetry event to the backend. Uses the same base URL as other
+ * API calls and falls back to localhost if unset. This used to live in
+ * lib/telemetry.ts but has been folded into api.ts as requested.
+ */
+export async function trackEvent(
+  eventType: string,
+  assistantId?: string,
+  metadata: Record<string, unknown> = {},
+  clientId?: string
+): Promise<void> {
+  const BASE = getApiBaseUrl() || 'http://127.0.0.1:8000';
+  const endpoint = `${BASE.replace(/\/+$/, '')}/telemetry/events/`;
+
+  const payload: TelemetryPayload = { event_type: eventType };
+  if (assistantId) payload.assistant = assistantId;
+  if (metadata && Object.keys(metadata).length > 0) payload.metadata = metadata;
+
+  try {
+    // avoid importing the entire helpers module at top to keep dependencies
+    const { getVisitorId } = await import('../app/embed/session/helpers');
+    if (clientId) {
+      payload.user_id = getVisitorId(clientId);
+    }
+  } catch {
+    // ignore failures
+  }
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('telemetry post failed', err);
+    }
+  }
+}
+
 /**
  * Returns the X-Embed-Origin header so the backend enforces the host app's
  * origin rather than the widget iframe's own origin.

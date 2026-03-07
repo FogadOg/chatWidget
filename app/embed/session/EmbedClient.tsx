@@ -14,6 +14,7 @@ import type {
   SourceData,
 } from '../../../types/widget';
 import { logPerf } from '../../../lib/logger';
+import { trackEvent } from '../../../lib/api';
 import FeedbackDialog from '../../../components/FeedbackDialog';
 import {
   createSessionError,
@@ -76,6 +77,10 @@ type EmbedClientProps = {
   startOpen: boolean;
   pagePath?: string;
   parentOrigin?: string;
+  /**
+   * test-only: forcibly display the feedback dialog regardless of timer state
+   */
+  showFeedbackDialogOverride?: boolean;
 };
 
 export default function EmbedClient({
@@ -86,6 +91,7 @@ export default function EmbedClient({
   startOpen: initialStartOpen,
   pagePath: _initialPagePath,
   parentOrigin: initialParentOrigin,
+  showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [flowResponses, setFlowResponses] = useState<FlowResponse[]>([]);
@@ -110,6 +116,33 @@ export default function EmbedClient({
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  // emit initial open/close telemetry when widget mounts, but only once per
+  // browser session; reloading the page should not produce duplicate open/close
+  // events. We use a storage key unique to the client+assistant combo.
+  useEffect(() => {
+    const initKey = `companin-telemetry-init-${initialClientId}-${initialAssistantId}`;
+    // if we've already sent the initial event, do nothing
+    let alreadySent = false;
+    try {
+      alreadySent = !!localStorage.getItem(initKey);
+    } catch (err) {
+      logError(err as Error, { context: 'initialTelemetry' });
+    }
+    if (alreadySent) {
+      return;
+    }
+
+    const initialEvent = initialStartOpen ? 'widget_open' : 'widget_close';
+    trackEvent(initialEvent, initialAssistantId, {}, initialClientId).catch(() => {});
+
+    try {
+      localStorage.setItem(initKey, '1');
+    } catch (error) {
+      // record failure but don't crash the widget
+      logError(error as Error, { context: 'initialTelemetry' });
+    }
+  }, [initialAssistantId, initialClientId, initialStartOpen]);
   const { getAuthToken, authToken, authError } = useWidgetAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +263,7 @@ export default function EmbedClient({
 
     // Detect iframe embedding and render a stripped layout when embedded
     try {
-      setIsEmbedded(window.top !== window.self);
+      setIsEmbedded(window.top !== window);
     } catch (e) {
       setIsEmbedded(true);
     }
@@ -640,7 +673,14 @@ export default function EmbedClient({
     return () => clearTimeout(inactivityTimer);
   }, [messages, sessionId, authToken, feedbackSubmitted, showFeedbackDialog]);
 
-  const handleFeedbackSubmit = () => {
+  const handleFeedbackSubmit = (rating: string, comment: string) => {
+    // telemetry for feedback given includes rating/comment metadata
+    trackEvent(
+      'feedback_given',
+      initialAssistantId,
+      { rating, comment },
+      initialClientId,
+    ).catch(() => {});
     setFeedbackSubmitted(true);
     setShowFeedbackDialog(false);
     // Store feedback submitted flag in localStorage
@@ -828,6 +868,9 @@ export default function EmbedClient({
               throw new Error(parseApiError(data, 'Failed to send message'));
             }
 
+            // record telemetry for message sent
+            trackEvent('message_sent', initialAssistantId, { message }, initialClientId).catch(() => {});
+
             return data.data;
           } catch (fetchError: unknown) {
             clearTimeout(timeoutId);
@@ -926,6 +969,8 @@ export default function EmbedClient({
     }, 300);
 
     const flowHandled = processWidgetFlow(button.action);
+    // track interaction click
+    trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
 
     if (!maybeText && !flowHandled) {
       handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
@@ -999,47 +1044,52 @@ export default function EmbedClient({
   };
 
   const toggleCollapsed = () => {
-    setIsCollapsed((prev) => {
-      const newCollapsed = !prev;
+    const newCollapsed = !isCollapsed;
+    setIsCollapsed(newCollapsed);
 
-      // Reset unread count when opening the widget
-      if (!newCollapsed) {
-        setUnreadCount(0);
+    // send telemetry whenever collapse state toggles
+    trackEvent(
+      newCollapsed ? 'widget_close' : 'widget_open',
+      initialAssistantId,
+      { clientId: initialClientId },
+      initialClientId
+    ).catch(() => {});
 
-        // Update last read message to the most recent one
-        if (messages.length > 0) {
-          const lastMessage = messages[messages.length - 1];
-          if (lastMessage?.id) {
-            setLastReadMessageId(lastMessage.id);
-            try {
-              localStorage.setItem(lastReadStorageKey, lastMessage.id);
-            } catch (error) {
-              logError(error as Error, { context: 'saveLastRead' });
-            }
+    // Reset unread count when opening the widget
+    if (!newCollapsed) {
+      setUnreadCount(0);
+
+      // Update last read message to the most recent one
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.id) {
+          setLastReadMessageId(lastMessage.id);
+          try {
+            localStorage.setItem(lastReadStorageKey, lastMessage.id);
+          } catch (error) {
+            logError(error as Error, { context: 'saveLastRead' });
           }
         }
-
-        // Clear unread count from localStorage
-        try {
-          localStorage.setItem(unreadStorageKey, '0');
-        } catch (error) {
-          logError(error as Error, { context: 'clearUnreadCount' });
-        }
       }
 
-      // Notify parent window about collapse state change
-      if (window.parent !== window) {
-        window.parent.postMessage(
-          {
-            type: newCollapsed ? EMBED_EVENTS.MINIMIZE : EMBED_EVENTS.RESTORE,
-            data: { collapsed: newCollapsed }
-          },
-          targetOrigin(initialParentOrigin)
-        );
+      // Clear unread count from localStorage
+      try {
+        localStorage.setItem(unreadStorageKey, '0');
+      } catch (error) {
+        logError(error as Error, { context: 'clearUnreadCount' });
       }
+    }
 
-      return newCollapsed;
-    });
+    // Notify parent window about collapse state change
+    if (window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: newCollapsed ? EMBED_EVENTS.MINIMIZE : EMBED_EVENTS.RESTORE,
+          data: { collapsed: newCollapsed },
+        },
+        targetOrigin(initialParentOrigin)
+      );
+    }
   };
 
 
@@ -1103,12 +1153,12 @@ export default function EmbedClient({
       onFollowUpButtonClick={handleFollowUpButtonClick}
       flowResponses={flowResponses}
       getLocalizedText={getLocalizedText}
-      showFeedbackDialog={showFeedbackDialog}
+      showFeedbackDialog={showFeedbackDialogOverride ?? showFeedbackDialog}
       messageFeedbackSubmitted={messageFeedbackSubmitted}
       onSubmitMessageFeedback={handleSubmitMessageFeedback}
       unreadCount={unreadCount}
       feedbackDialog={
-        showFeedbackDialog && sessionId && authToken ? (
+        ((showFeedbackDialogOverride !== undefined ? showFeedbackDialogOverride : showFeedbackDialog) && (showFeedbackDialogOverride !== undefined ? true : (sessionId && authToken))) ? (
           <FeedbackDialog
             sessionId={sessionId}
             authToken={authToken}

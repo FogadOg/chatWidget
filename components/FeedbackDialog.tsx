@@ -9,13 +9,14 @@ import { API, embedOriginHeader } from '../lib/api';
 type FeedbackRating = 'positive' | 'neutral' | 'negative';
 
 interface FeedbackDialogProps {
-  sessionId: string;
-  authToken: string;
+  sessionId: string | null;
+  authToken: string | null;
   primaryColor: string;
   backgroundColor: string;
   textColor: string;
   borderRadius: number;
-  onSubmit: () => void;
+  // new: submit callback receives rating and comment for telemetry
+  onSubmit: (rating: FeedbackRating, comment: string) => void;
   onSkip: () => void;
 }
 
@@ -67,11 +68,12 @@ export default function FeedbackDialog({
       if (response && response.ok) {
         setSubmitted(true);
         setTimeout(() => {
-          onSubmit();
+          onSubmit(selectedRating as FeedbackRating, comment.trim());
         }, 2000);
       } else {
         console.error('Failed to submit feedback:', response?.status, data as unknown);
-        onSubmit(); // Close anyway
+        // still call with current values so telemetry can record attempt
+        onSubmit(selectedRating as FeedbackRating, comment.trim());
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
