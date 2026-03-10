@@ -95,11 +95,12 @@
     container.style.cssText = `
       position: fixed;
       bottom: 20px;
-      right: 20px;
       width: auto;
       height: auto;
+      max-width: 100vw;
       z-index: 999999;
       transition: all 0.3s ease;
+      display: none;
     `;
 
     // Ensure body is ready
@@ -188,6 +189,27 @@
 
       container.appendChild(iframe);
       document.body.appendChild(container);
+
+      // Ensure any hardcoded right positioning is removed (defensive):
+      try {
+        const _c = document.getElementById('companin-widget-container');
+        if (_c) {
+          // also sanitize raw style attribute if present
+          const s = _c.getAttribute && _c.getAttribute('style');
+          if (s && /right:\s*20px/.test(s)) {
+            _c.setAttribute('style', s.replace(/right:\s*20px;?/g, ''));
+          }
+          // also sanitize any immediate child nodes that may carry inline right:20px
+          Array.from(_c.querySelectorAll('[style]')).forEach((el) => {
+            const ss = el.getAttribute('style');
+            if (ss && /right:\s*20px/.test(ss)) {
+              el.setAttribute('style', ss.replace(/right:\s*20px;?/g, ''));
+            }
+          });
+        }
+      } catch (e) {
+        logError('Failed sanitizing inline right spacing', { error: e && e.message });
+      }
 
       // Listen for widget events with error handling
       window.addEventListener("message", handleMessage);
@@ -320,6 +342,8 @@
           },
         };
 
+        let allowDisplay = false;
+
         function handleMessage(event) {
           try {
             // Verify origin - always validate, even in dev mode
@@ -337,6 +361,14 @@
 
             switch (type) {
             case "WIDGET_RESIZE":
+                if (data?.hide) {
+                  allowDisplay = false;
+                  container.style.display = "none";
+                  break;
+                }
+                if (allowDisplay) {
+                  container.style.display = "block";
+                }
                 if (data?.height) {
                   container.style.height = `${data.height}px`;
                 }
@@ -346,7 +378,28 @@
 
                 // Handle dynamic positioning if provided
                 if (data?.position) {
-                  const offset = typeof data.edge_offset === 'number' ? data.edge_offset : 20;
+                  const baseOffset = typeof data.edge_offset === 'number' ? data.edge_offset : 20;
+                  const offset = data.position.includes('left') && baseOffset === 0 ? 16 : baseOffset;
+                  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+                  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+                  if (viewportWidth && typeof data?.width === 'number') {
+                    const maxWidth = Math.max(0, viewportWidth - (offset * 2));
+                    if (maxWidth > 0 && data.width > maxWidth) {
+                      container.style.width = `${maxWidth}px`;
+                    }
+                    if (maxWidth > 0) {
+                      container.style.maxWidth = `${maxWidth}px`;
+                    }
+                  }
+                  if (viewportHeight && typeof data?.height === 'number') {
+                    const maxHeight = Math.max(0, viewportHeight - (offset * 2));
+                    if (maxHeight > 0 && data.height > maxHeight) {
+                      container.style.height = `${maxHeight}px`;
+                    }
+                    if (maxHeight > 0) {
+                      container.style.maxHeight = `${maxHeight}px`;
+                    }
+                  }
 
                   // Reset all corner properties
                   container.style.bottom = '';
@@ -360,15 +413,21 @@
                     container.style.top = `${offset}px`;
                   }
 
-                  if (data.position.includes('right')) {
-                    container.style.right = `${offset}px`;
-                  } else {
+                  if (data.position.includes('left')) {
                     container.style.left = `${offset}px`;
+                    container.style.right = '';
+                  } else if (data.position.includes('right')) {
+                    container.style.right = `${offset}px`;
+                    container.style.left = '';
+                  } else {
+                    container.style.left = '';
+                    container.style.right = '';
                   }
                 }
                 break;
 
               case "WIDGET_HIDE":
+                allowDisplay = false;
                 container.style.display = "none";
                 try {
                   if (hostHooks.onClose) {
@@ -388,6 +447,7 @@
                 break;
 
               case "WIDGET_SHOW":
+                allowDisplay = true;
                 container.style.display = "block";
                 try {
                   if (hostHooks.onOpen) {
@@ -504,7 +564,6 @@
       errorContainer.style.cssText = `
         position: fixed;
         bottom: 20px;
-        right: 20px;
         width: 320px;
         background: #fef2f2;
         border: 1px solid #dc2626;

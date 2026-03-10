@@ -289,16 +289,29 @@ export default function EmbedClient({
     // Only check user agent for mobile device detection (not screen width)
     const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|Mobi/i.test(ua);
 
-    // Always show the widget (don't hide it completely)
-    setShouldRender(true);
-
-    // Determine collapsed state based on device and settings
+    // Determine collapsed state and visibility based on device and settings
     if (isMobileDevice && widgetConfig.hide_on_mobile) {
-      // On mobile devices with hide_on_mobile=true: always start collapsed
+      // On mobile devices with hide_on_mobile=true: hide the widget completely
+      setShouldRender(false);
       setIsCollapsed(true);
+      try {
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'WIDGET_HIDE' }, targetOrigin(initialParentOrigin));
+        }
+      } catch (e) {
+        // ignore
+      }
     } else {
+      setShouldRender(true);
       // Use the prop value if available, otherwise use config
       setIsCollapsed(!initialStartOpen && !widgetConfig.start_open);
+      try {
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'WIDGET_SHOW' }, targetOrigin(initialParentOrigin));
+        }
+      } catch (e) {
+        // ignore
+      }
     }
   }, [widgetConfig, initialStartOpen]);
 

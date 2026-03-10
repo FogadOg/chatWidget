@@ -149,6 +149,26 @@
         container.appendChild(iframe);
         document.body.appendChild(container);
 
+        // Defensive cleanup: replace inline 'right: 20px' with 'right: 0' on the docs container
+        try {
+          const _c = document.getElementById('companin-docs-widget-container');
+          if (_c) {
+            _c.style.right = '0';
+            const s = _c.getAttribute && _c.getAttribute('style');
+            if (s && /right:\s*20px/.test(s)) {
+              _c.setAttribute('style', s.replace(/right:\s*20px;?/g, 'right: 0;'));
+            }
+            Array.from(_c.querySelectorAll('[style]')).forEach((el) => {
+              const ss = el.getAttribute('style');
+              if (ss && /right:\s*20px/.test(ss)) {
+                el.setAttribute('style', ss.replace(/right:\s*20px;?/g, 'right: 0;'));
+              }
+            });
+          }
+        } catch (e) {
+          logError('Failed sanitizing docs-widget inline right spacing', { error: e && e.message });
+        }
+
         // Listen for widget events with error handling
         window.addEventListener("message", handleMessage);
 
@@ -312,7 +332,7 @@
       errorContainer.style.cssText = `
         position: fixed;
         bottom: 20px;
-        right: 20px;
+        right: 0;
         width: 320px;
         background: #fef2f2;
         border: 1px solid #dc2626;

@@ -659,6 +659,25 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     }
   }, []);
 
+  // Apply hide_on_mobile from widget config for docs widget
+  useEffect(() => {
+    if (!widgetConfig) return;
+    const ua = navigator.userAgent;
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|Mobi/i.test(ua);
+    const hideOnMobile = Boolean(widgetConfig?.data?.hide_on_mobile);
+
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          { type: hideOnMobile && isMobileDevice ? 'WIDGET_HIDE' : 'WIDGET_SHOW' },
+          parentOrigin
+        );
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [widgetConfig, parentOrigin]);
+
   // Listen for messages from parent to open/close dialog
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -839,7 +858,10 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                   <PromptInputTextarea
                     onChange={(event) => setText(event.target.value)}
                     value={text}
-                    placeholder={getLocalizedText(widgetConfig?.data?.placeholder) || t.typeYourMessage}
+                    placeholder={
+                      getLocalizedText(widgetConfig?.data?.placeholder)
+                        || translate(activeLocale, 'typeYourMessage')
+                    }
                   />
                 </PromptInputBody>
                 <PromptInputFooter>
