@@ -287,6 +287,35 @@ This shouldn't happen due to iframe isolation, but if it does:
 - [ ] Voice input
 - [ ] Mobile-optimized UI
 
+## Bundle size enforcement — CI checks & performance budgets (future)
+
+Automated bundle size enforcement is configured to run in CI and helps prevent regressions in shipped bundle weight. The CI workflow runs a build and then `size-limit` to measure built assets against configured performance budgets. When budgets are exceeded the workflow fails and blocks merges so teams can address large regressions early.
+
+- How it works:
+  - `npm run ci:size-limit` builds the app and runs `size-limit` against Next.js build artifacts.
+  - Budgets live in `.size-limit.js` and are kept intentionally conservative; adjust them over time as the product grows.
+  - Developers investigate violations with bundle analyzers (for example `webpack-bundle-analyzer` or `next-bundle-analyzer`), replace heavy libraries, and adopt lazy-loading.
+
+- Files added:
+  - `.size-limit.js` — performance budgets for CI
+  - `.github/workflows/size-limit.yml` — CI job that runs the size checks
+  - `package.json` scripts: `size-limit` and `ci:size-limit`
+
+- Next steps for the team:
+  - Tweak limits in `.size-limit.js` to match realistic budgets.
+  - Optionally add a `--why` step or `size-limit --why` for pull requests to show the dependency tree causing the weight.
+  - Add bundle analysis scripts (e.g. `analyze`) and document mitigation guidance for oversized packages.
+
+  Viewing the analyzer report quickly
+
+  - After running `npm run analyze`, open the static report in your browser:
+    - Serve and open automatically: `npm run analyze:open` (starts a static server on port 8000)
+    - Or manually open: `.next/analyze/client.html`
+
+  If you want, I can also:
+  - Open the analyzer report for you now, or
+  - Propose specific modules to tree-shake or replace after you review the report.
+
 ---
 
 **Need help?** Contact [support@companin.tech](mailto:support@companin.tech) or visit our [documentation](https://companin.tech/docs).

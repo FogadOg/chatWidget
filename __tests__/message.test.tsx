@@ -50,9 +50,10 @@ jest.mock('lucide-react', () => ({
   XIcon: () => <div data-testid="x">×</div>,
 }));
 
-// Mock streamdown
-jest.mock('streamdown', () => ({
-  Streamdown: ({ children }: any) => <div>{children}</div>,
+// Mock internal Markdown component
+jest.mock('../src/components/ai-elements/Markdown', () => ({
+  __esModule: true,
+  default: ({ content }: any) => <div>{content}</div>,
 }));
 
 describe('Message Components', () => {
