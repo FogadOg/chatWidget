@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs=require('fs');
 const s=fs.readFileSync('.next/analyze/client.html','utf8');
 const pos=s.indexOf('window.chartData');

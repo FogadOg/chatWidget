@@ -10,7 +10,7 @@ describe('MessageInput rate limiting', () => {
   beforeEach(() => {
     resetLimiter(sessionId);
     // mock fetch to always succeed for POST and GET
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (global as any).fetch = jest.fn().mockImplementation((url: string, opts: any) => {
       if (opts && opts.method === 'POST') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ status: 'success', data: { message_id: '1' } }) });

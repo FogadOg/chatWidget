@@ -23,7 +23,7 @@ export default function Markdown({ content }: Props) {
       const pkgName = "rehype-katex";
       try {
         const dynamicImport = new Function("pkg", "return import(pkg)");
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+         
         dynamicImport(pkgName)
           .then((mod: any) => {
             if (!mounted) return;

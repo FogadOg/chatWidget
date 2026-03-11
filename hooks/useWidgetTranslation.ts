@@ -12,7 +12,7 @@ const getInitialLocale = (): Locale => {
   let storedLocale: string | null = null;
   try {
     storedLocale = window.localStorage.getItem('companin-widget-locale');
-  } catch (_err) {
+  } catch {
     storedLocale = null;
   }
 
@@ -54,7 +54,7 @@ export function useWidgetTranslation() {
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem('companin-widget-locale', locale);
-      } catch (_err) {
+      } catch {
         // ignore storage errors
       }
     }

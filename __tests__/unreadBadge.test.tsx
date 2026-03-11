@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -36,7 +36,7 @@ describe('EmbedShell - Unread Badge', () => {
     button_border_radius: 8,
     opacity: 1,
     greeting_message: { text: { en: 'Hello' }, buttons: [] },
-  } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  } as any;  
 
   const messages = [
     { id: 'm1', text: 'Hello from assistant', from: 'assistant' as const, timestamp: 1000 },

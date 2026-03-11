@@ -99,7 +99,7 @@ export async function trackEvent(
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
+       
       console.warn('telemetry post failed', err);
     }
   }

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+ 
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWidgetAuth } from '../hooks/useWidgetAuth';

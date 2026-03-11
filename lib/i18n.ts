@@ -96,7 +96,7 @@ const pickPluralForm = (locale: string, forms: PluralForms, count: number): stri
     const rule = new Intl.PluralRules(locale);
     const category = rule.select(count) as keyof PluralForms;
     return forms[category] || forms.other || "";
-  } catch (_err) {
+  } catch {
     return forms.other || "";
   }
 };

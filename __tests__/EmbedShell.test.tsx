@@ -1,7 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import EmbedShell from '../components/EmbedShell';
 import { useWidgetStyles } from '../hooks/useWidgetStyles';

@@ -37,7 +37,7 @@ describe('onInitConfig helper', () => {
     const { handler, remove } = onInitConfig(callback);
 
     // create an object whose property access throws
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const badData: any = {};
     Object.defineProperty(badData, 'type', {
       get() {

@@ -7,7 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 import { cn } from "@/lib/utils";
 import { BookmarkIcon, type LucideProps } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";

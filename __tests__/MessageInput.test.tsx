@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -14,7 +14,7 @@ jest.mock('../lib/errorHandling', () => {
   const original = jest.requireActual('../lib/errorHandling');
   return {
     ...original,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     retryWithBackoff: jest.fn((fn: () => Promise<any>, _opts: any) => fn()),
   };
 });

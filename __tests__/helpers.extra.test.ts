@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
+ 
 describe('helpers.ts additional branches', () => {
       test('getPageContext executes referrer branch when embedded and referrer is valid (jsdom fallback)', () => {
         jest.resetModules();

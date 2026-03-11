@@ -1,7 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
   Message,

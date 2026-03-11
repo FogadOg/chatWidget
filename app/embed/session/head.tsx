@@ -2,7 +2,7 @@
 // Dynamic head elements for the embed session page
 // Accepts query parameters from the loader script and injects CSS/JS
 
-import React, { useEffect } from 'react';
+import React from 'react';
 
 type HeadProps = {
   searchParams: {

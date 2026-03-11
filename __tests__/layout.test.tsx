@@ -8,7 +8,7 @@ jest.mock('next/font/google', () => ({
   Geist_Mono: () => ({ variable: '--font-geist-mono' }),
 }));
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 describe('RootLayout', () => {
   let RootLayout: React.ComponentType<{ children: React.ReactNode }>;
   let metadata: { title: string; description: string };

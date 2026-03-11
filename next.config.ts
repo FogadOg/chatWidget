@@ -16,19 +16,19 @@ const nextConfig: NextConfig = {
         // Plugins are optional and only used during CI/local analysis.
         // Require at runtime to avoid build-time TypeScript issues when the
         // packages may not be installed in other environments.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const SizeLimitWebpack = require('@size-limit/webpack');
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const SizeLimitWebpackWhy = require('@size-limit/webpack-why');
         if (SizeLimitWebpack) {
-          // @ts-ignore - plugin types not required here
+          // @ts-expect-error size-limit webpack plugin has no types in this env
           config.plugins.push(new SizeLimitWebpack());
         }
         if (SizeLimitWebpackWhy) {
-          // @ts-ignore
+          // @ts-expect-error size-limit webpack-why plugin has no types in this env
           config.plugins.push(new SizeLimitWebpackWhy());
         }
-      } catch (e) {
+      } catch {
         // If plugins are not available, skip silently.
       }
     }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs=require('fs');
 const data=JSON.parse(fs.readFileSync('.next/analyze/chartData.json','utf8'));
 const modules=[];

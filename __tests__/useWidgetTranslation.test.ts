@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+ 
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useState, useEffect } from 'react';
@@ -219,7 +219,7 @@ describe('useWidgetTranslation', () => {
             setTranslations({ send: 'Senden' });
           }
         }
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- test intentionally avoids adding locale
+       
       }, []);
 
       return { translations, locale };
