@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Ensure Turbopack uses this project as the root to avoid
+  // warnings when multiple lockfiles exist in the mono-repo.
+  turbopack: {
+    root: '.',
+  },
   webpack(config, { isServer }) {
     if (!isServer) {
       try {
