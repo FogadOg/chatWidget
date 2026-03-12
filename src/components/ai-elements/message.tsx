@@ -1,5 +1,5 @@
 "use client";
- 
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,15 @@ import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-const Streamdown = dynamic(() => import("./Markdown"), { ssr: false });
+// During tests (Jest sets `JEST_WORKER_ID`) load the Markdown component synchronously
+// so that dynamically-imported components render immediately in the test environment.
+let Streamdown: any;
+if (process.env.JEST_WORKER_ID) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  Streamdown = require("./Markdown").default;
+} else {
+  Streamdown = dynamic(() => import("./Markdown"), { ssr: false });
+}
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
