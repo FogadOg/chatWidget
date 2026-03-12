@@ -37,6 +37,7 @@ jobs:
       uses: codecov/codecov-action@v4
       if: always()
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage/lcov.info
         flags: widget-app
         name: widget-app-coverage
