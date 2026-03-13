@@ -24,6 +24,7 @@
       "lib/*": ["./lib/*"],
       "types/*": ["./types/*"],
       "components/*": ["./components/*"],
+
       "hooks/*": ["./hooks/*"]
     }
   },
@@ -36,5 +37,5 @@
     "**/*.mts",
     "lib/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/__tests__/**", "__tests__/**", "**/__mocks__/**", "node_modules/react-markdown/**"]
 }

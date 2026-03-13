@@ -1,5 +1,5 @@
 "use client";
- 
+
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -177,7 +177,7 @@ export const InlineCitationCarouselIndex = ({
       window.clearTimeout(id);
       // attempt to remove listener if supported
       try {
-        // @ts-expect-error - guard for api.off
+        // guard for api.off
         if (typeof api.off === "function") api.off("select", update);
       } catch (e) {
         /* ignore */

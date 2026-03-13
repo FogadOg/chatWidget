@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+const ReactMarkdown: any = typeof require !== 'undefined' ? require("react-markdown") : (null as any);
+const remarkGfm: any = typeof require !== 'undefined' ? require("remark-gfm") : (null as any);
 
 type Props = {
   content: string;
@@ -23,7 +23,7 @@ export default function Markdown({ content }: Props) {
       const pkgName = "rehype-katex";
       try {
         const dynamicImport = new Function("pkg", "return import(pkg)");
-         
+
         dynamicImport(pkgName)
           .then((mod: any) => {
             if (!mounted) return;
@@ -44,9 +44,14 @@ export default function Markdown({ content }: Props) {
 
   return (
     <div className="prose max-w-full">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins}>
-        {content}
-      </ReactMarkdown>
+      {(() => {
+        const R = ReactMarkdown as any;
+        return (
+          <R remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins}>
+            {content}
+          </R>
+        );
+      })()}
     </div>
   );
 }

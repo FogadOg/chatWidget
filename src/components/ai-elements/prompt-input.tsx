@@ -1,5 +1,5 @@
 "use client";
- 
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -199,8 +199,9 @@ export function PromptInputProvider({
 
   // Keep a ref to attachments for cleanup on unmount (avoids stale closure)
   const attachmentsRef = useRef<(FileUIPart & { id: string })[]>([]);
+  const timeoutIdRef = useRef<number | undefined>(undefined);
+
   useEffect(() => {
-    let setId: number | undefined;
     attachmentsRef.current = attachmentFiles;
   }, [attachmentFiles]);
 
@@ -1132,6 +1133,7 @@ export const PromptInputSpeechButton = ({
     null
   );
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const timeoutIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (
@@ -1183,12 +1185,12 @@ export const PromptInputSpeechButton = ({
 
       recognitionRef.current = speechRecognition;
       // Defer setting React state to avoid synchronous setState in effect
-      setId = window.setTimeout(() => setRecognition(speechRecognition), 0);
+      timeoutIdRef.current = window.setTimeout(() => setRecognition(speechRecognition), 0);
     }
 
     return () => {
-      if (typeof setId !== "undefined") {
-        window.clearTimeout(setId);
+      if (typeof timeoutIdRef.current !== "undefined") {
+        window.clearTimeout(timeoutIdRef.current);
       }
       if (recognitionRef.current) {
         recognitionRef.current.stop();

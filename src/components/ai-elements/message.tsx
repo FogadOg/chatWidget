@@ -324,7 +324,10 @@ export const MessageResponse = memo(
     const content = (props.children ?? (props.text as any) ?? "") as string;
     return (
       <div className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}>
-        <Streamdown content={content} />
+        {(() => {
+          const Stream = Streamdown as any;
+          return <Stream content={content} />;
+        })()}
       </div>
     );
   },
