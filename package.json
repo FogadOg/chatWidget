@@ -11,6 +11,7 @@
     "analyze:open": "npx serve .next/analyze --listen 8000",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -52,7 +53,7 @@
     "use-stick-to-bottom": "^1.1.1"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^13.2.0",
+    "@next/bundle-analyzer": "^16.0.0",
     "@size-limit/preset-small-lib": "^7.0.8",
     "@size-limit/webpack": "^7.0.8",
     "@size-limit/webpack-why": "^7.0.8",
