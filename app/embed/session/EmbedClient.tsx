@@ -939,6 +939,8 @@ export default function EmbedClient({
     const maybeButtons = b.response?.buttons || [];
     const labelText = getLocalizedText(b.label) || (typeof b.label === 'string' ? b.label : (b.label?.en || ''));
 
+    trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
+
     // Add response as a grouped flow response
     if (maybeText || maybeButtons.length > 0) {
       setFlowResponses((prev: FlowResponse[]) => [...prev, {

@@ -4655,6 +4655,8 @@ describe('EmbedClient Component', () => {
 
   describe('Button Click Handlers', () => {
     test('handleFollowUpButtonClick adds flow responses', async () => {
+      const { trackEvent } = require('../lib/api');
+
       mockFetch.mockImplementation((url: string) => {
         if (url.includes('/widget-config/')) {
           return Promise.resolve({
@@ -4704,6 +4706,7 @@ describe('EmbedClient Component', () => {
       });
 
       expect(screen.getByText('No Buttons')).toBeInTheDocument();
+      expect(trackEvent).toHaveBeenCalledWith('button_clicked', expect.anything(), expect.any(Object), expect.anything());
     });
 
     test('handleFollowUpButtonClick returns early without session or auth', async () => {
