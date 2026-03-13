@@ -17,6 +17,9 @@
     "minimize": "Reduire le chat"
   },
   "newMessageAnnouncement": "Nouveau message : {message}",
+  "viewUncertaintyLog": "Voir le journal d'incertitude de l'assistant",
+  "uncertaintyResponsesHint": "L'assistant a indiqué une incertitude dans certaines réponses",
+  "closeFeedback": "Fermer les commentaires",
   "unreadMessages": {
     "one": "{count} message non lu",
     "other": "{count} messages non lus"

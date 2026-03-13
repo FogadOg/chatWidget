@@ -197,7 +197,7 @@ export default function EmbedShell({
                 ...fontStyles
               }}
               className={`${btnWidth} ${btnHeight} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90 relative`}
-              title="Open Chat"
+              title={translate(locale, 'chatControl', { context: 'open' })}
             >
                 {widgetConfig?.bot_avatar ? (
                   <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${btnIcon} rounded-full object-cover`} />
@@ -277,8 +277,8 @@ export default function EmbedShell({
                       onClick={onShowUnsureModal}
                       style={{ backgroundColor: secondaryColor }}
                       className="px-2 py-1 rounded text-sm flex items-center justify-center hover:opacity-90 relative"
-                      aria-label="View assistant uncertainty log"
-                      title="Assistant has indicated uncertainty in some responses"
+                      aria-label={translate(locale, 'viewUncertaintyLog')}
+                      title={translate(locale, 'uncertaintyResponsesHint')}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10"/>

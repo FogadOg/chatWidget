@@ -17,6 +17,9 @@
     "minimize": "Chat minimaliseren"
   },
   "newMessageAnnouncement": "Nieuw bericht: {message}",
+  "viewUncertaintyLog": "Bekijk assistentens onzekerheidslogg",
+  "uncertaintyResponsesHint": "De assistent heeft onzekerheid aangegeven in sommige antwoorden",
+  "closeFeedback": "Sluit feedback",
   "unreadMessages": {
     "one": "{count} ongelezen bericht",
     "other": "{count} ongelezen berichten"

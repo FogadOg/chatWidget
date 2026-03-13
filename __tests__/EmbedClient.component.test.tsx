@@ -2652,7 +2652,8 @@ describe('EmbedClient Component', () => {
     });
 
     test('logs error when feedback status fetch fails', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const { logError } = require('../lib/errorHandling');
+      const logErrorSpy = jest.spyOn(require('../lib/errorHandling'), 'logError').mockImplementation();
       const originalFetch = global.fetch;
 
       mockHelpers.getStoredSession.mockReturnValue({
@@ -2693,14 +2694,11 @@ describe('EmbedClient Component', () => {
       render(<EmbedClient {...defaultProps} />);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Error checking feedback status:',
-          expect.any(Error)
-        );
+        expect(logErrorSpy).toHaveBeenCalled();
       }, { timeout: 3000 });
 
       global.fetch = originalFetch as any;
-      consoleErrorSpy.mockRestore();
+      logErrorSpy.mockRestore();
     });
   });
 

@@ -1,4 +1,4 @@
- 
+
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -36,7 +36,7 @@ describe('EmbedShell - Unread Badge', () => {
     button_border_radius: 8,
     opacity: 1,
     greeting_message: { text: { en: 'Hello' }, buttons: [] },
-  } as any;  
+  } as any;
 
   const messages = [
     { id: 'm1', text: 'Hello from assistant', from: 'assistant' as const, timestamp: 1000 },
@@ -128,7 +128,7 @@ describe('EmbedShell - Unread Badge', () => {
     );
 
     // No badge should be visible
-    const button = screen.getByTitle('Open Chat');
+    const button = screen.getByTitle(/open chat/i);
     expect(button).toBeInTheDocument();
     // Check that no number badge exists in the button
     expect(screen.queryByText(/^\d+$/)).not.toBeInTheDocument();

@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FeedbackDialog from '../components/FeedbackDialog';
 import { embedOriginHeader } from '../lib/api';
+import { logError } from '../lib/errorHandling';
 
 // Mock fetch
 const mockFetch = jest.fn();
@@ -23,6 +24,10 @@ jest.mock('../hooks/useWidgetTranslation', () => ({
       feedbackSubmitted: 'Feedback submitted successfully',
     },
   }),
+}));
+
+jest.mock('../lib/errorHandling', () => ({
+  logError: jest.fn(),
 }));
 
 const defaultProps = {
@@ -164,8 +169,6 @@ describe('FeedbackDialog', () => {
   });
 
   it('handles non-ok API response and closes dialog', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -179,15 +182,9 @@ describe('FeedbackDialog', () => {
     fireEvent.click(screen.getByText('Submit Feedback'));
 
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to submit feedback:',
-        500,
-        { error: 'Server error' }
-      );
+      expect(logError).toHaveBeenCalled();
       expect(defaultProps.onSubmit).toHaveBeenCalled();
     });
-
-    consoleErrorSpy.mockRestore();
   });
 
   it('calls onSkip when skip button is clicked', () => {

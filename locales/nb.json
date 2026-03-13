@@ -17,6 +17,9 @@
     "minimize": "Minimer chat"
   },
   "newMessageAnnouncement": "Ny melding: {message}",
+  "viewUncertaintyLog": "Vis assistentens usikkerhetslogg",
+  "uncertaintyResponsesHint": "Assistenten har vist usikkerhet i noen svar",
+  "closeFeedback": "Lukk tilbakemelding",
   "unreadMessages": {
     "one": "{count} ulest melding",
     "other": "{count} uleste meldinger"

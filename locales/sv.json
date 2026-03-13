@@ -17,6 +17,9 @@
     "minimize": "Minimera chatt"
   },
   "newMessageAnnouncement": "Nytt meddelande: {message}",
+  "viewUncertaintyLog": "Visa assistentens osäkerhetslogg",
+  "uncertaintyResponsesHint": "Assistenten har visat osäkerhet i vissa svar",
+  "closeFeedback": "Stäng feedback",
   "unreadMessages": {
     "one": "{count} olast meddelande",
     "other": "{count} olasta meddelanden"

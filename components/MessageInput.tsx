@@ -240,7 +240,7 @@ export default function MessageInput({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
@@ -253,7 +253,7 @@ export default function MessageInput({
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyDown}
         placeholder={translate(locale, 'typeYourMessage')}
         aria-label={translate(locale, 'typeYourMessageLabel')}
         disabled={disabled || isSubmitting || !sessionId}

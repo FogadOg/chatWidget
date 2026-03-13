@@ -6,6 +6,7 @@ import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { t as translate } from '../lib/i18n';
 import { ThumbsUp, ThumbsDown, Minus, X } from 'lucide-react';
 import { API, embedOriginHeader } from '../lib/api';
+import { logError } from '../lib/errorHandling';
 
 type FeedbackRating = 'positive' | 'neutral' | 'negative';
 
@@ -21,8 +22,6 @@ interface FeedbackDialogProps {
   onSkip: () => void;
 }
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-
 export default function FeedbackDialog({
   sessionId,
   authToken,
@@ -33,7 +32,7 @@ export default function FeedbackDialog({
   onSubmit,
   onSkip,
 }: FeedbackDialogProps) {
-  const { translations: t, locale } = useWidgetTranslation();
+  const { locale } = useWidgetTranslation();
   const [selectedRating, setSelectedRating] = useState<FeedbackRating | null>(null);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,12 +73,16 @@ export default function FeedbackDialog({
           onSubmit(selectedRating as FeedbackRating, comment.trim());
         }, 2000);
       } else {
-        console.error('Failed to submit feedback:', response?.status, data as unknown);
+        logError(new Error('Failed to submit feedback'), {
+          action: 'feedbackDialogSubmit',
+          status: response?.status,
+          data,
+        });
         // still call with current values so telemetry can record attempt
         onSubmit(selectedRating as FeedbackRating, comment.trim());
       }
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      logError(error, { action: 'feedbackDialogSubmit' });
       // Ensure we call the submit callback with the same contract
       onSubmit(selectedRating as FeedbackRating, comment.trim());
     } finally {
@@ -127,7 +130,7 @@ export default function FeedbackDialog({
         onClick={onSkip}
         className="absolute top-4 right-4 p-1 rounded-full hover:opacity-70 transition-opacity"
         style={{ color: textColor }}
-        aria-label="Close feedback"
+        aria-label={translate(locale, 'closeFeedback')}
       >
         <X className="w-5 h-5" />
       </button>

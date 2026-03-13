@@ -17,6 +17,9 @@
     "minimize": "Minimizar chat"
   },
   "newMessageAnnouncement": "Nuevo mensaje: {message}",
+  "viewUncertaintyLog": "Ver registro de incertidumbre del asistente",
+  "uncertaintyResponsesHint": "El asistente ha mostrado incertidumbre en algunas respuestas",
+  "closeFeedback": "Cerrar comentarios",
   "unreadMessages": {
     "one": "{count} mensaje sin leer",
     "other": "{count} mensajes sin leer"

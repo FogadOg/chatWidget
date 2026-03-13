@@ -1,4 +1,5 @@
-import * as EmbedClient from '../app/embed/session/EmbedClient';
+jest.mock('../lib/errorHandling', () => ({ logError: jest.fn() }));
+const EmbedClient = require('../app/embed/session/EmbedClient');
 
 describe('EmbedClient helpers', () => {
   beforeEach(() => {
@@ -38,12 +39,13 @@ describe('EmbedClient helpers', () => {
     // Use malformed percent-encoding so decodeURIComponent throws and is caught
     const malformed = '%';
 
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const { logError } = require('../lib/errorHandling');
+      const logErrorSpy = jest.spyOn(require('../lib/errorHandling'), 'logError').mockImplementation(() => {});
 
-    EmbedClient.applyCustomAssetsFromQuery(`?customCss=${malformed}`);
+      EmbedClient.applyCustomAssetsFromQuery(`?customCss=${malformed}`);
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith('[widget] applyCustomAssetsFromQuery error', expect.any(Error));
+      expect(logErrorSpy).toHaveBeenCalled();
 
-    consoleErrorSpy.mockRestore();
+      logErrorSpy.mockRestore();
   });
 });

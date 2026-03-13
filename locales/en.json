@@ -17,6 +17,8 @@
     "minimize": "Minimize chat"
   },
   "newMessageAnnouncement": "New message: {message}",
+  "viewUncertaintyLog": "View assistant uncertainty log",
+  "uncertaintyResponsesHint": "Assistant has indicated uncertainty in some responses",
   "unreadMessages": {
     "one": "{count} unread message",
     "other": "{count} unread messages"
@@ -32,6 +34,7 @@
   "feedbackNegative": "Bad",
   "feedbackCommentPlaceholder": "Any additional comments? (optional)",
   "submitFeedback": "Submit Feedback",
+  "closeFeedback": "Close feedback",
   "skipFeedback": "Skip",
   "thankYouFeedback": "Thank you for your feedback!",
   "feedbackSubmitted": "Feedback submitted successfully"

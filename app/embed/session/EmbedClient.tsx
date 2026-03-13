@@ -54,7 +54,7 @@ export function applyCustomAssetsFromQuery(search?: string) {
       injectCustomAssets(css ? decodeURIComponent(css) : undefined);
     }
   } catch (err) {
-    console.error('[widget] applyCustomAssetsFromQuery error', err);
+    logError(err, { action: 'applyCustomAssetsFromQuery', search });
   }
 }
 
@@ -647,7 +647,7 @@ export default function EmbedClient({
         }
       }
     } catch (error) {
-      console.error('Error checking feedback status:', error);
+      logError(error, { action: 'checkFeedbackStatus', sessionId });
     }
   };
 
@@ -710,14 +710,16 @@ export default function EmbedClient({
         // Show success toast if available
       } else {
         const errorText = await response.text();
-        console.error('Failed to submit message feedback:', {
+        logError(new Error('Failed to submit message feedback'), {
+          action: 'handleSubmitMessageFeedback',
+          messageId,
           status: response.status,
           statusText: response.statusText,
-          body: errorText
+          body: errorText,
         });
       }
     } catch (error) {
-      console.error('Error submitting message feedback:', error);
+      logError(error, { action: 'handleSubmitMessageFeedback', messageId });
     }
   };
 
