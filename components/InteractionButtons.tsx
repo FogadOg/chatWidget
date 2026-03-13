@@ -29,7 +29,8 @@ export default function InteractionButtons({
   return (
     <div className="flex flex-col gap-2">
       {buttons.map((button: ButtonType) => {
-        const buttonId = (button.id || (button as any).button_id) ?? '';
+        const altId = (button as ButtonType)['button_id'];
+        const buttonId = typeof button.id === 'string' ? button.id : (typeof altId === 'string' ? altId : '');
         const isClicked = clickedButtons.has(buttonId);
         return (
           <button

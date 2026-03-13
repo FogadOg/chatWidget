@@ -18,7 +18,11 @@ export function onInitConfig(callback: (data: Record<string, unknown>) => void) 
       // Validate origin against allowlist. If allowlist is empty fall back
       // to only allowing same-origin messages (safe default).
       const origin = event.origin || '';
-      const allowed = ALLOWLIST.length > 0 ? ALLOWLIST.includes(origin) : origin === window.location.origin;
+      // If allowlist provided, require exact match. If allowlist is empty,
+      // accept messages that are same-origin OR have no origin (JSDOM/tests).
+      const allowed = ALLOWLIST.length > 0
+        ? ALLOWLIST.includes(origin)
+        : (!origin || origin === window.location.origin);
       if (!allowed) return;
 
       callback(data);

@@ -452,8 +452,8 @@ export default function EmbedShell({
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={getText(widgetConfig?.placeholder) || translate(locale, 'typeYourMessage')}
-                    aria-label={translate(locale, 'typeYourMessageLabel')}
+                    placeholder={getText(widgetConfig?.placeholder) || t.typeYourMessage || translate(locale, 'typeYourMessage')}
+                    aria-label={t.typeYourMessageLabel || translate(locale, 'typeYourMessageLabel')}
                     className="flex-1 p-2 border focus:outline-none focus:ring-2"
                     style={{
                       borderRadius: `${buttonBorderRadius}px`,
@@ -703,8 +703,8 @@ export default function EmbedShell({
                       type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={getText(widgetConfig?.placeholder) || translate(locale, 'typeYourMessage')}
-                      aria-label={translate(locale, 'typeYourMessageLabel')}
+                      placeholder={getText(widgetConfig?.placeholder) || t.typeYourMessage || translate(locale, 'typeYourMessage')}
+                      aria-label={t.typeYourMessageLabel || translate(locale, 'typeYourMessageLabel')}
                       className="flex-1 p-2 border focus:outline-none focus:ring-2"
                       style={{
                         borderRadius: `${buttonBorderRadius}px`,

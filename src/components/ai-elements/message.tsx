@@ -20,18 +20,17 @@ import {
   PaperclipIcon,
   XIcon,
 } from "lucide-react";
-import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
+import type { ComponentProps, HTMLAttributes, ReactElement, ComponentType } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
 // During tests (Jest sets `JEST_WORKER_ID`) load the Markdown component synchronously
 // so that dynamically-imported components render immediately in the test environment.
-let Streamdown: any;
+let Streamdown: ComponentType<unknown>;
 if (process.env.JEST_WORKER_ID) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  Streamdown = require("./Markdown").default;
+  Streamdown = require("./Markdown").default as ComponentType<unknown>;
 } else {
-  Streamdown = dynamic(() => import("./Markdown"), { ssr: false });
+  Streamdown = dynamic(() => import("./Markdown"), { ssr: false }) as ComponentType<unknown>;
 }
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
