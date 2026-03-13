@@ -14,6 +14,7 @@ import type {
   Flow,
   SourceData,
 } from '../../../types/widget';
+import { ButtonLike } from '../../../hooks/useClickedButtons';
 import { logPerf } from '../../../lib/logger';
 import { trackEvent } from '../../../lib/api';
 import FeedbackDialog from '../../../components/FeedbackDialog';
@@ -961,12 +962,13 @@ export default function EmbedClient({
     }
   };
 
-  const handleFollowUpButtonClick = (button: FlowButton) => {
+  const handleFollowUpButtonClick = (button: ButtonLike) => {
+    const b = button as FlowButton;
     if (!sessionId || !authToken) return;
 
-    const maybeText = getLocalizedText(button.response?.text);
-    const maybeButtons = button.response?.buttons || [];
-    const labelText = getLocalizedText(button.label) || (typeof button.label === 'string' ? button.label : (button.label?.en || ''));
+    const maybeText = getLocalizedText(b.response?.text);
+    const maybeButtons = b.response?.buttons || [];
+    const labelText = getLocalizedText(b.label) || (typeof b.label === 'string' ? b.label : (b.label?.en || ''));
 
     // Add response as a grouped flow response
     if (maybeText || maybeButtons.length > 0) {
@@ -977,7 +979,7 @@ export default function EmbedClient({
       }]);
     }
 
-    const flowHandled = processWidgetFlow(button.action, true);
+    const flowHandled = processWidgetFlow(b.action, true);
 
     // If the flow was handled client-side, notify parent about the interaction
     if (flowHandled) {
@@ -985,7 +987,7 @@ export default function EmbedClient({
         if (window.parent !== window) {
           const userMessage = {
             id: `temp-${Date.now()}`,
-            text: labelText || maybeText || button.action || '',
+            text: labelText || maybeText || b.action || '',
             from: 'user',
             timestamp: Date.now(),
           };
@@ -997,17 +999,18 @@ export default function EmbedClient({
     }
 
     if (!flowHandled) {
-      handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
+      handleSubmit(new Event('submit') as unknown as React.FormEvent, b.action);
     }
   };
 
-  const handleInteractionButtonClick = async (button: FlowButton) => {
+  const handleInteractionButtonClick = async (button: ButtonLike) => {
+    const b = button as FlowButton;
     if (!sessionId || !authToken) return;
 
-    const maybeText = getLocalizedText(button.response?.text);
-    const maybeButtons = button.response?.buttons || [];
-    const labelText = getLocalizedText(button.label) ||
-      (typeof button.label === 'string' ? button.label : (button.label?.en || ''));
+    const maybeText = getLocalizedText(b.response?.text);
+    const maybeButtons = b.response?.buttons || [];
+    const labelText = getLocalizedText(b.label) ||
+      (typeof b.label === 'string' ? b.label : (b.label?.en || ''));
 
     // immediately add a user message bubble to the conversation
     const userMsg: Message = {
@@ -1028,12 +1031,12 @@ export default function EmbedClient({
       setIsTyping(false);
     }, 300);
 
-    const flowHandled = processWidgetFlow(button.action);
+    const flowHandled = processWidgetFlow(b.action);
     // track interaction click
     trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
 
     if (!maybeText && !flowHandled) {
-      handleSubmit(new Event('submit') as unknown as React.FormEvent, button.action);
+      handleSubmit(new Event('submit') as unknown as React.FormEvent, b.action);
     }
     else {
       // also notify parent about the user message

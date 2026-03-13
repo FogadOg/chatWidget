@@ -4,6 +4,7 @@
 import React from 'react';
 import { t as translate } from '../lib/i18n';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
+import type { WidgetConfig } from '../types/widget';
 
 type Source = { url?: string; title?: string; snippet?: string };
 type Message = {
@@ -16,7 +17,7 @@ type Message = {
 
 type Props = {
   message: Message;
-  widgetConfig?: Record<string, unknown>;
+  widgetConfig?: WidgetConfig;
   assistantName?: string;
   showMessageAvatars?: boolean;
   textColor?: string;

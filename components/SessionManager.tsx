@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 
 import { useState, useEffect, useCallback } from 'react';
-import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode } from 'lib/errorHandling';
+import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode, createNetworkError } from 'lib/errorHandling';
 import { embedOriginHeader } from 'lib/api';
 import { logError } from 'lib/logger';
 import { TIMEOUTS } from 'lib/constants';
@@ -291,7 +291,5 @@ export default function SessionManager({
   return null; // This component doesn't render anything
 }
 
-// Import missing function
-function createNetworkError(message: string, code: WidgetErrorCode) {
-  return { message, code, userMessage: message };
-}
+// Use shared `createNetworkError` from `lib/errorHandling` to ensure
+// consistent error shape and retry behavior across components.

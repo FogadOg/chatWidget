@@ -31,8 +31,8 @@ type Props = {
   title?: string;
   assistantName?: string;
   widgetConfig?: WidgetConfig;
-  onInteractionButtonClick?: (button: FlowButton) => void;
-  onFollowUpButtonClick?: (button: FlowButton) => void;
+  onInteractionButtonClick?: (button: ButtonLike) => void | Promise<void>;
+  onFollowUpButtonClick?: (button: ButtonLike) => void | Promise<void>;
   flowResponses?: FlowResponse[];
   getLocalizedText?: (textObj: Record<string, string> | undefined) => string;
   showFeedbackDialog?: boolean;
@@ -77,7 +77,7 @@ export default function EmbedShell({
   const lastAnnouncedId = useRef<string | null>(null);
 
   // track which buttons have been clicked
-  const { clickedButtons, handleClick: onButtonClickInternal } = useClickedButtons();
+  const { clickedButtons, handleClick: onButtonClickInternal, getButtonId } = useClickedButtons();
 
   // Ref for scroll container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -261,7 +261,7 @@ export default function EmbedShell({
                     <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className="w-10 h-10 object-contain rounded" />
                   )}
                   <div className="flex flex-col">
-                    <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
+                    <h3 className="font-semibold">{getText(widgetConfig?.title) || title || translate(locale, 'chat')}</h3>
                     <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
                   </div>
                 </div>
@@ -379,8 +379,8 @@ export default function EmbedShell({
                         )}
                         {flowResponse.buttons.length > 0 && (
                           <div className="flex flex-col gap-2" style={{ marginInlineStart: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
-                            {flowResponse.buttons.map((button: FlowButton) => {
-                              const buttonId = button.id || button.button_id;
+                                {flowResponse.buttons.map((button: FlowButton) => {
+                              const buttonId = getButtonId(button);
                               const isClicked = clickedButtons.has(buttonId);
                               return (
                                 <button
@@ -452,7 +452,7 @@ export default function EmbedShell({
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={getText(widgetConfig?.placeholder) || t.typeYourMessage}
+                    placeholder={getText(widgetConfig?.placeholder) || translate(locale, 'typeYourMessage')}
                     aria-label={translate(locale, 'typeYourMessageLabel')}
                     className="flex-1 p-2 border focus:outline-none focus:ring-2"
                     style={{
@@ -472,7 +472,7 @@ export default function EmbedShell({
                     }}
                     className="px-4 py-2 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {t.send}
+                    {translate(locale, 'send')}
                   </button>
                 </div>
               </form>
@@ -537,7 +537,7 @@ export default function EmbedShell({
                       <img src={widgetConfig.logo} alt={(getText(widgetConfig?.title) || title || 'logo') + ' logo'} className="w-10 h-10 object-contain rounded" />
                     )}
                     <div className="flex flex-col">
-                      <h3 className="font-semibold">{getText(widgetConfig?.title) || title || t.chat}</h3>
+                      <h3 className="font-semibold">{getText(widgetConfig?.title) || title || translate(locale, 'chat')}</h3>
                       <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
                     </div>
                   </div>
@@ -636,7 +636,7 @@ export default function EmbedShell({
                           {flowResponse.buttons.length > 0 && (
                             <div className="flex flex-col gap-2" style={{ marginInlineStart: widgetConfig?.bot_avatar ? '40px' : '0' }}>
                               {flowResponse.buttons.map((button: FlowButton) => {
-                                const buttonId = button.id || button.button_id;
+                                const buttonId = getButtonId(button);
                                 const isClicked = clickedButtons.has(buttonId);
                                 return (
                                   <button
@@ -703,7 +703,7 @@ export default function EmbedShell({
                       type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={getText(widgetConfig?.placeholder) || t.typeYourMessage}
+                      placeholder={getText(widgetConfig?.placeholder) || translate(locale, 'typeYourMessage')}
                       aria-label={translate(locale, 'typeYourMessageLabel')}
                       className="flex-1 p-2 border focus:outline-none focus:ring-2"
                       style={{
@@ -723,7 +723,7 @@ export default function EmbedShell({
                       }}
                       className="px-4 py-2 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {t.send}
+                      {translate(locale, 'send')}
                     </button>
                   </div>
                 </form>

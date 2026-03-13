@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
+import { t as translate } from '../lib/i18n';
 import { ThumbsUp, ThumbsDown, Minus, X } from 'lucide-react';
 import { API, embedOriginHeader } from '../lib/api';
 
@@ -32,7 +33,7 @@ export default function FeedbackDialog({
   onSubmit,
   onSkip,
 }: FeedbackDialogProps) {
-  const { translations: t } = useWidgetTranslation();
+  const { translations: t, locale } = useWidgetTranslation();
   const [selectedRating, setSelectedRating] = useState<FeedbackRating | null>(null);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +41,8 @@ export default function FeedbackDialog({
 
   const handleSubmit = async () => {
     if (!selectedRating) return;
+
+    if (!sessionId) return;
 
     setIsSubmitting(true);
     try {
@@ -77,7 +80,8 @@ export default function FeedbackDialog({
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      onSubmit(); // Close anyway
+      // Ensure we call the submit callback with the same contract
+      onSubmit(selectedRating as FeedbackRating, comment.trim());
     } finally {
       setIsSubmitting(false);
     }
@@ -99,8 +103,8 @@ export default function FeedbackDialog({
         >
           <ThumbsUp className="w-8 h-8" style={{ color: primaryColor }} />
         </div>
-        <h3 className="text-lg font-semibold mb-2">{t.thankYouFeedback}</h3>
-        <p className="text-sm opacity-70">{t.feedbackSubmitted}</p>
+        <h3 className="text-lg font-semibold mb-2">{translate(locale, 'thankYouFeedback')}</h3>
+        <p className="text-sm opacity-70">{translate(locale, 'feedbackSubmitted')}</p>
       </div>
     );
   }
@@ -129,7 +133,7 @@ export default function FeedbackDialog({
       </button>
 
       {/* Title */}
-      <h3 id="feedback-dialog-title" className="text-lg font-semibold mb-6 pr-8">{t.rateConversation}</h3>
+      <h3 id="feedback-dialog-title" className="text-lg font-semibold mb-6 pr-8">{translate(locale, 'rateConversation')}</h3>
 
       {/* Rating buttons */}
       <div className="flex justify-center gap-4 mb-6">
@@ -150,7 +154,7 @@ export default function FeedbackDialog({
             className="w-8 h-8"
             style={{ color: selectedRating === 'positive' ? primaryColor : textColor }}
           />
-          <span className="text-sm font-medium">{t.feedbackPositive}</span>
+          <span className="text-sm font-medium">{translate(locale, 'feedbackPositive')}</span>
         </button>
 
         <button
@@ -170,7 +174,7 @@ export default function FeedbackDialog({
             className="w-8 h-8"
             style={{ color: selectedRating === 'neutral' ? primaryColor : textColor }}
           />
-          <span className="text-sm font-medium">{t.feedbackNeutral}</span>
+          <span className="text-sm font-medium">{translate(locale, 'feedbackNeutral')}</span>
         </button>
 
         <button
@@ -190,7 +194,7 @@ export default function FeedbackDialog({
             className="w-8 h-8"
             style={{ color: selectedRating === 'negative' ? primaryColor : textColor }}
           />
-          <span className="text-sm font-medium">{t.feedbackNegative}</span>
+          <span className="text-sm font-medium">{translate(locale, 'feedbackNegative')}</span>
         </button>
       </div>
 
@@ -200,8 +204,8 @@ export default function FeedbackDialog({
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={t.feedbackCommentPlaceholder}
-            aria-label={t.feedbackCommentPlaceholder}
+            placeholder={translate(locale, 'feedbackCommentPlaceholder')}
+            aria-label={translate(locale, 'feedbackCommentPlaceholder')}
             className="w-full p-3 rounded-lg border resize-none focus:outline-none focus:ring-2"
             style={{
               backgroundColor: `${primaryColor}05`,
@@ -224,7 +228,7 @@ export default function FeedbackDialog({
             color: textColor,
           }}
         >
-          {t.skipFeedback}
+          {translate(locale, 'skipFeedback')}
         </button>
         <button
           onClick={handleSubmit}
@@ -235,7 +239,7 @@ export default function FeedbackDialog({
             color: '#ffffff',
           }}
         >
-          {isSubmitting ? '...' : t.submitFeedback}
+          {isSubmitting ? '...' : translate(locale, 'submitFeedback')}
         </button>
       </div>
     </div>
