@@ -25,9 +25,9 @@ export const SESSION_CONFIG = {
 
 // Widget sizing
 export const BUTTON_SIZES = {
-  sm: 100,
-  md: 128,
-  lg: 160,
+  sm: 48,
+  md: 56,
+  lg: 64,
 } as const;
 
 // Shadow intensity map

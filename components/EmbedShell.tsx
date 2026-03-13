@@ -1,11 +1,10 @@
-/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import InteractionButtons from './InteractionButtons';
 import MessageBubble from './MessageBubble';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
-import { logDebug } from '../lib/logger';
 import { t as translate } from '../lib/i18n';
 import type {
   Message,
@@ -65,7 +64,7 @@ export default function EmbedShell({
   getLocalizedText,
   showFeedbackDialog = false,
   feedbackDialog,
-  messageFeedbackSubmitted = new Set(),
+  messageFeedbackSubmitted,
   onSubmitMessageFeedback,
   unsureModal,
   unsureMessages = [],
@@ -75,6 +74,10 @@ export default function EmbedShell({
   const { translations: t, locale } = useWidgetTranslation();
   const [liveMessage, setLiveMessage] = useState('');
   const lastAnnouncedId = useRef<string | null>(null);
+  const messageFeedbackSet = useMemo(
+    () => messageFeedbackSubmitted ?? new Set<string>(),
+    [messageFeedbackSubmitted]
+  );
 
   // track which buttons have been clicked
   const { clickedButtons, handleClick: onButtonClickInternal, getButtonId } = useClickedButtons();
@@ -95,11 +98,14 @@ export default function EmbedShell({
       .find((msg) => msg.from === 'assistant' && !msg.id.startsWith('greeting-'));
     if (latestAssistant && latestAssistant.id !== lastAnnouncedId.current) {
       lastAnnouncedId.current = latestAssistant.id;
-      setLiveMessage(
-        translate(locale, 'newMessageAnnouncement', {
-          vars: { message: latestAssistant.text },
-        })
-      );
+      const timeoutId = window.setTimeout(() => {
+        setLiveMessage(
+          translate(locale, 'newMessageAnnouncement', {
+            vars: { message: latestAssistant.text },
+          })
+        );
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [messages, locale]);
 
@@ -111,7 +117,6 @@ export default function EmbedShell({
     textColor,
     borderRadius,
     fontStyles,
-    getShadowStyle,
     getButtonSizeClasses,
     widgetWidth,
     widgetHeight,
@@ -356,7 +361,7 @@ export default function EmbedShell({
                           fontStyles={fontStyles}
                           messageBubbleRadius={messageBubbleRadius}
                           onSubmitMessageFeedback={onSubmitMessageFeedback}
-                          messageFeedbackSubmitted={messageFeedbackSubmitted}
+                          messageFeedbackSubmitted={messageFeedbackSet}
                           showTimestamps={showTimestamps}
                         />
                       </div>
@@ -612,7 +617,7 @@ export default function EmbedShell({
                             fontStyles={fontStyles}
                             messageBubbleRadius={messageBubbleRadius}
                             onSubmitMessageFeedback={onSubmitMessageFeedback}
-                            messageFeedbackSubmitted={messageFeedbackSubmitted}
+                            messageFeedbackSubmitted={messageFeedbackSet}
                             showTimestamps={showTimestamps}
                           />
                         </div>

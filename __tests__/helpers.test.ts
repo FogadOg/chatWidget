@@ -13,20 +13,20 @@ describe('embed session helpers', () => {
   });
 
   test('getVisitorId generates and persists id', () => {
-    jest.spyOn(Date, 'now').mockReturnValue(1600000000000);
-    jest.spyOn(Math, 'random').mockReturnValue(0.123456789);
+    const randomUuidSpy = jest
+      .spyOn(global.crypto, 'randomUUID')
+      .mockReturnValue('11111111-1111-4111-8111-111111111111');
 
     const vid = helpers.getVisitorId('clientX');
     const key = `companin-visitor-clientX`;
     expect(localStorage.getItem(key)).toBe(vid);
-    expect(vid.startsWith('widget-1600000000000-')).toBe(true);
+    expect(vid).toBe('widget-11111111-1111-4111-8111-111111111111');
 
     // calling again returns same id
     const vid2 = helpers.getVisitorId('clientX');
     expect(vid2).toBe(vid);
 
-    (Date.now as jest.MockedFunction<any>).mockRestore();
-    (Math.random as jest.MockedFunction<any>).mockRestore();
+    randomUuidSpy.mockRestore();
   });
 
   // Embedded scenarios (window.top !== window.self) are difficult to simulate

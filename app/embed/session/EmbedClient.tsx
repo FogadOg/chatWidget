@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -29,6 +28,7 @@ import {
 } from '../../../lib/errorHandling';
 import { API } from '../../../lib/api';
 import { EMBED_EVENTS, targetOrigin } from '../../../lib/embedConstants';
+import { BUTTON_SIZES } from '../../../lib/constants';
 import * as helpers from './helpers';
 import { onInitConfig } from './events';
 
@@ -61,12 +61,7 @@ export function applyCustomAssetsFromQuery(search?: string) {
 
 
 export const getButtonPixelSize = (buttonSize: string) => {
-  const sizeMap = {
-    sm: 100,
-    md: 128,
-    lg: 160
-  };
-  return sizeMap[buttonSize as keyof typeof sizeMap] || 56;
+  return BUTTON_SIZES[buttonSize as keyof typeof BUTTON_SIZES] || BUTTON_SIZES.md;
 };
 
 type EmbedClientProps = {
@@ -89,18 +84,11 @@ export default function EmbedClient({
   configId: initialConfigId,
   locale: initialLocale,
   startOpen: initialStartOpen,
-  pagePath: _initialPagePath,
   parentOrigin: initialParentOrigin,
   showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [flowResponses, setFlowResponses] = useState<FlowResponse[]>([]);
-
-  // measure mount/render time
-  const mountStart = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
-  useEffect(() => {
-    const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - mountStart.current;
-  }, []);
 
   // debug and perform custom css/js injection on mount
   useEffect(() => {
@@ -147,15 +135,12 @@ export default function EmbedClient({
   const [error, setError] = useState<string | null>(null);
   const [isEmbedded, setIsEmbedded] = useState(false);
   const [assistantName, setAssistantName] = useState<string>('');
-  const [isMobile, setIsMobile] = useState(false);
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig | null>(null);
   const [shouldRender, setShouldRender] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { translations: t, locale: hookLocale } = useWidgetTranslation();
   const activeLocale = initialLocale || hookLocale || 'en';
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(0);
   const [messageFeedbackSubmitted, setMessageFeedbackSubmitted] = useState<Set<string>>(new Set());
   const [unsureMessages, setUnsureMessages] = useState<Array<{userMessage: string, assistantMessage: string, timestamp: number}>>([]);
   const [showUnsureModal, setShowUnsureModal] = useState(false);
@@ -199,24 +184,11 @@ export default function EmbedClient({
           if (window.parent !== window) {
             window.parent.postMessage({ type: EMBED_EVENTS.AUTH_FAILURE, data: { message: authError } }, targetOrigin(initialParentOrigin));
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
     }
-  }, [authError, widgetConfig]);
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkIsMobile = () => {
-      const isMobileDevice = window.innerWidth <= 768 && /Android|iPhone|Mobile|Mobi/i.test(navigator.userAgent);
-      setIsMobile(isMobileDevice);
-    };
-
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
+  }, [authError, widgetConfig, initialParentOrigin]);
 
   // Periodic check for expired sessions
   useEffect(() => {
@@ -233,8 +205,9 @@ export default function EmbedClient({
     // Check every 60 seconds
     const interval = setInterval(checkSessionExpiry, 60000);
     return () => clearInterval(interval);
-  }, [sessionId]);
+  }, [sessionId, sessionStorageKey]);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     // Use props instead of URL params
     const clientIdParam = initialClientId;
@@ -277,10 +250,11 @@ export default function EmbedClient({
     // Detect iframe embedding and render a stripped layout when embedded
     try {
       setIsEmbedded(window.top !== window);
-    } catch (e) {
+    } catch {
       setIsEmbedded(true);
     }
   }, [initialClientId, initialAssistantId, initialConfigId]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Apply widget behavior settings when config is loaded
   useEffect(() => {
@@ -299,7 +273,7 @@ export default function EmbedClient({
         if (window.parent !== window) {
           window.parent.postMessage({ type: 'WIDGET_HIDE' }, targetOrigin(initialParentOrigin));
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     } else {
@@ -310,11 +284,11 @@ export default function EmbedClient({
         if (window.parent !== window) {
           window.parent.postMessage({ type: 'WIDGET_SHOW' }, targetOrigin(initialParentOrigin));
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
-  }, [widgetConfig, initialStartOpen]);
+  }, [widgetConfig, initialStartOpen, initialParentOrigin]);
 
   // Load unread count and last read message from localStorage on mount
   useEffect(() => {
@@ -331,7 +305,7 @@ export default function EmbedClient({
     } catch (error) {
       logError(error as Error, { context: 'loadUnreadCount' });
     }
-  }, []);
+  }, [lastReadStorageKey, unreadStorageKey]);
 
   // Track unread messages when new assistant messages arrive and widget is collapsed
   useEffect(() => {
@@ -372,7 +346,7 @@ export default function EmbedClient({
         }
       }
     }
-  }, [messages, isCollapsed, lastReadMessageId, widgetConfig?.show_unread_badge]);
+  }, [messages, isCollapsed, lastReadMessageId, widgetConfig?.show_unread_badge, unreadStorageKey]);
   useEffect(() => {
     if (widgetConfig && window.parent !== window) {
       const positionData = {
@@ -411,7 +385,7 @@ export default function EmbedClient({
         );
       }
     }
-  }, [widgetConfig, isCollapsed]);
+  }, [widgetConfig, isCollapsed, initialParentOrigin]);
 
   const createSession = async (assistant: string, token: string) => {
     try {
@@ -442,7 +416,7 @@ export default function EmbedClient({
             let data;
             try {
               data = await response.json();
-            } catch (parseError) {
+            } catch {
               throw createSessionError(
                 'Invalid response from session server',
                 WidgetErrorCode.SESSION_CREATE_FAILED
@@ -564,7 +538,6 @@ export default function EmbedClient({
             }));
 
           setMessages(loadedMessages);
-          setIsInitialLoad(false);
 
           // Check if we should show feedback
           if (loadedMessages.length > 0 && !feedbackSubmitted) {
@@ -683,12 +656,6 @@ export default function EmbedClient({
     if (!sessionId || !authToken || feedbackSubmitted || showFeedbackDialog) return;
     if (messages.length === 0) return;
 
-    // Update last message timestamp
-    const latestMessage = messages[messages.length - 1];
-    if (latestMessage && latestMessage.timestamp) {
-      setLastMessageTimestamp(latestMessage.timestamp);
-    }
-
     // Set a timer to show feedback dialog after 30 seconds of inactivity
     const inactivityTimer = setTimeout(() => {
       if (!feedbackSubmitted && messages.length > 0) {
@@ -776,7 +743,7 @@ export default function EmbedClient({
     return values.length > 0 ? values[0] : '';
   };
 
-  const processWidgetFlow = (action: string | undefined, isFollowUpButton: boolean = false): boolean => {
+  const processWidgetFlow = (action: string | undefined): boolean => {
     if (!action || action === 'text') {
       return false;
     }
@@ -791,7 +758,7 @@ export default function EmbedClient({
     const responses: (Flow['responses'] extends Array<infer R> ? R : never)[] = flow.responses || [];
     type RawFlowResp = (Flow['responses'] extends Array<infer R> ? R : never);
 
-    responses.forEach((response: RawFlowResp, index: number) => {
+    responses.forEach((response: RawFlowResp) => {
       const responseText = getLocalizedText(response.text as unknown as { [k: string]: string } | string | undefined);
 
       if (responseText || (response.buttons && response.buttons.length > 0)) {
@@ -837,7 +804,7 @@ export default function EmbedClient({
       if (window.parent !== window) {
         window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
 
@@ -871,7 +838,7 @@ export default function EmbedClient({
             let data;
             try {
               data = await response.json();
-            } catch (parseError) {
+            } catch {
               throw new Error('Invalid response from message server');
             }
 
@@ -979,7 +946,7 @@ export default function EmbedClient({
       }]);
     }
 
-    const flowHandled = processWidgetFlow(b.action, true);
+    const flowHandled = processWidgetFlow(b.action);
 
     // If the flow was handled client-side, notify parent about the interaction
     if (flowHandled) {
@@ -993,7 +960,7 @@ export default function EmbedClient({
           };
           window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -1050,7 +1017,7 @@ export default function EmbedClient({
           };
           window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -1118,14 +1085,10 @@ export default function EmbedClient({
               }
             }
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
 
-        // Only set initial load flag to false after first load
-        if (isInitial) {
-          setIsInitialLoad(false);
-        }
       } else {
         throw new Error('Invalid messages response format');
       }

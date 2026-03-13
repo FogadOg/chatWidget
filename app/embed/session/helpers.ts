@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { API } from '../../../lib/api';
 import { logError } from '../../../lib/logger';
+import { getOrCreateVisitorId, getStoredSessionByKey, storeSessionByKey } from '../../../lib/sessionStorage';
 import type { Message, SourceData } from '../../../types/widget';
 
 /**
@@ -20,12 +20,7 @@ export function lastReadStorageKey(clientId: string, assistantId: string) {
 
 export function getVisitorId(clientId: string) {
   const visitorKey = `companin-visitor-${clientId}`;
-  let visitorId = localStorage.getItem(visitorKey);
-  if (!visitorId) {
-    visitorId = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem(visitorKey, visitorId);
-  }
-  return visitorId;
+  return getOrCreateVisitorId(visitorKey, 'widget');
 }
 
 export function getPageContext(
@@ -66,7 +61,7 @@ export function getPageContext(
       title: documentObj.title,
       referrer: documentObj.referrer || null,
     };
-  } catch (e) {
+  } catch {
     return {
       url: windowObj.location.href,
       pathname: windowObj.location.pathname,
@@ -77,32 +72,11 @@ export function getPageContext(
 }
 
 export function getStoredSession(sessionStorageKey: string) {
-  try {
-    const stored = localStorage.getItem(sessionStorageKey);
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.expiresAt && new Date(data.expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
-        return data;
-      } else {
-        localStorage.removeItem(sessionStorageKey);
-      }
-    }
-  } catch (e) {
-    logError((e as Error).message || String(e), { context: 'getStoredSession', sessionStorageKey });
-  }
-  return null;
+  return getStoredSessionByKey(sessionStorageKey);
 }
 
 export function storeSession(sessionStorageKey: string, sessionId: string, expiresAt: string) {
-  try {
-    localStorage.setItem(sessionStorageKey, JSON.stringify({
-      sessionId,
-      expiresAt,
-      createdAt: new Date().toISOString(),
-    }));
-  } catch (e) {
-    logError((e as Error).message || String(e), { context: 'storeSession', sessionId });
-  }
+  storeSessionByKey(sessionStorageKey, sessionId, expiresAt);
 }
 
 export async function loadSessionMessages(sessionId: string, token: string, setMessages: (msgs: Message[]) => void) {

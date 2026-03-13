@@ -8,9 +8,9 @@ describe('EmbedClient helpers', () => {
   });
 
   test('getButtonPixelSize returns mapped sizes and default', () => {
-    expect(EmbedClient.getButtonPixelSize('sm')).toBe(100);
-    expect(EmbedClient.getButtonPixelSize('md')).toBe(128);
-    expect(EmbedClient.getButtonPixelSize('lg')).toBe(160);
+    expect(EmbedClient.getButtonPixelSize('sm')).toBe(48);
+    expect(EmbedClient.getButtonPixelSize('md')).toBe(56);
+    expect(EmbedClient.getButtonPixelSize('lg')).toBe(64);
     // unknown size -> default
     expect(EmbedClient.getButtonPixelSize('unknown')).toBe(56);
   });

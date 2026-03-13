@@ -1,13 +1,14 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode, createNetworkError } from 'lib/errorHandling';
 import { embedOriginHeader } from 'lib/api';
 import { logError } from 'lib/logger';
 import { TIMEOUTS } from 'lib/constants';
 import { API } from 'lib/api';
+import { getOrCreateVisitorId, getStoredSessionByKey, storeSessionByKey } from 'lib/sessionStorage';
 import type { Message } from 'types/widget';
 
 type SessionManagerProps = {
@@ -27,53 +28,23 @@ export default function SessionManager({
   onSessionError,
   onMessagesLoaded
 }: SessionManagerProps) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const storageKey = `companin-session-${assistantId}`;
+  const visitorKey = `companin-visitor-${assistantId}`;
 
   // Helper function to get stored session data
   const getStoredSession = useCallback(() => {
-    try {
-      const storageKey = `companin-session-${assistantId}`;
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const data = JSON.parse(stored);
-        // Check if session is expired (with 5 minute buffer before actual expiry)
-        if (data.expiresAt && new Date(data.expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
-          return data;
-        } else {
-          // Clear expired session
-          localStorage.removeItem(storageKey);
-        }
-      }
-    } catch (e) {
-      logError(e instanceof Error ? e.message : String(e), { context: 'getStoredSession', assistantId });
-    }
-    return null;
-  }, [assistantId]);
+    return getStoredSessionByKey(storageKey);
+  }, [storageKey]);
 
   // Helper function to store session data
   const storeSession = useCallback((sessionId: string, expiresAt: string) => {
-    try {
-      const storageKey = `companin-session-${assistantId}`;
-      localStorage.setItem(storageKey, JSON.stringify({
-        sessionId,
-        expiresAt,
-        createdAt: new Date().toISOString()
-      }));
-    } catch (e) {
-      logError(e instanceof Error ? e.message : String(e), { context: 'storeSession', assistantId, sessionId });
-    }
-  }, [assistantId]);
+    storeSessionByKey(storageKey, sessionId, expiresAt);
+  }, [storageKey]);
 
   // Helper function to get visitor ID
   const getVisitorId = useCallback(() => {
-    const visitorKey = `companin-visitor-${assistantId}`;
-    let visitorId = localStorage.getItem(visitorKey);
-    if (!visitorId) {
-      visitorId = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem(visitorKey, visitorId);
-    }
-    return visitorId;
-  }, [assistantId]);
+    return getOrCreateVisitorId(visitorKey, 'widget');
+  }, [visitorKey]);
 
   const createSession = useCallback(async () => {
     try {
@@ -105,7 +76,7 @@ export default function SessionManager({
             let data;
             try {
               data = await response.json();
-            } catch (parseError) {
+            } catch {
               throw createSessionError(
                 'Invalid response from session server',
                 WidgetErrorCode.SESSION_CREATE_FAILED
@@ -158,7 +129,6 @@ export default function SessionManager({
         }
       );
 
-      setSessionId(sessionData.session_id);
       onSessionCreated(sessionData.session_id, sessionData.expires_at);
 
       // Store session data in localStorage
@@ -173,6 +143,7 @@ export default function SessionManager({
       onSessionError(errorMessage);
       logError(err instanceof Error ? err.message : String(err), { assistantId, action: 'createSession' });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assistantId, authToken, locale, getVisitorId, storeSession, onSessionCreated, onSessionError]);
 
   const validateAndRestoreSession = useCallback(async (storedSessionId: string) => {
@@ -189,7 +160,6 @@ export default function SessionManager({
         const data = await response.json();
         if (data.status === 'success') {
           // Session is valid, use it
-          setSessionId(storedSessionId);
           onSessionCreated(storedSessionId, '');
 
           // Load messages
@@ -220,15 +190,15 @@ export default function SessionManager({
         assistantId,
         status: response.status
       });
-      localStorage.removeItem(`companin-session-${assistantId}`);
+      localStorage.removeItem(storageKey);
       await createSession();
     } catch (err) {
       logError(err instanceof Error ? err.message : String(err), { sessionId: storedSessionId, assistantId, action: 'validateAndRestoreSession' });
       // On error, create new session
-      localStorage.removeItem(`companin-session-${assistantId}`);
+      localStorage.removeItem(storageKey);
       await createSession();
     }
-  }, [assistantId, authToken, createSession, onSessionCreated, onMessagesLoaded]);
+  }, [assistantId, authToken, createSession, onSessionCreated, onMessagesLoaded, storageKey]);
 
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     try {
