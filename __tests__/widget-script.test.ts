@@ -10,6 +10,7 @@ import path from 'path';
 
 describe('public/widget.js loader', () => {
   let code: string;
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
   beforeAll(() => {
     code = fs.readFileSync(path.resolve(__dirname, '../public/widget.js'), 'utf8');
@@ -69,7 +70,7 @@ describe('public/widget.js loader', () => {
   });
 
   describe('host hooks API', () => {
-    it('invokes onOpen/onClose hooks when show/hide called', () => {
+    it('invokes onOpen/onClose hooks when show/hide called', async () => {
       inject({
         'data-client-id': 'c',
         'data-assistant-id': 'a',
@@ -82,13 +83,15 @@ describe('public/widget.js loader', () => {
       window.CompaninWidget.onClose(closeSpy);
 
       window.CompaninWidget.show();
+      await tick();
       expect(openSpy).toHaveBeenCalled();
 
       window.CompaninWidget.hide();
+      await tick();
       expect(closeSpy).toHaveBeenCalled();
     });
 
-    it('delivers cached message event when registered late', () => {
+    it('delivers cached message event when registered late', async () => {
       inject({
         'data-client-id': 'c',
         'data-assistant-id': 'a',
@@ -101,10 +104,11 @@ describe('public/widget.js loader', () => {
 
       const spy = jest.fn();
       window.CompaninWidget.onMessage(spy);
+      await tick();
       expect(spy).toHaveBeenCalledWith(msg);
     });
 
-    it('suppresses duplicate message after sendMessage', () => {
+    it('suppresses duplicate message after sendMessage', async () => {
       inject({
         'data-client-id': 'c',
         'data-assistant-id': 'a',
@@ -117,14 +121,16 @@ describe('public/widget.js loader', () => {
       // send a message from host
       const myMsg = { id: 'foo', text: 'hello' };
       window.CompaninWidget.sendMessage(myMsg);
+      await tick();
       expect(spy).toHaveBeenCalledTimes(1);
 
       // same message posts back from iframe - should be ignored
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_MESSAGE', data: myMsg }, origin: 'https://widget.companin.tech' }));
+      await tick();
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('invokes response and authFailure hooks generically', () => {
+    it('invokes response and authFailure hooks generically', async () => {
       inject({
         'data-client-id': 'c',
         'data-assistant-id': 'a',
@@ -138,11 +144,57 @@ describe('public/widget.js loader', () => {
 
       const resp = { result: 42 };
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_RESPONSE', data: resp }, origin: 'https://widget.companin.tech' }));
+      await tick();
       expect(respSpy).toHaveBeenCalledWith(resp);
 
       const auth = { error: 'auth expired' };
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_ERROR', data: auth }, origin: 'https://widget.companin.tech' }));
+      await tick();
       expect(authSpy).toHaveBeenCalledWith(auth);
+    });
+
+    it('supports generic on/off with multiple handlers and unsubscribe', async () => {
+      inject({
+        'data-client-id': 'c',
+        'data-assistant-id': 'a',
+        'data-config-id': 'cfg',
+      });
+
+      const handlerA = jest.fn();
+      const handlerB = jest.fn();
+      const unsubA = window.CompaninWidget.on('response', handlerA);
+      window.CompaninWidget.on('response', handlerB);
+
+      const resp = { id: 'r-1', text: 'hello' };
+      window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_RESPONSE', data: resp }, origin: 'https://widget.companin.tech' }));
+      await tick();
+
+      expect(handlerA).toHaveBeenCalled();
+      expect(handlerB).toHaveBeenCalled();
+      expect(handlerA.mock.calls[0][0]).toMatchObject({ event: 'response', data: resp });
+
+      unsubA();
+      await new Promise((resolve) => setTimeout(resolve, 130));
+      window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_RESPONSE', data: { id: 'r-2' } }, origin: 'https://widget.companin.tech' }));
+      await tick();
+      expect(handlerA).toHaveBeenCalledTimes(1);
+      expect(handlerB).toHaveBeenCalledTimes(2);
+    });
+
+    it('supports onError callback for widget errors', async () => {
+      inject({
+        'data-client-id': 'c',
+        'data-assistant-id': 'a',
+        'data-config-id': 'cfg',
+      });
+
+      const errorSpy = jest.fn();
+      window.CompaninWidget.onError(errorSpy);
+
+      const auth = { error: 'auth expired' };
+      window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_ERROR', data: auth }, origin: 'https://widget.companin.tech' }));
+      await tick();
+      expect(errorSpy).toHaveBeenCalledWith(auth);
     });
   });
 });

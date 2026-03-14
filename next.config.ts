@@ -51,8 +51,10 @@ const nextConfig: NextConfig = {
     const rawAllowlist = process.env.EMBED_ALLOWLIST || process.env.NEXT_PUBLIC_EMBED_ALLOWLIST || '';
     const origins = rawAllowlist.split(',').map(s => s.trim()).filter(Boolean);
 
-    // Always include 'self' as a safe default
-    const cspSources = ["'self'", ...origins].join(' ');
+    // If an allowlist is provided, restrict framing to those origins + self.
+    // If no allowlist is configured, allow embedding from any origin to avoid
+    // blocking host pages unexpectedly.
+    const cspSources = origins.length > 0 ? ["'self'", ...origins].join(' ') : '*';
 
     return [
       {

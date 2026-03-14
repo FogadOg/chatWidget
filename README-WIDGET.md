@@ -107,6 +107,13 @@ window.CompaninWidget.sendMessage({
   type: 'greeting',
   text: 'Hello from the host page!'
 });
+
+// Subscribe to lifecycle and message events
+window.CompaninWidget.onOpen(() => console.log('Widget opened'));
+window.CompaninWidget.onClose(() => console.log('Widget closed'));
+window.CompaninWidget.onMessage((msg) => console.log('Message event', msg));
+window.CompaninWidget.onResponse((resp) => console.log('Response event', resp));
+window.CompaninWidget.onAuthFailure((err) => console.warn('Auth failure', err));
 ```
 
 ## 📨 PostMessage Events
@@ -137,6 +144,23 @@ iframe.contentWindow.postMessage(
   { type: 'HOST_MESSAGE', data: { ... } },
   'https://widget.companin.tech'
 );
+```
+
+Supported `HOST_MESSAGE` payloads:
+- `"your text"` → sends a user message into the widget
+- `{ text: "your text" }` (also `message`, `content`, `prompt`, `query`)
+- `{ action: 'open' | 'close' | 'toggle' }` (also `show`/`hide`/`restore`/`minimize`)
+
+Example host commands:
+
+```javascript
+// Send a message
+window.CompaninWidget.sendMessage('Summarize this page');
+
+// Open / close with commands
+window.CompaninWidget.sendMessage({ action: 'open' });
+window.CompaninWidget.sendMessage({ action: 'close' });
+window.CompaninWidget.sendMessage({ action: 'toggle' });
 ```
 
 ## 🔐 Security

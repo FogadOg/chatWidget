@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
@@ -63,6 +63,75 @@ export function applyCustomAssetsFromQuery(search?: string) {
 export const getButtonPixelSize = (buttonSize: string) => {
   return BUTTON_SIZES[buttonSize as keyof typeof BUTTON_SIZES] || BUTTON_SIZES.md;
 };
+
+type HostWidgetAction = 'open' | 'close' | 'toggle';
+type ParsedHostMessageCommand =
+  | { kind: 'action'; action: HostWidgetAction }
+  | { kind: 'message'; text: string }
+  | null;
+
+export function parseHostMessageCommand(raw: unknown): ParsedHostMessageCommand {
+  if (typeof raw === 'string') {
+    const text = raw.trim();
+    return text ? { kind: 'message', text } : null;
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const payload = raw as Record<string, unknown>;
+  const commandValue = [payload.action, payload.command, payload.event, payload.type]
+    .find((value) => typeof value === 'string');
+  const command = typeof commandValue === 'string' ? commandValue.trim().toLowerCase() : '';
+
+  if (command) {
+    if (command === 'open' || command === 'show' || command === 'restore') {
+      return { kind: 'action', action: 'open' };
+    }
+
+    if (command === 'close' || command === 'hide' || command === 'minimize') {
+      return { kind: 'action', action: 'close' };
+    }
+
+    if (command === 'toggle') {
+      return { kind: 'action', action: 'toggle' };
+    }
+  }
+
+  const textValue = [payload.text, payload.message, payload.content, payload.prompt, payload.query]
+    .find((value) => typeof value === 'string');
+  const text = typeof textValue === 'string' ? textValue.trim() : '';
+  if (!text) {
+    return null;
+  }
+
+  return { kind: 'message', text };
+}
+
+export function resolveParentTargetOrigin(explicit?: string, referrer?: string): string {
+  const explicitOrigin = (explicit || '').trim();
+  if (explicitOrigin) {
+    return explicitOrigin;
+  }
+
+  const fallbackReferrer = typeof referrer === 'string'
+    ? referrer
+    : (typeof document !== 'undefined' ? document.referrer : '');
+
+  if (fallbackReferrer) {
+    try {
+      const parsed = new URL(fallbackReferrer);
+      if (parsed.origin) {
+        return parsed.origin;
+      }
+    } catch {
+      // ignore invalid referrer
+    }
+  }
+
+  return '*';
+}
 
 type EmbedClientProps = {
   clientId: string;
@@ -148,6 +217,11 @@ export default function EmbedClient({
   const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const [fatalError, setFatalError] = useState<string | null>(null);
+  const parentTargetOrigin = useMemo(
+    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin)),
+    [initialParentOrigin]
+  );
+
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.lang = activeLocale;
@@ -182,13 +256,13 @@ export default function EmbedClient({
       setFatalError(authError);
         try {
           if (window.parent !== window) {
-            window.parent.postMessage({ type: EMBED_EVENTS.AUTH_FAILURE, data: { message: authError } }, targetOrigin(initialParentOrigin));
+            window.parent.postMessage({ type: EMBED_EVENTS.AUTH_FAILURE, data: { message: authError } }, parentTargetOrigin);
           }
         } catch {
           // ignore
         }
     }
-  }, [authError, widgetConfig, initialParentOrigin]);
+  }, [authError, widgetConfig, initialParentOrigin, parentTargetOrigin]);
 
   // Periodic check for expired sessions
   useEffect(() => {
@@ -271,7 +345,7 @@ export default function EmbedClient({
       setIsCollapsed(true);
       try {
         if (window.parent !== window) {
-          window.parent.postMessage({ type: 'WIDGET_HIDE' }, targetOrigin(initialParentOrigin));
+          window.parent.postMessage({ type: 'WIDGET_HIDE' }, parentTargetOrigin);
         }
       } catch {
         // ignore
@@ -282,13 +356,13 @@ export default function EmbedClient({
       setIsCollapsed(!initialStartOpen && !widgetConfig.start_open);
       try {
         if (window.parent !== window) {
-          window.parent.postMessage({ type: 'WIDGET_SHOW' }, targetOrigin(initialParentOrigin));
+          window.parent.postMessage({ type: 'WIDGET_SHOW' }, parentTargetOrigin);
         }
       } catch {
         // ignore
       }
     }
-  }, [widgetConfig, initialStartOpen, initialParentOrigin]);
+  }, [widgetConfig, initialStartOpen, initialParentOrigin, parentTargetOrigin]);
 
   // Load unread count and last read message from localStorage on mount
   useEffect(() => {
@@ -366,7 +440,7 @@ export default function EmbedClient({
               ...positionData
             }
           },
-          targetOrigin(initialParentOrigin)
+          parentTargetOrigin
         );
       } else {
         // Send widget size when expanded
@@ -381,11 +455,91 @@ export default function EmbedClient({
               ...positionData
             }
           },
-          targetOrigin(initialParentOrigin)
+          parentTargetOrigin
         );
       }
     }
-  }, [widgetConfig, isCollapsed, initialParentOrigin]);
+  }, [widgetConfig, isCollapsed, initialParentOrigin, parentTargetOrigin]);
+
+  const loadSessionMessages = useCallback(async (sessionId: string, token: string, isInitial: boolean = false) => {
+    try {
+      const response = await fetch(API.sessionMessages(sessionId), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load messages: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status === 'success' && Array.isArray(data.data?.messages)) {
+        // Convert API messages to widget message format
+        const loadedMessages: Message[] = (data.data.messages as unknown[])
+          .filter((msg: unknown) => {
+            // Filter out assistant greeting messages
+            const m = msg as { sender?: string };
+            if (m.sender === 'assistant') {
+              const userMessages = (data.data.messages as unknown[]).filter(
+                (m2: unknown) => (m2 as { sender?: string }).sender === 'user'
+              );
+              return userMessages.length > 0;
+            }
+            return true;
+          })
+          .map((msg: unknown) => {
+            const m = msg as {
+              id: string;
+              content: string;
+              sender: string;
+              created_at?: string;
+              sources?: unknown[];
+            };
+            return {
+              id: m.id,
+              text: m.content,
+              from: m.sender as 'user' | 'assistant',
+              timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+              sources: (m.sources as SourceData[]) || [],  // Include sources from API
+            };
+          });
+
+        setMessages(loadedMessages);
+
+        // Notify parent window about the latest message(s)
+        try {
+          if (window.parent !== window) {
+            const last = loadedMessages[loadedMessages.length - 1];
+            if (last) {
+              // Post a generic message event for the last message
+              window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: last }, parentTargetOrigin);
+
+              // If the last message is from assistant, also post a response event
+              if (last.from === 'assistant') {
+                window.parent.postMessage({ type: EMBED_EVENTS.RESPONSE, data: last }, parentTargetOrigin);
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+      } else {
+        throw new Error('Invalid messages response format');
+      }
+    } catch (err) {
+      logError(err, { sessionId, isInitial, action: 'loadSessionMessages' });
+      // Non-critical error for non-initial loads
+      if (isInitial) {
+        setError('Failed to load conversation history');
+      }
+    } finally {
+      setIsTyping(false);
+    }
+  }, [parentTargetOrigin]);
 
   const createSession = async (assistant: string, token: string) => {
     try {
@@ -491,7 +645,7 @@ export default function EmbedClient({
       if (window.parent !== window) {
         window.parent.postMessage(
           { type: EMBED_EVENTS.ERROR, data: { message: errorMessage } },
-          targetOrigin(initialParentOrigin)
+          parentTargetOrigin
         );
       }
     }
@@ -776,7 +930,7 @@ export default function EmbedClient({
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent, messageText?: string) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent, messageText?: string) => {
     e.preventDefault();
     const message = messageText || input;
     if (!message.trim()) return;
@@ -804,7 +958,7 @@ export default function EmbedClient({
     // Notify parent about the sent message
     try {
       if (window.parent !== window) {
-        window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
+        window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentTargetOrigin);
       }
     } catch {
       // ignore
@@ -929,7 +1083,18 @@ export default function EmbedClient({
     } finally {
       setIsTyping(false);
     }
-  };
+  }, [
+    input,
+    sessionId,
+    authToken,
+    activeLocale,
+    parentTargetOrigin,
+    t,
+    initialAssistantId,
+    initialClientId,
+    loadSessionMessages,
+    sessionStorageKey,
+  ]);
 
   const handleFollowUpButtonClick = (button: ButtonLike) => {
     const b = button as FlowButton;
@@ -962,7 +1127,7 @@ export default function EmbedClient({
             from: 'user',
             timestamp: Date.now(),
           };
-          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
+          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentTargetOrigin);
         }
       } catch {
         // ignore
@@ -1019,7 +1184,7 @@ export default function EmbedClient({
             from: 'user',
             timestamp: userMsg.timestamp,
           };
-          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, targetOrigin(initialParentOrigin));
+          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentTargetOrigin);
         }
       } catch {
         // ignore
@@ -1027,134 +1192,100 @@ export default function EmbedClient({
     }
   };
 
-  const loadSessionMessages = async (sessionId: string, token: string, isInitial: boolean = false) => {
-    try {
-      const response = await fetch(API.sessionMessages(sessionId), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+  const toggleCollapsed = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const newCollapsed = !prev;
 
-      if (!response.ok) {
-        throw new Error(`Failed to load messages: ${response.status}`);
-      }
+      // send telemetry whenever collapse state toggles
+      trackEvent(
+        newCollapsed ? 'widget_close' : 'widget_open',
+        initialAssistantId,
+        { clientId: initialClientId },
+        initialClientId
+      ).catch(() => {});
 
-      const data = await response.json();
+      // Reset unread count when opening the widget
+      if (!newCollapsed) {
+        setUnreadCount(0);
 
-      if (data.status === 'success' && Array.isArray(data.data?.messages)) {
-        // Convert API messages to widget message format
-        const loadedMessages: Message[] = (data.data.messages as unknown[])
-          .filter((msg: unknown) => {
-            // Filter out assistant greeting messages
-            const m = msg as { sender?: string };
-            if (m.sender === 'assistant') {
-              const userMessages = (data.data.messages as unknown[]).filter(
-                (m2: unknown) => (m2 as { sender?: string }).sender === 'user'
-              );
-              return userMessages.length > 0;
+        // Update last read message to the most recent one
+        if (messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage?.id) {
+            setLastReadMessageId(lastMessage.id);
+            try {
+              localStorage.setItem(lastReadStorageKey, lastMessage.id);
+            } catch (error) {
+              logError(error as Error, { context: 'saveLastRead' });
             }
-            return true;
-          })
-          .map((msg: unknown) => {
-            const m = msg as {
-              id: string;
-              content: string;
-              sender: string;
-              created_at?: string;
-              sources?: unknown[];
-            };
-            return {
-              id: m.id,
-              text: m.content,
-              from: m.sender as 'user' | 'assistant',
-              timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-              sources: (m.sources as SourceData[]) || [],  // Include sources from API
-            };
-          });
+          }
+        }
 
-        setMessages(loadedMessages);
-
-        // Notify parent window about the latest message(s)
+        // Clear unread count from localStorage
         try {
-          if (window.parent !== window) {
-            const last = loadedMessages[loadedMessages.length - 1];
-            if (last) {
-              // Post a generic message event for the last message
-              window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: last }, targetOrigin(initialParentOrigin));
-
-              // If the last message is from assistant, also post a response event
-              if (last.from === 'assistant') {
-                window.parent.postMessage({ type: EMBED_EVENTS.RESPONSE, data: last }, targetOrigin(initialParentOrigin));
-              }
-            }
-          }
-        } catch {
-          // ignore
-        }
-
-      } else {
-        throw new Error('Invalid messages response format');
-      }
-    } catch (err) {
-      logError(err, { sessionId, isInitial, action: 'loadSessionMessages' });
-      // Non-critical error for non-initial loads
-      if (isInitial) {
-        setError('Failed to load conversation history');
-      }
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const toggleCollapsed = () => {
-    const newCollapsed = !isCollapsed;
-    setIsCollapsed(newCollapsed);
-
-    // send telemetry whenever collapse state toggles
-    trackEvent(
-      newCollapsed ? 'widget_close' : 'widget_open',
-      initialAssistantId,
-      { clientId: initialClientId },
-      initialClientId
-    ).catch(() => {});
-
-    // Reset unread count when opening the widget
-    if (!newCollapsed) {
-      setUnreadCount(0);
-
-      // Update last read message to the most recent one
-      if (messages.length > 0) {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage?.id) {
-          setLastReadMessageId(lastMessage.id);
-          try {
-            localStorage.setItem(lastReadStorageKey, lastMessage.id);
-          } catch (error) {
-            logError(error as Error, { context: 'saveLastRead' });
-          }
+          localStorage.setItem(unreadStorageKey, '0');
+        } catch (error) {
+          logError(error as Error, { context: 'clearUnreadCount' });
         }
       }
 
-      // Clear unread count from localStorage
+      // Notify parent window about collapse state change
+      if (window.parent !== window) {
+        window.parent.postMessage(
+          {
+            type: newCollapsed ? EMBED_EVENTS.MINIMIZE : EMBED_EVENTS.RESTORE,
+            data: { collapsed: newCollapsed },
+          },
+          parentTargetOrigin
+        );
+      }
+
+      return newCollapsed;
+    });
+  }, [initialAssistantId, initialClientId, messages, lastReadStorageKey, unreadStorageKey, parentTargetOrigin]);
+
+  useEffect(() => {
+    const handleHostMessage = (event: MessageEvent) => {
       try {
-        localStorage.setItem(unreadStorageKey, '0');
-      } catch (error) {
-        logError(error as Error, { context: 'clearUnreadCount' });
-      }
-    }
+        if (window.parent === window) return;
+        if (event.source !== window.parent) return;
 
-    // Notify parent window about collapse state change
-    if (window.parent !== window) {
-      window.parent.postMessage(
-        {
-          type: newCollapsed ? EMBED_EVENTS.MINIMIZE : EMBED_EVENTS.RESTORE,
-          data: { collapsed: newCollapsed },
-        },
-        targetOrigin(initialParentOrigin)
-      );
-    }
-  };
+        const expectedOrigin = parentTargetOrigin;
+        if (expectedOrigin !== '*' && event.origin !== expectedOrigin) return;
+
+        const { type, data } = event.data || {};
+        if (type !== EMBED_EVENTS.HOST_MESSAGE) return;
+
+        const command = parseHostMessageCommand(data);
+        if (!command) return;
+
+        if (command.kind === 'action') {
+          if (command.action === 'toggle') {
+            toggleCollapsed();
+            return;
+          }
+
+          if (command.action === 'open' && isCollapsed) {
+            toggleCollapsed();
+            return;
+          }
+
+          if (command.action === 'close' && !isCollapsed) {
+            toggleCollapsed();
+          }
+
+          return;
+        }
+
+        handleSubmit({ preventDefault: () => {} } as React.FormEvent, command.text);
+      } catch (err) {
+        logError(err as Error, { action: 'handleHostMessage' });
+      }
+    };
+
+    window.addEventListener('message', handleHostMessage);
+    return () => window.removeEventListener('message', handleHostMessage);
+  }, [parentTargetOrigin, isCollapsed, toggleCollapsed, handleSubmit]);
 
 
   if (fatalError) {

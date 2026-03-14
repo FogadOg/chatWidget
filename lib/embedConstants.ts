@@ -2,6 +2,7 @@
 // Centralized embed-related event names and storage key helpers
 export const EMBED_EVENTS = {
   INIT_CONFIG: 'WIDGET_INIT_CONFIG',
+  HOST_MESSAGE: 'HOST_MESSAGE',
   RESIZE: 'WIDGET_RESIZE',
   MINIMIZE: 'WIDGET_MINIMIZE',
   RESTORE: 'WIDGET_RESTORE',

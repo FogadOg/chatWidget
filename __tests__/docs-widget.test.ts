@@ -1,4 +1,9 @@
+import { afterEach, beforeAll, describe, expect, it, jest } from '@jest/globals';
+
 // allow accessing the global flag used by the docs widget script
+
+declare const require: (path: string) => any;
+declare const __dirname: string;
 
 declare global {
   interface Window {
@@ -7,8 +12,8 @@ declare global {
   }
 }
 
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');
+const path = require('path');
 
 describe('public/docs-widget.js loader', () => {
   let code: string;
@@ -66,8 +71,77 @@ describe('public/docs-widget.js loader', () => {
     });
 
     expect(window.CompaninDocsWidget).toBeDefined();
-    const methods = ['open', 'close', 'show', 'hide', 'sendMessage'];
+    const methods = ['on', 'off', 'onOpen', 'onClose', 'onMessage', 'onResponse', 'onAuthFailure', 'onError', 'open', 'close', 'show', 'hide', 'sendMessage', 'registerHooks'];
     methods.forEach(m => expect(typeof window.CompaninDocsWidget[m]).toBe('function'));
+  });
+
+  it('supports on/off with event envelope for open/close', () => {
+    jest.useFakeTimers();
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+    });
+
+    const onOpen = jest.fn();
+    const unsub = window.CompaninDocsWidget.on('open', onOpen);
+
+    window.CompaninDocsWidget.show();
+    jest.runOnlyPendingTimers();
+
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        event: 'open',
+        data: expect.objectContaining({ source: 'host-api' }),
+        context: expect.objectContaining({
+          clientId: 'c',
+          assistantId: 'a',
+          configId: 'cfg',
+        }),
+      })
+    );
+
+    unsub();
+    window.CompaninDocsWidget.show();
+    jest.runOnlyPendingTimers();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+
+    jest.useRealTimers();
+  });
+
+  it('supports legacy onError hook', () => {
+    jest.useFakeTimers();
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+    });
+
+    const iframe = document.querySelector('#companin-docs-widget-container iframe') as HTMLIFrameElement;
+    Object.defineProperty(iframe, 'contentWindow', {
+      writable: true,
+      value: {
+        postMessage: () => {
+          throw new Error('postMessage failed');
+        },
+      },
+    });
+
+    const onError = jest.fn();
+    window.CompaninDocsWidget.onError(onError);
+
+    window.CompaninDocsWidget.sendMessage('will-fail-without-iframe-contentwindow');
+    jest.runOnlyPendingTimers();
+
+    expect(onError).toHaveBeenCalled();
+    expect(onError.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        code: 'SEND_MESSAGE_FAILED',
+      })
+    );
+
+    jest.useRealTimers();
   });
 
   it('open/close buttons post messages to iframe when iframe exists', () => {

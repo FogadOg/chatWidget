@@ -62,6 +62,11 @@
       ? "http://localhost:3001"
       : "https://widget.companin.tech";
 
+    // Allow the host page to explicitly set the postMessage target origin.
+    // Useful when the widget is hosted on a different / custom domain.
+    const explicitTargetOrigin = script.getAttribute("data-target-origin") || script.getAttribute("data-parent-origin");
+    const targetOrigin = (explicitTargetOrigin && explicitTargetOrigin.trim()) || baseUrl;
+
     // Create container with error handling (initially hidden)
     const container = document.createElement("div");
     container.id = "companin-docs-widget-container";
@@ -172,8 +177,179 @@
         // Listen for widget events with error handling
         window.addEventListener("message", handleMessage);
 
+        const eventNames = ["open", "close", "message", "response", "authFailure", "error"];
+        const callbackRegistry = eventNames.reduce((acc, name) => {
+          acc[name] = new Set();
+          return acc;
+        }, {});
+        const lastEventEnvelope = {};
+        const debounceState = {};
+
+        function normalizeEventName(name) {
+          if (!name) return null;
+          const normalized = String(name).toLowerCase();
+          if (normalized === "auth_failure" || normalized === "authfailure") return "authFailure";
+          if (
+            normalized === "open" ||
+            normalized === "close" ||
+            normalized === "message" ||
+            normalized === "response" ||
+            normalized === "error" ||
+            normalized === "authfailure"
+          ) {
+            return normalized === "authfailure" ? "authFailure" : normalized;
+          }
+          return null;
+        }
+
+        function invokeCallbackSafely(fn, payload, label) {
+          setTimeout(() => {
+            try {
+              fn(payload);
+            } catch (error) {
+              logError("Callback handler threw", { event: label, error: error && error.message });
+            }
+          }, 0);
+        }
+
+        function createEventEnvelope(name, data, rawType) {
+          return {
+            event: name,
+            type: rawType || null,
+            timestamp: new Date().toISOString(),
+            data,
+            context: {
+              clientId,
+              assistantId,
+              configId,
+              locale,
+              pagePath: window.location.pathname,
+              isOpen: container.style.display === "block",
+            },
+          };
+        }
+
+        function dispatchDomEvents(name, envelope) {
+          try {
+            window.dispatchEvent(new CustomEvent(`companinDocsWidget:${name}`, { detail: envelope }));
+            window.dispatchEvent(new CustomEvent(`companin:docs-widget:${name}`, { detail: envelope }));
+          } catch (e) {
+            logError("Failed dispatching DOM docs widget event", { event: name, error: e && e.message });
+          }
+        }
+
+        function emitNow(name, data, rawType) {
+          const envelope = createEventEnvelope(name, data, rawType);
+          lastEventEnvelope[name] = envelope;
+
+          const handlers = Array.from(callbackRegistry[name] || []);
+          handlers.forEach((handler) => invokeCallbackSafely(handler, envelope, name));
+          dispatchDomEvents(name, envelope);
+
+          return envelope;
+        }
+
+        function emitEvent(name, data, options = {}) {
+          const debounceMs = Number(options.debounceMs || 0);
+          if (!debounceMs) {
+            return emitNow(name, data, options.rawType);
+          }
+
+          const now = Date.now();
+          const state = debounceState[name] || {
+            lastEmittedAt: 0,
+            timer: null,
+            pendingData: null,
+            pendingRawType: null,
+          };
+
+          if (now - state.lastEmittedAt > debounceMs) {
+            state.lastEmittedAt = now;
+            debounceState[name] = state;
+            return emitNow(name, data, options.rawType);
+          }
+
+          state.pendingData = data;
+          state.pendingRawType = options.rawType;
+          if (state.timer) clearTimeout(state.timer);
+          state.timer = setTimeout(() => {
+            state.lastEmittedAt = Date.now();
+            emitNow(name, state.pendingData, state.pendingRawType);
+            state.pendingData = null;
+            state.pendingRawType = null;
+            state.timer = null;
+          }, debounceMs);
+          debounceState[name] = state;
+          return null;
+        }
+
+        function on(eventName, handler) {
+          try {
+            const normalized = normalizeEventName(eventName);
+            if (!normalized || typeof handler !== "function") return () => {};
+            callbackRegistry[normalized].add(handler);
+
+            if (lastEventEnvelope[normalized]) {
+              invokeCallbackSafely(handler, lastEventEnvelope[normalized], normalized);
+            }
+
+            return () => {
+              try {
+                callbackRegistry[normalized].delete(handler);
+              } catch {
+                // ignore
+              }
+            };
+          } catch (e) {
+            logError("Failed to register event handler", { eventName, error: e && e.message });
+            return () => {};
+          }
+        }
+
+        function off(eventName, handler) {
+          try {
+            const normalized = normalizeEventName(eventName);
+            if (!normalized || typeof handler !== "function") return false;
+            return callbackRegistry[normalized].delete(handler);
+          } catch (e) {
+            logError("Failed to unregister event handler", { eventName, error: e && e.message });
+            return false;
+          }
+        }
+
+        function registerLegacyHook(eventName, fn) {
+          if (typeof fn !== "function") return () => {};
+          return on(eventName, (envelope) => {
+            try {
+              fn(envelope ? envelope.data : undefined);
+            } catch (e) {
+              logError("Legacy hook threw", { eventName, error: e && e.message });
+            }
+          });
+        }
+
         // Expose API for programmatic control
         window.CompaninDocsWidget = {
+          on,
+          off,
+          onOpen: (fn) => registerLegacyHook("open", fn),
+          onClose: (fn) => registerLegacyHook("close", fn),
+          onMessage: (fn) => registerLegacyHook("message", fn),
+          onResponse: (fn) => registerLegacyHook("response", fn),
+          onAuthFailure: (fn) => registerLegacyHook("authFailure", fn),
+          onError: (fn) => registerLegacyHook("error", fn),
+          registerHooks: (hooks = {}) => {
+            try {
+              if (hooks.onOpen) window.CompaninDocsWidget.onOpen(hooks.onOpen);
+              if (hooks.onClose) window.CompaninDocsWidget.onClose(hooks.onClose);
+              if (hooks.onMessage) window.CompaninDocsWidget.onMessage(hooks.onMessage);
+              if (hooks.onResponse) window.CompaninDocsWidget.onResponse(hooks.onResponse);
+              if (hooks.onAuthFailure) window.CompaninDocsWidget.onAuthFailure(hooks.onAuthFailure);
+              if (hooks.onError) window.CompaninDocsWidget.onError(hooks.onError);
+            } catch (e) {
+              logError("Failed to register hooks object", { error: e && e.message });
+            }
+          },
           open: () => {
             try {
               if (!iframe.contentWindow) {
@@ -181,10 +357,12 @@
               }
               iframe.contentWindow.postMessage(
                 { type: "OPEN_DOCS_DIALOG" },
-                baseUrl
+                targetOrigin
               );
+              emitEvent("open", { source: "host-api" }, { rawType: "HOST_OPEN_DOCS_DIALOG" });
             } catch (err) {
               logError("Failed to open docs widget", { error: err.message });
+              emitEvent("error", { message: err.message, code: "OPEN_FAILED" }, { rawType: "HOST_OPEN_DOCS_DIALOG_ERROR" });
             }
           },
           close: () => {
@@ -194,46 +372,58 @@
               }
               iframe.contentWindow.postMessage(
                 { type: "CLOSE_DOCS_DIALOG" },
-                baseUrl
+                targetOrigin
               );
+              emitEvent("close", { source: "host-api" }, { rawType: "HOST_CLOSE_DOCS_DIALOG" });
             } catch (err) {
               logError("Failed to close docs widget", { error: err.message });
+              emitEvent("error", { message: err.message, code: "CLOSE_FAILED" }, { rawType: "HOST_CLOSE_DOCS_DIALOG_ERROR" });
             }
           },
           show: () => {
             try {
               container.style.display = "block";
+              emitEvent("open", { source: "host-api" }, { rawType: "HOST_SHOW" });
             } catch (err) {
               logError("Failed to show docs widget", { error: err.message });
+              emitEvent("error", { message: err.message, code: "SHOW_FAILED" }, { rawType: "HOST_SHOW_ERROR" });
             }
           },
           hide: () => {
             try {
               container.style.display = "none";
+              emitEvent("close", { source: "host-api" }, { rawType: "HOST_HIDE" });
             } catch (err) {
               logError("Failed to hide docs widget", { error: err.message });
+              emitEvent("error", { message: err.message, code: "HIDE_FAILED" }, { rawType: "HOST_HIDE_ERROR" });
             }
           },
           sendMessage: (message) => {
             try {
+              emitEvent("message", message, { rawType: "HOST_MESSAGE_SENT", debounceMs: 120 });
               if (!iframe.contentWindow) {
                 throw new Error("iframe not ready");
               }
               iframe.contentWindow.postMessage(
                 { type: "HOST_MESSAGE", data: message },
-                baseUrl
+                targetOrigin
               );
             } catch (err) {
               logError("Failed to send message to docs widget", {
                 error: err.message,
                 message,
               });
+              emitEvent("error", { message: err.message, code: "SEND_MESSAGE_FAILED", payload: message }, { rawType: "HOST_MESSAGE_ERROR" });
             }
           },
           getErrors: () => errors,
           destroy: () => {
             try {
               window.removeEventListener("message", handleMessage);
+              Object.keys(debounceState).forEach((eventName) => {
+                const state = debounceState[eventName];
+                if (state && state.timer) clearTimeout(state.timer);
+              });
               if (container.parentNode) {
                 container.parentNode.removeChild(container);
               }
@@ -247,8 +437,13 @@
 
         function handleMessage(event) {
           try {
-            // Verify origin in production
-            if (!isDev && !event.origin.includes("companin.tech")) {
+            // Verify origin - always validate, even in dev mode.
+            // Allow explicit host-target origin to support custom widget domains.
+            const validOrigins = new Set([baseUrl, targetOrigin]);
+            const isDevOrigin = event.origin.includes('localhost') || event.origin.includes('127.0.0.1');
+            if (isDev) {
+              if (!validOrigins.has(event.origin) && !isDevOrigin) return;
+            } else if (!validOrigins.has(event.origin) && !event.origin.includes("companin.tech")) {
               return;
             }
 
@@ -281,14 +476,25 @@
 
               case "WIDGET_HIDE":
                 container.style.display = "none";
+                emitEvent("close", data || { source: "widget" }, { rawType: type });
                 break;
 
               case "WIDGET_SHOW":
                 container.style.display = "block";
+                emitEvent("open", data || { source: "widget" }, { rawType: type });
+                break;
+
+              case "WIDGET_RESPONSE":
+                emitEvent("response", data, { rawType: type, debounceMs: 120 });
+                break;
+
+              case "WIDGET_AUTH_FAILURE":
+                emitEvent("authFailure", data, { rawType: type });
                 break;
 
               case "WIDGET_ERROR":
                 logError("Docs widget reported an error", data);
+                emitEvent("error", data, { rawType: type });
                 break;
 
               default:

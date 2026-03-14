@@ -1,4 +1,10 @@
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+
+declare const require: (path: string) => any;
+declare const global: any;
+
 jest.mock('../lib/errorHandling', () => ({ logError: jest.fn() }));
+
 const EmbedClient = require('../app/embed/session/EmbedClient');
 
 describe('EmbedClient helpers', () => {
@@ -36,16 +42,75 @@ describe('EmbedClient helpers', () => {
   });
 
   test('applyCustomAssetsFromQuery logs error when injectCustomAssets throws', () => {
-    // Use malformed percent-encoding so decodeURIComponent throws and is caught
-    const malformed = '%';
+    const encoded = encodeURIComponent('.test-fail{color:red}');
 
-      const { logError } = require('../lib/errorHandling');
-      const logErrorSpy = jest.spyOn(require('../lib/errorHandling'), 'logError').mockImplementation(() => {});
+    const mockedErrorHandling = require('../lib/errorHandling') as { logError: jest.Mock };
+    mockedErrorHandling.logError.mockClear();
+    const decodeSpy = jest.spyOn(global, 'decodeURIComponent').mockImplementation(() => {
+      throw new Error('decode failed');
+    });
 
-      EmbedClient.applyCustomAssetsFromQuery(`?customCss=${malformed}`);
+    EmbedClient.applyCustomAssetsFromQuery(`?customCss=${encoded}`);
 
-      expect(logErrorSpy).toHaveBeenCalled();
+    expect(mockedErrorHandling.logError).toHaveBeenCalled();
+    decodeSpy.mockRestore();
+  });
 
-      logErrorSpy.mockRestore();
+  test('parseHostMessageCommand parses plain string payloads', () => {
+    expect(EmbedClient.parseHostMessageCommand('hello from host')).toEqual({
+      kind: 'message',
+      text: 'hello from host',
+    });
+  });
+
+  test('parseHostMessageCommand parses action payloads', () => {
+    expect(EmbedClient.parseHostMessageCommand({ action: 'open' })).toEqual({
+      kind: 'action',
+      action: 'open',
+    });
+    expect(EmbedClient.parseHostMessageCommand({ type: 'MINIMIZE' })).toEqual({
+      kind: 'action',
+      action: 'close',
+    });
+    expect(EmbedClient.parseHostMessageCommand({ command: 'toggle' })).toEqual({
+      kind: 'action',
+      action: 'toggle',
+    });
+  });
+
+  test('parseHostMessageCommand parses object message payloads and ignores invalid payloads', () => {
+    expect(EmbedClient.parseHostMessageCommand({ text: 'host text' })).toEqual({
+      kind: 'message',
+      text: 'host text',
+    });
+    expect(EmbedClient.parseHostMessageCommand({ message: 'hello there' })).toEqual({
+      kind: 'message',
+      text: 'hello there',
+    });
+    expect(EmbedClient.parseHostMessageCommand({ content: 'question?' })).toEqual({
+      kind: 'message',
+      text: 'question?',
+    });
+
+    expect(EmbedClient.parseHostMessageCommand({})).toBeNull();
+    expect(EmbedClient.parseHostMessageCommand(null)).toBeNull();
+    expect(EmbedClient.parseHostMessageCommand('   ')).toBeNull();
+  });
+
+  test('resolveParentTargetOrigin prefers explicit origin', () => {
+    expect(EmbedClient.resolveParentTargetOrigin('https://host.example.com', 'https://referrer.example.com/path')).toBe(
+      'https://host.example.com'
+    );
+  });
+
+  test('resolveParentTargetOrigin falls back to referrer origin', () => {
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, 'https://referrer.example.com/path?a=1')).toBe(
+      'https://referrer.example.com'
+    );
+  });
+
+  test('resolveParentTargetOrigin falls back to wildcard when explicit and referrer are missing/invalid', () => {
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, '')).toBe('*');
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, 'not-a-valid-url')).toBe('*');
   });
 });
