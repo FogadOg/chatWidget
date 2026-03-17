@@ -70,12 +70,32 @@
     // Create container with error handling (initially hidden)
     const container = document.createElement("div");
     container.id = "companin-docs-widget-container";
+    const COMPACT_BUTTON_MAX_SIZE = 64;
+    const COMPACT_BUTTON_OUTER_PADDING = 8;
+    const parsePixelValue = (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value === "string") {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
+    const getContainerPadding = (width, height) => {
+      const isCompact =
+        typeof width === "number" &&
+        typeof height === "number" &&
+        width <= COMPACT_BUTTON_MAX_SIZE &&
+        height <= COMPACT_BUTTON_MAX_SIZE;
+      return isCompact ? COMPACT_BUTTON_OUTER_PADDING : 0;
+    };
     container.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
       width: 0;
       height: 0;
+      padding: 0;
+      box-sizing: border-box;
       z-index: 999999;
       transition: all 0.3s ease;
       display: none;
@@ -457,7 +477,12 @@
                   container.style.display = "none";
                   container.style.width = "0";
                   container.style.height = "0";
+                  container.style.padding = "0";
                 } else if (data?.height) {
+                  const parsedWidth = parsePixelValue(data?.width);
+                  const parsedHeight = parsePixelValue(data?.height);
+                  const containerPadding = getContainerPadding(parsedWidth, parsedHeight);
+                  container.style.padding = `${containerPadding}px`;
                   if (data.height === "100vh") {
                     // Full screen mode
                     container.style.display = "block";
@@ -466,11 +491,16 @@
                     container.style.top = "0";
                     container.style.left = "0";
                   } else {
-                    container.style.height = `${data.height}px`;
+                    const effectiveHeight = parsedHeight !== null ? parsedHeight + (containerPadding * 2) : data.height;
+                    container.style.height = `${effectiveHeight}px`;
                   }
                 }
                 if (data?.width && data.width !== "100vw") {
-                  container.style.width = `${data.width}px`;
+                  const parsedWidth = parsePixelValue(data.width);
+                  const parsedHeight = parsePixelValue(data?.height);
+                  const containerPadding = getContainerPadding(parsedWidth, parsedHeight);
+                  const effectiveWidth = parsedWidth !== null ? parsedWidth + (containerPadding * 2) : data.width;
+                  container.style.width = `${effectiveWidth}px`;
                 }
                 break;
 

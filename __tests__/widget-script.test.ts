@@ -69,6 +69,46 @@ describe('public/widget.js loader', () => {
     expect(document.querySelector('#companin-widget-container button')).toBeNull();
   });
 
+  it('adds outer padding around compact button size', () => {
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+    });
+
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'WIDGET_RESIZE',
+        data: { width: 56, height: 56, position: 'bottom-right', edge_offset: 20 },
+      },
+      origin: 'https://widget.companin.tech',
+    }));
+
+    const container = document.getElementById('companin-widget-container');
+    expect(container).toBeTruthy();
+    expect(container?.style.padding).toBe('8px');
+  });
+
+  it('adds outer padding when compact size arrives as strings', () => {
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+    });
+
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'WIDGET_RESIZE',
+        data: { width: '56', height: '56', position: 'bottom-right', edge_offset: 20 },
+      },
+      origin: 'https://widget.companin.tech',
+    }));
+
+    const container = document.getElementById('companin-widget-container');
+    expect(container).toBeTruthy();
+    expect(container?.style.padding).toBe('8px');
+  });
+
   describe('host hooks API', () => {
     it('invokes onOpen/onClose hooks when show/hide called', async () => {
       inject({

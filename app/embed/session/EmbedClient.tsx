@@ -431,12 +431,14 @@ export default function EmbedClient({
       if (isCollapsed) {
         // Send button size when collapsed
         const buttonSize = getButtonPixelSize(widgetConfig.button_size || 'md');
+        const hoverSafePadding = 8;
+        const collapsedViewportSize = buttonSize + (hoverSafePadding * 2);
         window.parent.postMessage(
           {
             type: EMBED_EVENTS.RESIZE,
             data: {
-              width: buttonSize,
-              height: buttonSize,
+              width: collapsedViewportSize,
+              height: collapsedViewportSize,
               ...positionData
             }
           },

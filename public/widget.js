@@ -97,11 +97,31 @@
     // Create container with error handling
     const container = document.createElement("div");
     container.id = "companin-widget-container";
+    const COMPACT_BUTTON_MAX_SIZE = 64;
+    const COMPACT_BUTTON_OUTER_PADDING = 8;
+    const parsePixelValue = (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value === "string") {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
+    const getContainerPadding = (width, height) => {
+      const isCompact =
+        typeof width === "number" &&
+        typeof height === "number" &&
+        width <= COMPACT_BUTTON_MAX_SIZE &&
+        height <= COMPACT_BUTTON_MAX_SIZE;
+      return isCompact ? COMPACT_BUTTON_OUTER_PADDING : 0;
+    };
     container.style.cssText = `
       position: fixed;
       bottom: 20px;
       width: auto;
       height: auto;
+      padding: 0;
+      box-sizing: border-box;
       max-width: 100vw;
       z-index: 999999;
       transition: all 0.3s ease;
@@ -478,11 +498,16 @@
                 if (allowDisplay) {
                   container.style.display = "block";
                 }
-                if (data?.height) {
-                  container.style.height = `${data.height}px`;
+                const resizeWidth = parsePixelValue(data?.width);
+                const resizeHeight = parsePixelValue(data?.height);
+                const containerPadding = getContainerPadding(resizeWidth, resizeHeight);
+                container.style.padding = `${containerPadding}px`;
+
+                if (resizeHeight !== null) {
+                  container.style.height = `${resizeHeight + (containerPadding * 2)}px`;
                 }
-                if (data?.width) {
-                  container.style.width = `${data.width}px`;
+                if (resizeWidth !== null) {
+                  container.style.width = `${resizeWidth + (containerPadding * 2)}px`;
                 }
 
                 // Handle dynamic positioning if provided
@@ -491,18 +516,20 @@
                   const offset = data.position.includes('left') && baseOffset === 0 ? 16 : baseOffset;
                   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
                   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-                  if (viewportWidth && typeof data?.width === 'number') {
+                  const desiredWidth = resizeWidth !== null ? resizeWidth + (containerPadding * 2) : null;
+                  const desiredHeight = resizeHeight !== null ? resizeHeight + (containerPadding * 2) : null;
+                  if (viewportWidth && desiredWidth !== null) {
                     const maxWidth = Math.max(0, viewportWidth - (offset * 2));
-                    if (maxWidth > 0 && data.width > maxWidth) {
+                    if (maxWidth > 0 && desiredWidth > maxWidth) {
                       container.style.width = `${maxWidth}px`;
                     }
                     if (maxWidth > 0) {
                       container.style.maxWidth = `${maxWidth}px`;
                     }
                   }
-                  if (viewportHeight && typeof data?.height === 'number') {
+                  if (viewportHeight && desiredHeight !== null) {
                     const maxHeight = Math.max(0, viewportHeight - (offset * 2));
-                    if (maxHeight > 0 && data.height > maxHeight) {
+                    if (maxHeight > 0 && desiredHeight > maxHeight) {
                       container.style.height = `${maxHeight}px`;
                     }
                     if (maxHeight > 0) {
