@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
+    "build": "npm run check-locales && next build",
+    "check-locales": "python3 scripts/check_locale_issues.py && python3 scripts/ci_warn_if_empty.py",
     "size-limit": "size-limit",
     "ci:size-limit": "npm run build && npm run size-limit",
     "analyze": "ANALYZE=true next build --webpack",
