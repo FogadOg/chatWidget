@@ -28,8 +28,7 @@ jobs:
       run: npm ci
 
     - name: Run locale checks (warnings only)
-      working-directory: ./widget-app
-      run: python3 scripts/check_locale_issues.py && python3 scripts/ci_warn_if_empty.py || true
+      run: python3 ./scripts/check_locale_issues.py && python3 ./scripts/ci_warn_if_empty.py || true
 
     - name: Run linter
       run: npm run lint
