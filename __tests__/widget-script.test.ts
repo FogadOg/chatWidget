@@ -109,6 +109,27 @@ describe('public/widget.js loader', () => {
     expect(container?.style.padding).toBe('8px');
   });
 
+  it('applies camelCase edgeOffset from resize data', () => {
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+    });
+
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'WIDGET_RESIZE',
+        data: { width: 320, height: 420, position: 'bottom-right', edgeOffset: '28' },
+      },
+      origin: 'https://widget.companin.tech',
+    }));
+
+    const container = document.getElementById('companin-widget-container');
+    expect(container).toBeTruthy();
+    expect(container?.style.right).toBe('28px');
+    expect(container?.style.bottom).toBe('28px');
+  });
+
   describe('host hooks API', () => {
     it('invokes onOpen/onClose hooks when show/hide called', async () => {
       inject({

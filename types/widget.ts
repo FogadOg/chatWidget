@@ -75,6 +75,7 @@ export type WidgetConfig = {
   // Positioning
   position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   edge_offset: number;
+  edgeOffset?: number | string;
   // Optional images
   logo?: string;
   bot_avatar?: string;

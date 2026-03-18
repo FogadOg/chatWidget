@@ -64,6 +64,25 @@ export const getButtonPixelSize = (buttonSize: string) => {
   return BUTTON_SIZES[buttonSize as keyof typeof BUTTON_SIZES] || BUTTON_SIZES.md;
 };
 
+const getNormalizedEdgeOffset = (config?: WidgetConfig | null): number => {
+  if (!config) return 20;
+
+  const raw = (config as WidgetConfig & { edgeOffset?: unknown }).edgeOffset ?? config.edge_offset;
+
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw;
+  }
+
+  if (typeof raw === 'string') {
+    const parsed = Number.parseFloat(raw);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return 20;
+};
+
 type HostWidgetAction = 'open' | 'close' | 'toggle';
 type ParsedHostMessageCommand =
   | { kind: 'action'; action: HostWidgetAction }
@@ -216,6 +235,7 @@ export default function EmbedClient({
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
+  const postedEdgeOffset = useRef<number | undefined>(undefined);
   const [fatalError, setFatalError] = useState<string | null>(null);
   const parentTargetOrigin = useMemo(
     () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin)),
@@ -243,6 +263,23 @@ export default function EmbedClient({
         setWidgetConfig((prev) => {
           if (!prev) return prev;
           return { ...prev, show_unread_badge: postedShowUnreadBadge.current } as WidgetConfig;
+        });
+      }
+
+      const rawEdgeOffset = data.edgeOffset ?? data.edge_offset;
+      if (typeof rawEdgeOffset === 'number' && Number.isFinite(rawEdgeOffset)) {
+        postedEdgeOffset.current = rawEdgeOffset;
+      } else if (typeof rawEdgeOffset === 'string') {
+        const parsed = Number.parseFloat(rawEdgeOffset);
+        if (Number.isFinite(parsed)) {
+          postedEdgeOffset.current = parsed;
+        }
+      }
+
+      if (typeof postedEdgeOffset.current !== 'undefined') {
+        setWidgetConfig((prev) => {
+          if (!prev) return prev;
+          return { ...prev, edge_offset: postedEdgeOffset.current } as WidgetConfig;
         });
       }
     });
@@ -425,7 +462,7 @@ export default function EmbedClient({
     if (widgetConfig && window.parent !== window) {
       const positionData = {
         position: widgetConfig.position || 'bottom-right',
-        edge_offset: widgetConfig.edge_offset || 20
+        edge_offset: getNormalizedEdgeOffset(widgetConfig)
       };
 
       if (isCollapsed) {
@@ -773,6 +810,9 @@ export default function EmbedClient({
         const configData = { ...data.data };
         if (typeof postedShowUnreadBadge.current !== 'undefined') {
           configData.show_unread_badge = postedShowUnreadBadge.current;
+        }
+        if (typeof postedEdgeOffset.current !== 'undefined') {
+          configData.edge_offset = postedEdgeOffset.current;
         }
         setWidgetConfig(configData);
       } else {

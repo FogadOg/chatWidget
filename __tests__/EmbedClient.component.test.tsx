@@ -1980,6 +1980,47 @@ describe('EmbedClient Component', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
     });
+
+    test('applies edgeOffset from posted config to resize payload', async () => {
+      const onInitConfig = require('../app/embed/session/events').onInitConfig;
+      let capturedCallback: any;
+      const postMessageSpy = jest.fn();
+
+      onInitConfig.mockImplementation((callback: any) => {
+        capturedCallback = callback;
+        return { remove: jest.fn() };
+      });
+
+      Object.defineProperty(window, 'parent', {
+        value: { postMessage: postMessageSpy },
+        writable: true,
+      });
+
+      render(<EmbedClient {...defaultProps} startOpen={false} />);
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/widget-config/'),
+          expect.any(Object)
+        );
+      });
+
+      act(() => {
+        if (capturedCallback) {
+          capturedCallback({ edgeOffset: 12 });
+        }
+      });
+
+      await waitFor(() => {
+        expect(postMessageSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'WIDGET_RESIZE',
+            data: expect.objectContaining({ edge_offset: 12 }),
+          }),
+          expect.any(String)
+        );
+      });
+    });
   });
 
   describe('Session Expiry Check Interval', () => {

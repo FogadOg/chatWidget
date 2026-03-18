@@ -107,6 +107,14 @@
       }
       return null;
     };
+    const parseOffsetValue = (value, fallback = 20) => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value === "string") {
+        const parsed = parseFloat(value);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+      return fallback;
+    };
     const getContainerPadding = (width, height) => {
       const isCompact =
         typeof width === "number" &&
@@ -512,7 +520,10 @@
 
                 // Handle dynamic positioning if provided
                 if (data?.position) {
-                  const baseOffset = typeof data.edge_offset === 'number' ? data.edge_offset : 20;
+                  const baseOffset = parseOffsetValue(
+                    typeof data.edge_offset !== 'undefined' ? data.edge_offset : data.edgeOffset,
+                    20
+                  );
                   const offset = data.position.includes('left') && baseOffset === 0 ? 16 : baseOffset;
                   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
                   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
