@@ -79,6 +79,27 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion"
 import { CheckIcon, GlobeIcon, MicIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
+import {
+  getSessionStorageKey,
+  getVisitorId as helpersGetVisitorId,
+  getPageContext as helpersGetPageContext,
+  getStoredSession as helpersGetStoredSession,
+  storeSession as helpersStoreSession,
+  getLocalizedText as helpersGetLocalizedText,
+  scrollToBottom as helpersScrollToBottom,
+} from './helpers'
+
+// NOTE: exported for testing. Accepts explicit locale to avoid closure on hook.
+export function getLocalizedText(textObj: { [lang: string]: string } | undefined, loc?: string): string {
+  if (!textObj) return '';
+  const useLoc = loc || 'en';
+
+  if (textObj[useLoc]) return textObj[useLoc];
+  if (textObj['en']) return textObj['en'];
+
+  const values = Object.values(textObj);
+  return values.length > 0 ? values[0] : '';
+}
 
 type Props = {
   clientId: string;
@@ -152,21 +173,8 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
   const [parentOrigin, setParentOrigin] = useState<string>('*');
 
-  const scrollToBottom = () => {
-    if (conversationEndRef.current) {
-      conversationEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-    // Also try scrolling the ScrollArea viewport
-    if (scrollAreaRef.current) {
-      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    }
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    helpersScrollToBottom(conversationEndRef.current, scrollAreaRef.current);
   }, [messages]);
 
   useEffect(() => {
@@ -195,86 +203,17 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   useEffect(() => {
     if (open && messages.length > 0) {
       // Scroll to bottom when dialog opens and has messages with a longer delay
-      setTimeout(() => scrollToBottom(), 300);
+      setTimeout(() => helpersScrollToBottom(conversationEndRef.current, scrollAreaRef.current), 300);
     }
   }, [open]);
 
-  // Helper function to get localStorage key for this widget instance
-  const getSessionStorageKey = () => {
-    return `companin-docs-session-${clientId}-${assistantId}`;
-  };
-
-  // Helper function to get or create visitor ID
-  const getVisitorId = () => {
-    const visitorKey = `companin-visitor-${clientId}`;
-    let visitorId = localStorage.getItem(visitorKey);
-    if (!visitorId) {
-      visitorId = `docs-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem(visitorKey, visitorId);
-    }
-    return visitorId;
-  };
-
-  // Helper function to get current page context
-  const getPageContext = () => {
-    try {
-      return {
-        url: window.location.href,
-        pathname: window.location.pathname,
-        title: document.title,
-        referrer: document.referrer || null,
-      };
-    } catch (e) {
-      // Fallback if accessing document fails (e.g., in iframe restrictions)
-      return {
-        url: window.location.href,
-        pathname: window.location.pathname,
-        title: 'Unknown Page',
-        referrer: null,
-      };
-    }
-  };
-
-  // Helper function to get stored session data
-  const getStoredSession = () => {
-    try {
-      const storageKey = getSessionStorageKey();
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const data = JSON.parse(stored);
-        // Check if session is expired (with 5 minute buffer before actual expiry)
-        if (data.expiresAt && new Date(data.expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
-          return data;
-        } else {
-          // Clear expired session
-          localStorage.removeItem(storageKey);
-        }
-      }
-    } catch (e) {
-      console.error('Error reading stored session:', e);
-    }
-    return null;
-  };
-
-  // Helper function to store session data
-  const storeSession = (sessionId: string, expiresAt: string) => {
-    try {
-      const storageKey = getSessionStorageKey();
-      localStorage.setItem(storageKey, JSON.stringify({
-        sessionId,
-        expiresAt,
-        createdAt: new Date().toISOString()
-      }));
-    } catch (e) {
-      console.error('Error storing session:', e);
-    }
-  };
+  // helper utilities are provided by ./helpers
 
 
   // Create session
   const createSession = useCallback(async (token: string) => {
     try {
-      const visitorId = getVisitorId();
+      const visitorId = helpersGetVisitorId(clientId);
 
       const requestBody = {
         assistant_id: assistantId,
@@ -298,7 +237,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         setError(null);
         // Store session data in localStorage
         if (data.data.expires_at) {
-          storeSession(data.data.session_id, data.data.expires_at);
+          helpersStoreSession(clientId, assistantId, data.data.session_id, data.data.expires_at);
         }
         // Load messages after session creation
         await loadSessionMessages(data.data.session_id, token, true);
@@ -349,16 +288,16 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
           setMessages(loadedMessages);
           setIsInitialLoad(false);
         } else {
-          localStorage.removeItem(getSessionStorageKey());
+          localStorage.removeItem(getSessionStorageKey(clientId, assistantId));
           createSession(token);
         }
       } else {
-        localStorage.removeItem(getSessionStorageKey());
+        localStorage.removeItem(getSessionStorageKey(clientId, assistantId));
         createSession(token);
       }
     } catch (err) {
       console.error('Session validation error:', err);
-      localStorage.removeItem(getSessionStorageKey());
+      localStorage.removeItem(getSessionStorageKey(clientId, assistantId));
       createSession(token);
     }
   }, [createSession]);
@@ -423,17 +362,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     }
   }, []);
 
-  // Helper function to get localized text
-  const getLocalizedText = (textObj: { [lang: string]: string } | undefined): string => {
-    if (!textObj) return '';
 
-    // Priority: user's locale -> English -> first available
-    if (textObj[locale]) return textObj[locale];
-    if (textObj['en']) return textObj['en'];
-
-    const values = Object.values(textObj);
-    return values.length > 0 ? values[0] : '';
-  };
 
   // Send message to API
   const sendMessageToAPI = useCallback(async (content: string) => {
@@ -453,7 +382,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         body: JSON.stringify({
           content: content,
           locale: locale,
-          page_context: getPageContext(),
+          page_context: helpersGetPageContext(),
         }),
       });
 
@@ -508,42 +437,6 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       console.error('Error submitting message feedback:', error);
     }
   }, [authToken]);
-
-  const streamResponse = useCallback(
-    async (messageId: string, content: string) => {
-      setStatus("streaming");
-      setStreamingMessageId(messageId);
-
-      const words = content.split(" ");
-      let currentContent = "";
-
-      for (let i = 0; i < words.length; i++) {
-        currentContent += (i > 0 ? " " : "") + words[i];
-
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.versions.some((v) => v.id === messageId)) {
-              return {
-                ...msg,
-                versions: msg.versions.map((v) =>
-                  v.id === messageId ? { ...v, content: currentContent } : v
-                ),
-              };
-            }
-            return msg;
-          })
-        );
-
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.random() * 100 + 50)
-        );
-      }
-
-      setStatus("ready");
-      setStreamingMessageId(null);
-    },
-    []
-  );
 
   const addUserMessage = useCallback(
     async (content: string) => {
@@ -606,7 +499,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
           // Fetch widget config
           fetchWidgetConfig(configId, token);
 
-          const storedSession = getStoredSession();
+          const storedSession = helpersGetStoredSession(clientId, assistantId);
           if (storedSession) {
             validateAndRestoreSession(storedSession.sessionId, token);
           } else {
@@ -630,7 +523,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   // Periodic check for expired sessions
   useEffect(() => {
     const checkSessionExpiry = () => {
-      const stored = getStoredSession();
+      const stored = helpersGetStoredSession(clientId, assistantId);
       if (!stored && sessionId) {
         setSessionId(null);
         setMessages([]);
@@ -728,9 +621,9 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         <DialogContent className='mb-8 flex h-[calc(100vh-20vh)] min-w-[calc(100vw-20vw)] flex-col justify-between gap-0 p-0'>
           <ScrollArea ref={scrollAreaRef} className='flex flex-col justify-between overflow-hidden'>
             <DialogHeader className='contents space-y-0 text-left'>
-              <DialogTitle className='px-6 pt-6'>{getLocalizedText(widgetConfig?.data?.title) || 'Documentation Assistant'}</DialogTitle>
+              <DialogTitle className='px-6 pt-6'>{getLocalizedText(widgetConfig?.data?.title, activeLocale) || 'Documentation Assistant'}</DialogTitle>
               <DialogDescription className='px-6 text-sm text-muted-foreground'>
-                {getLocalizedText(widgetConfig?.data?.subtitle) || 'How can we help you today?'}
+                {getLocalizedText(widgetConfig?.data?.subtitle, activeLocale) || 'How can we help you today?'}
               </DialogDescription>
               <DialogDescription asChild>
                 <div className='p-6'>
@@ -859,7 +752,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                     onChange={(event) => setText(event.target.value)}
                     value={text}
                     placeholder={
-                      getLocalizedText(widgetConfig?.data?.placeholder)
+                      getLocalizedText(widgetConfig?.data?.placeholder, activeLocale)
                         || translate(activeLocale, 'typeYourMessage')
                     }
                   />

@@ -1,3 +1,42 @@
+import { onInitConfig } from '../app/embed/session/events'
+import { EMBED_EVENTS } from '../lib/embedConstants'
+
+describe('onInitConfig', () => {
+  afterEach(() => {
+    // remove any listeners
+    window._removeTestHandlers && window._removeTestHandlers()
+    jest.clearAllMocks()
+  })
+
+  test('calls callback for same-origin when allowlist empty', () => {
+    // ensure env allowlist empty
+    process.env.NEXT_PUBLIC_EMBED_ALLOWLIST = ''
+    const cb = jest.fn()
+    const res = onInitConfig(cb)
+    // store remove fn for cleanup
+    // simulate message with no origin (jsdom)
+    window.dispatchEvent(new MessageEvent('message', { data: { type: EMBED_EVENTS.INIT_CONFIG, data: { foo: 'bar' } }, origin: '' }))
+    expect(cb).toHaveBeenCalledWith({ foo: 'bar' })
+    res.remove()
+  })
+
+  test('respects explicit allowlist', () => {
+    process.env.NEXT_PUBLIC_EMBED_ALLOWLIST = 'https://allowed.com'
+    // reload module to pick up allowlist - require fresh
+    jest.resetModules()
+    const { onInitConfig: onInit } = require('../app/embed/session/events')
+    const cb = jest.fn()
+    const r = onInit(cb)
+    window.dispatchEvent(new MessageEvent('message', { data: { type: EMBED_EVENTS.INIT_CONFIG, data: { ok: true } }, origin: 'https://allowed.com' }))
+    expect(cb).toHaveBeenCalledWith({ ok: true })
+    // not called for disallowed origin
+    const cb2 = jest.fn()
+    const r2 = onInit(cb2)
+    window.dispatchEvent(new MessageEvent('message', { data: { type: EMBED_EVENTS.INIT_CONFIG, data: { ok: true } }, origin: 'https://bad.com' }))
+    expect(cb2).not.toHaveBeenCalled()
+    r.remove(); r2.remove()
+  })
+})
 import { onInitConfig } from '../app/embed/session/events';
 
 describe('onInitConfig helper', () => {
@@ -37,7 +76,7 @@ describe('onInitConfig helper', () => {
     const { handler, remove } = onInitConfig(callback);
 
     // create an object whose property access throws
-     
+
     const badData: any = {};
     Object.defineProperty(badData, 'type', {
       get() {

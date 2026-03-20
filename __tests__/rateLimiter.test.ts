@@ -1,3 +1,32 @@
+import { checkAndConsume, peek, resetLimiter } from '../lib/rateLimiter'
+import { RATE_LIMIT } from '../lib/constants'
+
+describe('rateLimiter', () => {
+  beforeEach(() => {
+    // ensure clean
+    resetLimiter('s1')
+  })
+
+  test('allows when no sessionId', () => {
+    expect(checkAndConsume('')).toEqual({ allowed: true })
+    expect(peek('')).toEqual({ allowed: true })
+  })
+
+  test('consumes up to max then blocks', () => {
+    const id = 'session-x'
+    // consume max messages
+    for (let i = 0; i < RATE_LIMIT.MAX_MESSAGES; i++) {
+      const r = checkAndConsume(id)
+      expect(r.allowed).toBe(true)
+    }
+    const blocked = checkAndConsume(id)
+    expect(blocked.allowed).toBe(false)
+    const p = peek(id)
+    expect(p.allowed).toBe(false)
+    resetLimiter(id)
+    expect(peek(id).allowed).toBe(true)
+  })
+})
 import { checkAndConsume, resetLimiter, peek } from '../lib/rateLimiter';
 import { RATE_LIMIT } from '../lib/constants';
 

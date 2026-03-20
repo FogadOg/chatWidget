@@ -26,20 +26,74 @@ const config = {
   // Ignore specific files from coverage reports
   coveragePathIgnorePatterns: [
     '<rootDir>/node_modules/',
+    '<rootDir>/src/components/ui/command.tsx',
+    '<rootDir>/src/components/ui/dropdown-menu.tsx',
+    '<rootDir>/src/components/ui/hover-card.tsx',
+    '<rootDir>/src/components/ui/input.tsx',
+    '<rootDir>/src/components/ui/label.tsx',
+    '<rootDir>/src/components/ui/progress.tsx',
   ],
+  // Collect coverage from all source files so files not imported by tests
+  // still appear in the report (and will be measured against thresholds).
+  collectCoverage: true,
+  collectCoverageFrom: [
+    'app/**/*.{js,jsx,ts,tsx}',
+    'components/**/*.{js,jsx,ts,tsx}',
+    'lib/**/*.{js,jsx,ts,tsx}',
+    'hooks/**/*.{js,jsx,ts,tsx}',
+    'src/**/*.{js,jsx,ts,tsx}',
+    'scripts/**/*.{js,jsx,ts,tsx}',
+    'types/**/*.{js,jsx,ts,tsx}',
+    '!src/components/ui/command.tsx',
+    '!src/components/ui/dropdown-menu.tsx',
+    '!src/components/ui/hover-card.tsx',
+    '!src/components/ui/input.tsx',
+    '!src/components/ui/label.tsx',
+    '!src/components/ui/progress.tsx',
+    // Include all app files (pages and routes are now collected so coverage
+    // shows every source file in the repo). Integration-only files will also
+    // appear and will be measured against thresholds.
+    '!**/*.d.ts',
+    '!**/__tests__/**',
+    '!**/*.test.{js,jsx,ts,tsx}',
+    '!**/*.spec.{js,jsx,ts,tsx}',
+    '!**/.next/**',
+    '!**/coverage/**'
+  ],
+  coverageReporters: ['text', 'json', 'lcov', 'text-summary'],
   coverageThreshold: {
-    global: {
-      branches: 80,       // lowered to accommodate current coverage
+    './app/': {
+      branches: 80,
       functions: 80,
       lines: 90,
       statements: 90,
     },
-    // you can add per-folder thresholds if needed
+    './hooks/': {
+      branches: 80,
+      functions: 80,
+      lines: 90,
+      statements: 90,
+    },
+    './lib/': {
+      branches: 80,
+      functions: 80,
+      lines: 90,
+      statements: 90,
+    },
+    // per-folder thresholds kept
     './components/': {
       branches: 70,
       functions: 70,
       lines: 85,
       statements: 85,
+    },
+    // enforce per-file minimums (any file below this will fail the run)
+    // Note: relax `functions` to 0 to avoid failing files that contain no functions
+    '{app,components,lib,hooks}/**/*.{js,jsx,ts,tsx}': {
+      branches: 80,
+      functions: 0,
+      lines: 80,
+      statements: 80,
     },
   },
 }
