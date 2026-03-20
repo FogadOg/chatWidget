@@ -19,7 +19,7 @@
   "newMessageAnnouncement": "Neue Nachricht: {message}",
   "viewUncertaintyLog": "Customer Support AI Assistant Unsicherheitsprotokoll anzeigen",
   "uncertaintyResponsesHint": "Customer Support AI Assistant hat in einigen Antworten Unsicherheit angezeigt",
-  "closeFeedback": "Lukk tilbakemelding",
+  "closeFeedback": "Feedback schließen",
   "unreadMessages": {
     "one": "{count} ungelesene Nachricht",
     "other": "{count} ungelesene Nachrichten"
@@ -29,6 +29,31 @@
     "other": "{count} Quellen"
   },
   "assistantTyping": "Customer Support AI Assistant tippt",
+  "appTitle": "Customer Support AI Assistant Chat-Widget",
+  "appDescription": "Customer Support AI Assistant Chat-Widget für Ihre Website",
+  "getStarted": "Loslegen",
+  "viewDemo": "Demo ansehen",
+  "easyIntegrationTitle": "Einfache Integration",
+  "easyIntegrationDesc": "Fügen Sie es mit einem einfachen Script-Tag zu jeder Website hinzu",
+  "customizableTitle": "Anpassbar",
+  "customizableDesc": "Passen Sie es an Ihr Branding mit voller Styling-Kontrolle an",
+  "multilanguageTitle": "Mehrsprachig",
+  "multilanguageDesc": "Unterstützung für 9 Sprachen sofort einsatzbereit",
+  "noMessagesTitle": "Keine Nachrichten",
+  "noMessagesDesc": "Beginnen Sie eine Konversation, um hier Nachrichten zu sehen",
+  "enterUrlPlaceholder": "URL eingeben...",
+  "awaitingApproval": "Wartet auf Freigabe",
+  "statusPending": "Ausstehend",
+  "statusRunning": "Wird ausgeführt",
+  "statusResponded": "Beantwortet",
+  "statusCompleted": "Abgeschlossen",
+  "statusError": "Fehler",
+  "statusDenied": "Abgelehnt",
+  "parametersLabel": "Parameter",
+  "resultLabel": "Ergebnis",
+  "errorLabel": "Fehler",
+  "consoleTitle": "Konsole",
+  "consoleNoOutput": "Keine Konsolenausgabe",
   "rateConversation": "Wie war Ihre Erfahrung?",
   "feedbackPositive": "Gut",
   "feedbackNeutral": "Okay",
@@ -38,4 +63,12 @@
   "skipFeedback": "Überspringen",
   "thankYouFeedback": "Vielen Dank für Ihr Feedback!",
   "feedbackSubmitted": "Feedback erfolgreich gesendet"
+  ,"chainOfThought": "Chain of Thought",
+  "modelSelectorTitle": "Model Selector",
+  "prevBranch": "Previous branch",
+  "nextBranch": "Next branch",
+  "of": "of",
+  "imageLabel": "Image",
+  "attachmentLabel": "Attachment"
+  ,"poweredBy": "Powered by "
 }

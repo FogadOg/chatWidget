@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals'
+import { STORAGE_PREFIX } from '../lib/constants'
 import {
   getSessionStorageKey,
   getVisitorId,
@@ -16,13 +17,13 @@ describe('docs helpers', () => {
   })
 
   test('getSessionStorageKey returns expected key', () => {
-    expect(getSessionStorageKey('c','a')).toContain('companin-docs-session-c-a')
+    expect(getSessionStorageKey('c','a')).toContain(`${STORAGE_PREFIX}docs-session-c-a`)
   })
 
   test('getVisitorId creates and returns visitor id', () => {
     const id = getVisitorId('clientX')
     expect(typeof id).toBe('string')
-    expect(localStorage.getItem('companin-visitor-clientX')).toBe(id)
+    expect(localStorage.getItem(`${STORAGE_PREFIX}visitor-clientX`)).toBe(id)
   })
 
   test('getPageContext returns values and handles thrown window', () => {
@@ -85,8 +86,8 @@ describe('docs helpers', () => {
   })
 
   test('session storage key and visitor key', () => {
-    expect(getSessionStorageKey('c', 'a')).toContain('companin-docs-session-c-a')
-    expect(getVisitorKey('c')).toContain('companin-visitor-c')
+    expect(getSessionStorageKey('c', 'a')).toContain(`${STORAGE_PREFIX}docs-session-c-a`)
+    expect(getVisitorKey('c')).toContain(`${STORAGE_PREFIX}visitor-c`)
   })
 
   test('getVisitorId stores and returns an id', () => {

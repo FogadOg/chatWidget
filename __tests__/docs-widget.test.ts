@@ -12,6 +12,8 @@ declare global {
   }
 }
 
+import { DOCS_WIDGET_SCRIPT_ID, COMPANY_NAME } from '../lib/constants';
+
 const fs = require('fs');
 const path = require('path');
 
@@ -35,10 +37,11 @@ describe('public/docs-widget.js loader', () => {
   }
 
   afterEach(() => {
-    const container = document.getElementById('companin-docs-widget-container');
+    const container = document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`);
     if (container && container.parentNode) container.parentNode.removeChild(container);
-    window.__COMPANIN_DOCS_WIDGET__ = false;
-    delete window.CompaninDocsWidget;
+    try { window.__COMPANIN_DOCS_WIDGET__ = false; } catch {}
+    try { window[`__${COMPANY_NAME.toUpperCase()}_DOCS_WIDGET__`] = false; } catch {}
+    try { delete (window as any).CompaninDocsWidget; } catch {}
   });
 
   it('injects container and iframe correctly', () => {
@@ -48,7 +51,7 @@ describe('public/docs-widget.js loader', () => {
       'data-config-id': 'cfg',
     });
 
-    const container = document.getElementById('companin-docs-widget-container');
+    const container = document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`);
     expect(container).toBeTruthy();
     expect(container?.style.display).toBe('none');
 
@@ -60,7 +63,7 @@ describe('public/docs-widget.js loader', () => {
   it('requires required attributes', () => {
     // no attrs -> error path: container not created
     inject({});
-    expect(document.getElementById('companin-docs-widget-container')).toBeNull();
+    expect(document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`)).toBeNull();
   });
 
   it('exports API methods', () => {
@@ -118,7 +121,7 @@ describe('public/docs-widget.js loader', () => {
       'data-config-id': 'cfg',
     });
 
-    const iframe = document.querySelector('#companin-docs-widget-container iframe') as HTMLIFrameElement;
+    const iframe = document.querySelector(`#${DOCS_WIDGET_SCRIPT_ID}-container iframe`) as HTMLIFrameElement;
     Object.defineProperty(iframe, 'contentWindow', {
       writable: true,
       value: {
@@ -152,7 +155,7 @@ describe('public/docs-widget.js loader', () => {
     });
 
     // create fake iframe contentWindow
-    const iframe = document.querySelector('#companin-docs-widget-container iframe') as HTMLIFrameElement;
+    const iframe = document.querySelector(`#${DOCS_WIDGET_SCRIPT_ID}-container iframe`) as HTMLIFrameElement;
     const postSpy = jest.fn();
     Object.defineProperty(iframe, 'contentWindow', {
       writable: true,
@@ -175,7 +178,7 @@ describe('public/docs-widget.js loader', () => {
       'data-assistant-id': 'a',
       'data-config-id': 'cfg',
     });
-    const container = document.getElementById('companin-docs-widget-container')!;
+    const container = document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`)!;
     window.CompaninDocsWidget.show();
     expect(container.style.display).toBe('block');
     window.CompaninDocsWidget.hide();

@@ -21,14 +21,39 @@
   "uncertaintyResponsesHint": "Customer Support AI Assistant indicou incerteza em algumas respostas",
   "closeFeedback": "Fechar feedback",
   "unreadMessages": {
-    "one": "{count} mensagem nao lida",
-    "other": "{count} mensagens nao lidas"
+    "one": "{count} mensagem não lida",
+    "other": "{count} mensagens não lidas"
   },
   "sourcesCount": {
     "one": "{count} fonte",
     "other": "{count} fontes"
   },
   "assistantTyping": "Customer Support AI Assistant está digitando",
+  "appTitle": "Customer Support AI Assistant Widget de chat",
+  "appDescription": "Customer Support AI Assistant widget de chat para o seu site",
+  "getStarted": "Começar",
+  "viewDemo": "Ver demonstração",
+  "easyIntegrationTitle": "Integração fácil",
+  "easyIntegrationDesc": "Adicione a qualquer site com uma simples tag de script",
+  "customizableTitle": "Personalizável",
+  "customizableDesc": "Combine com sua marca com controle total de estilo",
+  "multilanguageTitle": "Multilíngue",
+  "multilanguageDesc": "Suporte para 9 idiomas prontos para uso",
+  "noMessagesTitle": "Sem mensagens",
+  "noMessagesDesc": "Inicie uma conversa para ver mensagens aqui",
+  "enterUrlPlaceholder": "Insira a URL...",
+  "awaitingApproval": "Aguardando aprovação",
+  "statusPending": "Pendente",
+  "statusRunning": "Em execução",
+  "statusResponded": "Respondido",
+  "statusCompleted": "Concluído",
+  "statusError": "Erro",
+  "statusDenied": "Negado",
+  "parametersLabel": "Parâmetros",
+  "resultLabel": "Resultado",
+  "errorLabel": "Erro",
+  "consoleTitle": "Console",
+  "consoleNoOutput": "Sem saída do console",
   "rateConversation": "Como foi sua experiência?",
   "feedbackPositive": "Bom",
   "feedbackNeutral": "Ok",
@@ -37,5 +62,13 @@
   "submitFeedback": "Enviar feedback",
   "skipFeedback": "Pular",
   "thankYouFeedback": "Obrigado pelo seu feedback!",
-  "feedbackSubmitted": "Feedback enviado com sucesso"
+  "feedbackSubmitted": "Feedback enviado com sucesso",
+  "chainOfThought": "Chain of Thought",
+  "modelSelectorTitle": "Model Selector",
+  "prevBranch": "Previous branch",
+  "nextBranch": "Next branch",
+  "of": "of",
+  "imageLabel": "Image",
+  "attachmentLabel": "Attachment"
+  ,"poweredBy": "Powered by "
 }

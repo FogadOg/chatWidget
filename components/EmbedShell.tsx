@@ -16,6 +16,7 @@ import type {
 import { useClickedButtons, ButtonLike } from '../hooks/useClickedButtons';
 import { useWidgetStyles } from '../hooks/useWidgetStyles';
 import { hexToRgb } from '../lib/colors';
+import { COMPANY_NAME } from '../lib/constants';
 
 type Props = {
   isEmbedded: boolean;
@@ -169,6 +170,7 @@ export default function EmbedShell({
     : translate(locale, 'chatControl', { context: 'open' });
   const closeChatLabel = translate(locale, 'chatControl', { context: 'close' });
   const minimizeChatLabel = translate(locale, 'chatControl', { context: 'minimize' });
+  const poweredByLabel = typeof t?.poweredBy === 'string' ? t.poweredBy : '';
 
   return (
     <>
@@ -482,7 +484,7 @@ export default function EmbedShell({
                 </div>
               </form>
               <div className="p-2 text-center text-xs text-gray-500">
-                Powered by <a href="https://companin.tech" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">Companin</a>
+                {poweredByLabel}<a href="https://companin.tech" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">{COMPANY_NAME}</a>
               </div>
             </div>
           </div>
@@ -733,7 +735,7 @@ export default function EmbedShell({
                   </div>
                 </form>
                 <div className="p-2 text-center text-xs text-gray-500">
-                  Powered by <a href="https://companin.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">Companin</a>
+                  {poweredByLabel}<a href="https://companin.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">{COMPANY_NAME}</a>
                 </div>
               </div>
             </div>

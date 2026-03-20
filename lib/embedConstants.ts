@@ -12,12 +12,13 @@ export const EMBED_EVENTS = {
   RESPONSE: 'WIDGET_RESPONSE',
   AUTH_FAILURE: 'WIDGET_AUTH_FAILURE',
 } as const;
+import { STORAGE_PREFIX } from "./constants";
 
 export const STORAGE_KEYS = {
-  sessionPrefix: (clientId: string, assistantId: string) => `companin-session-${clientId}-${assistantId}`,
-  unreadPrefix: (clientId: string, assistantId: string) => `companin-unread-${clientId}-${assistantId}`,
-  lastReadPrefix: (clientId: string, assistantId: string) => `companin-lastread-${clientId}-${assistantId}`,
-  visitorPrefix: (clientId: string) => `companin-visitor-${clientId}`,
+  sessionPrefix: (clientId: string, assistantId: string) => `${STORAGE_PREFIX}session-${clientId}-${assistantId}`,
+  unreadPrefix: (clientId: string, assistantId: string) => `${STORAGE_PREFIX}unread-${clientId}-${assistantId}`,
+  lastReadPrefix: (clientId: string, assistantId: string) => `${STORAGE_PREFIX}lastread-${clientId}-${assistantId}`,
+  visitorPrefix: (clientId: string) => `${STORAGE_PREFIX}visitor-${clientId}`,
 };
 
 /**

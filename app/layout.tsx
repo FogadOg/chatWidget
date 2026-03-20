@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import en from "../locales/en.json";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Companin Customer Support AI Assistant Widget",
-  description: "Customer Support AI Assistant chat widget for your website",
+  title: en.appTitle,
+  description: en.appDescription,
 };
 
 export default function RootLayout({

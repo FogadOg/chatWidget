@@ -1,25 +1,26 @@
 import { API } from '../../../lib/api';
 import { logError } from '../../../lib/logger';
 import { getOrCreateVisitorId, getStoredSessionByKey, storeSessionByKey } from '../../../lib/sessionStorage';
+import { STORAGE_PREFIX } from '../../../lib/constants';
 import type { Message, SourceData } from '../../../types/widget';
 
 /**
  * Storage keys for widget instances.
  */
 export function sessionStorageKey(clientId: string, assistantId: string) {
-  return `companin-session-${clientId}-${assistantId}`;
+  return `${STORAGE_PREFIX}session-${clientId}-${assistantId}`;
 }
 
 export function unreadStorageKey(clientId: string, assistantId: string) {
-  return `companin-unread-${clientId}-${assistantId}`;
+  return `${STORAGE_PREFIX}unread-${clientId}-${assistantId}`;
 }
 
 export function lastReadStorageKey(clientId: string, assistantId: string) {
-  return `companin-lastread-${clientId}-${assistantId}`;
+  return `${STORAGE_PREFIX}lastread-${clientId}-${assistantId}`;
 }
 
 export function getVisitorId(clientId: string) {
-  const visitorKey = `companin-visitor-${clientId}`;
+  const visitorKey = `${STORAGE_PREFIX}visitor-${clientId}`;
   return getOrCreateVisitorId(visitorKey, 'widget');
 }
 

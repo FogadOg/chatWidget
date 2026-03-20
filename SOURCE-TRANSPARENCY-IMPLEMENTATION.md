@@ -1,7 +1,7 @@
 # Source Transparency Implementation
 
 ## Overview
-This document describes the implementation of source transparency in the chat widget, allowing users to see which documents/pages the AI assistant used to generate answers.
+This document describes the implementation of source transparency in the chat widget, allowing users to see which documents/pages the Customer Support AI Assistant used to generate answers.
 
 ## Features Implemented
 

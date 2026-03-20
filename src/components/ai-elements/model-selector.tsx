@@ -1,4 +1,4 @@
- 
+
 import {
   Command,
   CommandDialog,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { ComponentProps, ReactNode } from "react";
+import en from "../../../locales/en.json";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
 
@@ -38,7 +39,7 @@ export type ModelSelectorContentProps = ComponentProps<typeof DialogContent> & {
 export const ModelSelectorContent = ({
   className,
   children,
-  title = "Model Selector",
+  title = en.modelSelectorTitle,
   ...props
 }: ModelSelectorContentProps) => (
   <DialogContent className={cn("p-0", className)} {...props}>

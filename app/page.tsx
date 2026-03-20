@@ -1,4 +1,5 @@
 import Link from "next/link";
+import en from "../locales/en.json";
 
 export default function Home() {
   return (
@@ -11,10 +12,10 @@ export default function Home() {
             </svg>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Companin Customer Support AI Assistant Widget
+            {en.appTitle}
           </h1>
           <p className="max-w-md text-lg leading-7 text-zinc-600 dark:text-zinc-400">
-            Customer Support AI Assistant widget for your website. Embed intelligent conversations anywhere with just a few lines of code.
+            {en.appDescription}
           </p>
         </div>
         <div className="flex flex-col gap-4 w-full max-w-md">
@@ -22,27 +23,27 @@ export default function Home() {
             className="flex h-12 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-6 text-white font-medium transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
             href="/docs/getting-started"
           >
-            Get Started
+            {en.getStarted}
           </Link>
           <Link
             className="flex h-12 items-center justify-center rounded-lg border border-solid border-zinc-300 px-6 font-medium text-zinc-900 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
             href="/preview"
           >
-            View Demo
+            {en.viewDemo}
           </Link>
         </div>
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-2xl">
           <div className="flex flex-col gap-2 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Easy Integration</h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Add to any website with a simple script tag</p>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{en.easyIntegrationTitle}</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{en.easyIntegrationDesc}</p>
           </div>
           <div className="flex flex-col gap-2 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Customizable</h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Match your brand with full styling control</p>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{en.customizableTitle}</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{en.customizableDesc}</p>
           </div>
           <div className="flex flex-col gap-2 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Multi-language</h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Support for 9 languages out of the box</p>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{en.multilanguageTitle}</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{en.multilanguageDesc}</p>
           </div>
         </div>
       </main>

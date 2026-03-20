@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getTranslations, Locale, resolveLocaleCandidates } from '../lib/i18n';
+import { STORAGE_PREFIX } from '../lib/constants';
 
 const getInitialLocale = (): Locale => {
   if (typeof window === 'undefined') {
@@ -11,7 +12,7 @@ const getInitialLocale = (): Locale => {
 
   let storedLocale: string | null = null;
   try {
-    storedLocale = window.localStorage.getItem('companin-widget-locale');
+    storedLocale = window.localStorage.getItem(`${STORAGE_PREFIX}widget-locale`);
   } catch {
     storedLocale = null;
   }
@@ -53,7 +54,7 @@ export function useWidgetTranslation() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        window.localStorage.setItem('companin-widget-locale', locale);
+        window.localStorage.setItem(`${STORAGE_PREFIX}widget-locale`, locale);
       } catch {
         // ignore storage errors
       }

@@ -1,3 +1,18 @@
+export const BRAND_NAME = "Customer Support AI Assistant";
+export const COMPANY_NAME = "Companin";
+
+// Non-localizable identifiers / prefixes used across the widget
+export const STORAGE_PREFIX = "companin-";
+export const WIDGET_SCRIPT_ID = "companin-widget";
+export const DOCS_WIDGET_SCRIPT_ID = "companin-docs-widget";
+
+export default {
+  BRAND_NAME,
+  COMPANY_NAME,
+  STORAGE_PREFIX,
+  WIDGET_SCRIPT_ID,
+  DOCS_WIDGET_SCRIPT_ID,
+};
 // Widget Constants
 
 // Timeout values (in milliseconds)

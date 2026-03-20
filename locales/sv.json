@@ -12,8 +12,8 @@
   "chat": "Chatt",
   "chatMessages": "Chattmeddelanden",
   "chatControl": {
-    "open": "Oppna chatt",
-    "close": "Stang chatt",
+    "open": "Öppna chatt",
+    "close": "Stäng chatt",
     "minimize": "Minimera chatt"
   },
   "newMessageAnnouncement": "Nytt meddelande: {message}",
@@ -21,14 +21,39 @@
   "uncertaintyResponsesHint": "Customer Support AI Assistant har visat osäkerhet i vissa svar",
   "closeFeedback": "Stäng feedback",
   "unreadMessages": {
-    "one": "{count} olast meddelande",
-    "other": "{count} olasta meddelanden"
+    "one": "{count} oläst meddelande",
+    "other": "{count} olästa meddelanden"
   },
   "sourcesCount": {
-    "one": "{count} kalla",
-    "other": "{count} kallor"
+    "one": "{count} källa",
+    "other": "{count} källor"
   },
   "assistantTyping": "Customer Support AI Assistant skriver",
+  "appTitle": "Customer Support AI Assistant Chatt-widget",
+  "appDescription": "Customer Support AI Assistant chatt-widget för din webbplats",
+  "getStarted": "Kom igång",
+  "viewDemo": "Visa demo",
+  "easyIntegrationTitle": "Enkel integration",
+  "easyIntegrationDesc": "Lägg till på vilken webbplats som helst med en enkel script-tag",
+  "customizableTitle": "Anpassningsbar",
+  "customizableDesc": "Matcha ditt varumärke med full stilkontroll",
+  "multilanguageTitle": "Fler språk",
+  "multilanguageDesc": "Stöd för 9 språk direkt ur lådan",
+  "noMessagesTitle": "Inga meddelanden",
+  "noMessagesDesc": "Starta en konversation för att se meddelanden här",
+  "enterUrlPlaceholder": "Ange URL...",
+  "awaitingApproval": "Väntar på godkännande",
+  "statusPending": "Väntar",
+  "statusRunning": "Körs",
+  "statusResponded": "Besvarad",
+  "statusCompleted": "Slutförd",
+  "statusError": "Fel",
+  "statusDenied": "Nekad",
+  "parametersLabel": "Parametrar",
+  "resultLabel": "Resultat",
+  "errorLabel": "Fel",
+  "consoleTitle": "Konsol",
+  "consoleNoOutput": "Ingen konsolutdata",
   "rateConversation": "Hur var din upplevelse?",
   "feedbackPositive": "Bra",
   "feedbackNeutral": "Okej",
@@ -37,5 +62,13 @@
   "submitFeedback": "Skicka feedback",
   "skipFeedback": "Hoppa över",
   "thankYouFeedback": "Tack för din feedback!",
-  "feedbackSubmitted": "Feedback skickat framgångsrikt"
+  "feedbackSubmitted": "Feedback skickat framgångsrikt",
+  "chainOfThought": "Chain of Thought",
+  "modelSelectorTitle": "Model Selector",
+  "prevBranch": "Previous branch",
+  "nextBranch": "Next branch",
+  "of": "of",
+  "imageLabel": "Image",
+  "attachmentLabel": "Attachment"
+  ,"poweredBy": "Powered by "
 }

@@ -8,7 +8,7 @@ jest.mock('next/font/google', () => ({
   Geist_Mono: () => ({ variable: '--font-geist-mono' }),
 }));
 
- 
+
 describe('RootLayout', () => {
   let RootLayout: React.ComponentType<{ children: React.ReactNode }>;
   let metadata: { title: string; description: string };
@@ -34,9 +34,14 @@ describe('RootLayout', () => {
   });
 
   it('exports metadata with correct title and description', () => {
+    // Use locale-driven expectations to avoid hard-coded strings
+    // Import English locale directly for the test
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const en = require('../locales/en.json');
+
     expect(metadata).toEqual({
-      title: 'Companin Chat Widget',
-      description: 'AI-powered chat widget for your website',
+      title: en.appTitle,
+      description: en.appDescription,
     });
   });
 

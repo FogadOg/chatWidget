@@ -37,12 +37,13 @@ describe('public/widget.js loader', () => {
     window.__COMPANIN_WIDGET__ = false;
   });
 
-  it('injects iframe immediately with no placeholder button', () => {
+        __COMPANY_NAME_WIDGET__?: boolean;
     inject({
       'data-client-id': 'c',
       'data-assistant-id': 'a',
       'data-config-id': 'cfg',
     });
+    import { WIDGET_SCRIPT_ID, COMPANY_NAME } from '../lib/constants';
 
     const iframe = document.querySelector('#companin-widget-container iframe');
     expect(iframe).toBeTruthy();
@@ -67,14 +68,14 @@ describe('public/widget.js loader', () => {
     const iframe = document.querySelector('#companin-widget-container iframe');
     expect(iframe).toBeTruthy();
     expect(document.querySelector('#companin-widget-container button')).toBeNull();
-  });
+        const container = document.getElementById(`${WIDGET_SCRIPT_ID}-container`);
 
   it('adds outer padding around compact button size', () => {
     inject({
-      'data-client-id': 'c',
+          window.__COMPANY_NAME_WIDGET__ = false;
       'data-assistant-id': 'a',
       'data-config-id': 'cfg',
-    });
+          window[`__${COMPANY_NAME.toUpperCase()}_WIDGET__`] = false;
 
     window.dispatchEvent(new MessageEvent('message', {
       data: {
@@ -86,10 +87,10 @@ describe('public/widget.js loader', () => {
 
     const container = document.getElementById('companin-widget-container');
     expect(container).toBeTruthy();
-    expect(container?.style.padding).toBe('8px');
+        const iframe = document.querySelector(`#${WIDGET_SCRIPT_ID}-container iframe`);
   });
 
-  it('adds outer padding when compact size arrives as strings', () => {
+        expect(document.querySelector(`#${WIDGET_SCRIPT_ID}-container button`)).toBeNull();
     inject({
       'data-client-id': 'c',
       'data-assistant-id': 'a',
@@ -100,7 +101,7 @@ describe('public/widget.js loader', () => {
       data: {
         type: 'WIDGET_RESIZE',
         data: { width: '56', height: '56', position: 'bottom-right', edge_offset: 20 },
-      },
+        const iframe = document.querySelector(`#${WIDGET_SCRIPT_ID}-container iframe`);
       origin: 'https://widget.companin.tech',
     }));
 
@@ -120,7 +121,7 @@ describe('public/widget.js loader', () => {
       data: {
         type: 'WIDGET_RESIZE',
         data: { width: 320, height: 420, position: 'bottom-right', edgeOffset: '28' },
-      },
+        const container = document.getElementById(`${WIDGET_SCRIPT_ID}-container`);
       origin: 'https://widget.companin.tech',
     }));
 
@@ -140,7 +141,7 @@ describe('public/widget.js loader', () => {
 
       const openSpy = jest.fn();
       const closeSpy = jest.fn();
-      window.CompaninWidget.onOpen(openSpy);
+        const container = document.getElementById(`${WIDGET_SCRIPT_ID}-container`);
       window.CompaninWidget.onClose(closeSpy);
 
       window.CompaninWidget.show();
@@ -160,7 +161,7 @@ describe('public/widget.js loader', () => {
       });
 
       // simulate widget posting a message before host registers
-      const msg = { id: 'foo', text: 'bar' };
+        const container = document.getElementById(`${WIDGET_SCRIPT_ID}-container`);
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'WIDGET_MESSAGE', data: msg }, origin: 'https://widget.companin.tech' }));
 
       const spy = jest.fn();

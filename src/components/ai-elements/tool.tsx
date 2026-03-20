@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import en from "../../../locales/en.json";
 import type { ToolUIPart } from "ai";
 import {
   CheckCircleIcon,
@@ -38,13 +39,13 @@ export type ToolHeaderProps = {
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
   const labels: Record<ToolUIPart["state"], string> = {
-    "input-streaming": "Pending",
-    "input-available": "Running",
-    "approval-requested": "Awaiting Approval",
-    "approval-responded": "Responded",
-    "output-available": "Completed",
-    "output-error": "Error",
-    "output-denied": "Denied",
+    "input-streaming": en.statusPending,
+    "input-available": en.statusRunning,
+    "approval-requested": en.awaitingApproval,
+    "approval-responded": en.statusResponded,
+    "output-available": en.statusCompleted,
+    "output-error": en.statusError,
+    "output-denied": en.statusDenied,
   };
 
   const icons: Record<ToolUIPart["state"], ReactNode> = {
@@ -108,9 +109,9 @@ export type ToolInputProps = ComponentProps<"div"> & {
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
   <div className={cn("space-y-2 overflow-hidden p-4", className)} {...props}>
-    <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-      Parameters
-    </h4>
+      <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+        {en.parametersLabel}
+      </h4>
     <div className="rounded-md bg-muted/50">
       <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
     </div>
@@ -145,7 +146,7 @@ export const ToolOutput = ({
   return (
     <div className={cn("space-y-2 p-4", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {errorText ? "Error" : "Result"}
+        {errorText ? en.errorLabel : en.resultLabel}
       </h4>
       <div
         className={cn(

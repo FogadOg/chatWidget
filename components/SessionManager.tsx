@@ -6,7 +6,7 @@ import { useEffect, useCallback } from 'react';
 import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode, createNetworkError } from 'lib/errorHandling';
 import { embedOriginHeader } from 'lib/api';
 import { logError } from 'lib/logger';
-import { TIMEOUTS } from 'lib/constants';
+import { TIMEOUTS, STORAGE_PREFIX } from 'lib/constants';
 import { API } from 'lib/api';
 import { getOrCreateVisitorId, getStoredSessionByKey, storeSessionByKey } from 'lib/sessionStorage';
 import type { Message } from 'types/widget';
@@ -28,8 +28,8 @@ export default function SessionManager({
   onSessionError,
   onMessagesLoaded
 }: SessionManagerProps) {
-  const storageKey = `companin-session-${assistantId}`;
-  const visitorKey = `companin-visitor-${assistantId}`;
+  const storageKey = `${STORAGE_PREFIX}session-${assistantId}`;
+  const visitorKey = `${STORAGE_PREFIX}visitor-${assistantId}`;
 
   // Helper function to get stored session data
   const getStoredSession = useCallback(() => {

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
+import en from "../../../locales/en.json";
 
 type ChainOfThoughtContextValue = {
   isOpen: boolean;
@@ -94,7 +95,7 @@ export const ChainOfThoughtHeader = memo(
         >
           <BrainIcon className="size-4" />
           <span className="flex-1 text-left">
-            {children ?? "Chain of Thought"}
+            {children ?? en.chainOfThought}
           </span>
           <ChevronDownIcon
             className={cn(

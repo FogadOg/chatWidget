@@ -1,11 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 (function () {
-  // Prevent multiple initializations
-  if (window.__COMPANIN_WIDGET__) {
-    console.warn("Companin Widget: Already initialized");
+  // Local constants to mirror centralized app constants (keeps single-place edits easy)
+  const STORAGE_PREFIX = 'companin-';
+  const WIDGET_SCRIPT_ID = 'companin-widget';
+  const COMPANY_NAME = 'Companin';
+  let POWERED_BY_TEXT = (typeof window !== 'undefined' && window[`__${COMPANY_NAME.toUpperCase()}_WIDGET_LOCALES__`] && window[`__${COMPANY_NAME.toUpperCase()}_WIDGET_LOCALES__`].poweredBy) || 'Powered by ';
+  const BASE_WIDGET_HOST = 'https://widget.companin.tech';
+
+  // Prevent multiple initializations (dynamic flag based on company name)
+  const globalFlagName = `__${COMPANY_NAME.toUpperCase()}_WIDGET__`;
+  if (window[globalFlagName]) {
+    console.warn(COMPANY_NAME + ' Widget: Already initialized');
     return;
   }
-  window.__COMPANIN_WIDGET__ = true;
+  window[globalFlagName] = true;
 
   // Error tracking
   const errors = [];
@@ -16,7 +24,7 @@
       context,
     };
     errors.push(error);
-    console.error("Companin Widget Error:", message, context);
+    console.error(COMPANY_NAME + ' Widget Error:', message, context);
   };
 
   try {
@@ -25,6 +33,17 @@
       logError("Failed to get current script reference", {});
       return;
     }
+
+    // Resolve powered-by text: attribute -> global locales -> default
+    try {
+      const poweredByAttr = script.getAttribute && script.getAttribute('data-powered-by');
+      if (poweredByAttr) {
+        POWERED_BY_TEXT = poweredByAttr;
+      } else {
+        const globalLocales = window[`__${COMPANY_NAME.toUpperCase()}_WIDGET_LOCALES__`];
+        if (globalLocales && globalLocales.poweredBy) POWERED_BY_TEXT = globalLocales.poweredBy;
+      }
+    } catch (e) {}
 
     // Get attributes with validation
     const clientId = script.getAttribute("data-client-id");
@@ -60,12 +79,25 @@
     const isDev = script.getAttribute("data-dev") === "true";
     const baseUrl = isDev
       ? "http://localhost:3001"
-      : "https://widget.companin.tech";
+      : BASE_WIDGET_HOST;
 
     // Allow the host page to explicitly set the postMessage target origin.
     // This is useful when the widget is hosted on a different / custom domain.
     const explicitTargetOrigin = script.getAttribute("data-target-origin") || script.getAttribute("data-parent-origin");
     const targetOrigin = (explicitTargetOrigin && explicitTargetOrigin.trim()) || baseUrl;
+
+    // Try to load locale file from the widget host to get localized strings (non-blocking)
+    try {
+      const localeUrl = baseUrl.replace(/\/$/, '') + `/locales/${encodeURIComponent(locale)}.json`;
+      fetch(localeUrl, { cache: 'no-cache' })
+        .then((res) => (res && res.ok) ? res.json() : null)
+        .then((data) => {
+          if (data && data.poweredBy) {
+            POWERED_BY_TEXT = data.poweredBy;
+          }
+        })
+        .catch(() => {});
+    } catch (e) {}
 
     // performance hint: warm up connection to widget host
     (function addPreconnectHints() {
@@ -96,7 +128,7 @@
 
     // Create container with error handling
     const container = document.createElement("div");
-    container.id = "companin-widget-container";
+    container.id = WIDGET_SCRIPT_ID + '-container';
     const COMPACT_BUTTON_MAX_SIZE = 64;
     const COMPACT_BUTTON_OUTER_PADDING = 8;
     const parsePixelValue = (value) => {
@@ -181,7 +213,7 @@
           background-color: transparent;
         `;
         iframe.setAttribute("allow", "clipboard-write");
-        iframe.setAttribute("title", "Companin Chat Widget");
+        iframe.setAttribute("title", COMPANY_NAME + ' Chat Widget');
 
         // Handle iframe load errors
         let iframeLoaded = false;
@@ -225,7 +257,7 @@
 
       // Ensure any hardcoded right positioning is removed (defensive):
       try {
-        const _c = document.getElementById('companin-widget-container');
+        const _c = document.getElementById(WIDGET_SCRIPT_ID + '-container');
         if (_c) {
           // also sanitize raw style attribute if present
           const s = _c.getAttribute && _c.getAttribute('style');
@@ -296,8 +328,9 @@
 
         function dispatchDomEvents(name, envelope) {
           try {
-            window.dispatchEvent(new CustomEvent(`companinWidget:${name}`, { detail: envelope }));
-            window.dispatchEvent(new CustomEvent(`companin:widget:${name}`, { detail: envelope }));
+            // Emit events using configured script IDs and storage prefix
+            window.dispatchEvent(new CustomEvent(WIDGET_SCRIPT_ID + ':' + name, { detail: envelope }));
+            window.dispatchEvent(new CustomEvent(STORAGE_PREFIX + 'widget:' + name, { detail: envelope }));
           } catch (e) {
             logError('Failed dispatching DOM widget event', { event: name, error: e && e.message });
           }
@@ -469,7 +502,11 @@
                 container.parentNode.removeChild(container);
               }
               delete window.CompaninWidget;
-              window.__COMPANIN_WIDGET__ = false;
+              try {
+                window[globalFlagName] = false;
+              } catch (e) {
+                // ignore
+              }
             } catch (err) {
               logError("Failed to destroy widget", { error: err.message });
             }
@@ -682,7 +719,7 @@
   function showErrorWidget(title, message) {
     try {
       const errorContainer = document.createElement("div");
-      errorContainer.id = "companin-widget-error";
+      errorContainer.id = WIDGET_SCRIPT_ID + '-error';
       errorContainer.style.cssText = `
         position: fixed;
         bottom: 20px;
@@ -708,6 +745,9 @@
             <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">${message}</p>
           </div>
           <button onclick="this.parentElement.parentElement.remove()" style="flex-shrink: 0; background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 20px; line-height: 1; padding: 0;">×</button>
+        </div>
+        <div style="margin-top:8px; font-size:12px; color:#6b7280;">
+          ${POWERED_BY_TEXT} <a href="https://${COMPANY_NAME.toLowerCase()}.tech" target="_blank" rel="noopener noreferrer" style="color:#2563eb; text-decoration:none; margin-left:6px;">${COMPANY_NAME}</a>
         </div>
       `;
 
@@ -746,6 +786,9 @@
             font-size: 13px;
             cursor: pointer;
           ">Reload Page</button>
+          <div style="margin-top:8px; font-size:12px; color:#6b7280;">
+            ${POWERED_BY_TEXT} <a href="https://${COMPANY_NAME.toLowerCase()}.tech" target="_blank" rel="noopener noreferrer" style="color:#2563eb; text-decoration:none; margin-left:6px;">${COMPANY_NAME}</a>
+          </div>
         </div>
       `;
     } catch (err) {

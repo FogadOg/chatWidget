@@ -1,4 +1,5 @@
 import * as helpers from '../app/embed/session/helpers';
+import { STORAGE_PREFIX } from '../lib/constants';
 
 describe('embed session helpers', () => {
   beforeEach(() => {
@@ -7,9 +8,9 @@ describe('embed session helpers', () => {
   });
 
   test('storage key helpers produce expected strings', () => {
-    expect(helpers.sessionStorageKey('c1', 'a1')).toBe('companin-session-c1-a1');
-    expect(helpers.unreadStorageKey('c1', 'a1')).toBe('companin-unread-c1-a1');
-    expect(helpers.lastReadStorageKey('c1', 'a1')).toBe('companin-lastread-c1-a1');
+    expect(helpers.sessionStorageKey('c1', 'a1')).toBe(`${STORAGE_PREFIX}session-c1-a1`);
+    expect(helpers.unreadStorageKey('c1', 'a1')).toBe(`${STORAGE_PREFIX}unread-c1-a1`);
+    expect(helpers.lastReadStorageKey('c1', 'a1')).toBe(`${STORAGE_PREFIX}lastread-c1-a1`);
   });
 
   test('getVisitorId generates and persists id', () => {
@@ -18,7 +19,7 @@ describe('embed session helpers', () => {
       .mockReturnValue('11111111-1111-4111-8111-111111111111');
 
     const vid = helpers.getVisitorId('clientX');
-    const key = `companin-visitor-clientX`;
+    const key = `${STORAGE_PREFIX}visitor-clientX`;
     expect(localStorage.getItem(key)).toBe(vid);
     expect(vid).toBe('widget-11111111-1111-4111-8111-111111111111');
 

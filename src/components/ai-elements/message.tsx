@@ -20,6 +20,7 @@ import {
   PaperclipIcon,
   XIcon,
 } from "lucide-react";
+import en from "../../../locales/en.json";
 import type { ComponentProps, HTMLAttributes, ReactElement, ComponentType } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -258,7 +259,7 @@ export const MessageBranchPrevious = ({
 
   return (
     <Button
-      aria-label="Previous branch"
+      aria-label={en.prevBranch}
       disabled={totalBranches <= 1}
       onClick={goToPrevious}
       size="icon-sm"
@@ -282,7 +283,7 @@ export const MessageBranchNext = ({
 
   return (
     <Button
-      aria-label="Next branch"
+      aria-label={en.nextBranch}
       disabled={totalBranches <= 1}
       onClick={goToNext}
       size="icon-sm"
@@ -311,7 +312,7 @@ export const MessageBranchPage = ({
       )}
       {...props}
     >
-      {currentBranch + 1} of {totalBranches}
+      {currentBranch + 1} {en.of} {totalBranches}
     </ButtonGroupText>
   );
 };
@@ -352,7 +353,7 @@ export function MessageAttachment({
   const mediaType =
     data.mediaType?.startsWith("image/") && data.url ? "image" : "file";
   const isImage = mediaType === "image";
-  const attachmentLabel = filename || (isImage ? "Image" : "Attachment");
+  const attachmentLabel = filename || (isImage ? en.imageLabel : en.attachmentLabel);
 
   return (
     <div
