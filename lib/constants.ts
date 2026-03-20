@@ -6,13 +6,15 @@ export const STORAGE_PREFIX = "companin-";
 export const WIDGET_SCRIPT_ID = "companin-widget";
 export const DOCS_WIDGET_SCRIPT_ID = "companin-docs-widget";
 
-export default {
+const WIDGET_CONSTANTS = {
   BRAND_NAME,
   COMPANY_NAME,
   STORAGE_PREFIX,
   WIDGET_SCRIPT_ID,
   DOCS_WIDGET_SCRIPT_ID,
 };
+
+export default WIDGET_CONSTANTS;
 // Widget Constants
 
 // Timeout values (in milliseconds)

@@ -43,7 +43,7 @@
         const globalLocales = window[`__${COMPANY_NAME.toUpperCase()}_WIDGET_LOCALES__`];
         if (globalLocales && globalLocales.poweredBy) POWERED_BY_TEXT = globalLocales.poweredBy;
       }
-    } catch (e) {}
+    } catch (err) { void err; }
 
     // Get attributes with validation
     const clientId = script.getAttribute("data-client-id");

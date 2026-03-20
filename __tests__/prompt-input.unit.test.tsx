@@ -32,7 +32,7 @@ test('useProviderAttachments throws when not wrapped', () => {
   const TestComp = () => {
     const { useProviderAttachments } = require('../src/components/ai-elements/prompt-input');
     // call the hook - it should throw during render
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     useProviderAttachments();
     return null;
   };

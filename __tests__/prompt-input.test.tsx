@@ -154,7 +154,7 @@ describe("PromptInputSpeechButton behavior", () => {
       <PromptInputProvider>
         <div style={{ padding: 10 }}>
           {/* import lazily to avoid other UI dependencies */}
-          {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+          { }
           {/* @ts-ignore */}
           <PromptInputSpeechButtonWrapper />
         </div>
@@ -164,7 +164,7 @@ describe("PromptInputSpeechButton behavior", () => {
     // small wrapper to import the button lazily
     const PromptInputSpeechButtonWrapper = () => {
       // dynamic import to avoid type errors in test env
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+       
       const { PromptInputSpeechButton } = require("../src/components/ai-elements/prompt-input");
       return <PromptInputSpeechButton />;
     };

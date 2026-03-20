@@ -4,7 +4,7 @@ import { EMBED_EVENTS } from '../lib/embedConstants'
 describe('onInitConfig', () => {
   afterEach(() => {
     // remove any listeners
-    window._removeTestHandlers && window._removeTestHandlers()
+    if (window._removeTestHandlers) window._removeTestHandlers()
     jest.clearAllMocks()
   })
 

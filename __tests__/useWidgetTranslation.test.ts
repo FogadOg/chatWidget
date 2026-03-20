@@ -51,7 +51,7 @@ describe('useWidgetTranslation', () => {
         // @ts-ignore
         delete (global as any).window
         // require a fresh copy of the hook module and call the exported fn
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         const mod = require('../hooks/useWidgetTranslation')
         const out = mod.getInitialLocale()
         expect(out).toBe('en')
@@ -128,7 +128,7 @@ describe('useWidgetTranslation', () => {
       // @ts-ignore
       delete (global as any).window
       jest.resetModules()
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+       
       const mod = require('../hooks/useWidgetTranslation')
       expect(mod.getInitialLocale()).toBe('en')
     } finally {

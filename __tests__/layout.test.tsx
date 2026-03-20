@@ -36,7 +36,7 @@ describe('RootLayout', () => {
   it('exports metadata with correct title and description', () => {
     // Use locale-driven expectations to avoid hard-coded strings
     // Import English locale directly for the test
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const en = require('../locales/en.json');
 
     expect(metadata).toEqual({

@@ -19,7 +19,7 @@ describe("Reasoning components", () => {
   test("useReasoning throws when used outside Reasoning provider", () => {
     const Consumer = () => {
       // using the hook outside provider should throw
-      // eslint-disable-next-line react-hooks/rules-of-hooks
+       
       useReasoning();
       return null;
     };

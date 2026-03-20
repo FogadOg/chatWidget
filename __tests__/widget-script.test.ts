@@ -32,7 +32,7 @@ describe('public/widget.js loader', () => {
     const container = document.getElementById('companin-widget-container');
     if (container && container.parentNode) container.parentNode.removeChild(container);
     // reset global flag so subsequent injections can run
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+     
     // @ts-ignore
     window.__COMPANIN_WIDGET__ = false;
   });

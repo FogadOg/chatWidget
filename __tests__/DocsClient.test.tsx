@@ -69,7 +69,7 @@ describe.skip('DocsClient basic flows', () => {
     } catch (e) {
       // Some jsdom environments don't allow redefining location; fall back to setting href
       try {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+         
         // @ts-ignore
         window.location.href = 'http://localhost/';
       } catch (e) {
@@ -79,7 +79,7 @@ describe.skip('DocsClient basic flows', () => {
     document.title = 'Test Page'
     try {
       // jsdom may not allow setting referrer directly
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+       
       // @ts-ignore
       document.referrer = ''
     } catch (e) {
@@ -200,7 +200,7 @@ describe.skip('DocsClient component (coverage)', () => {
       jest.doMock('sonner', () => ({ toast: { success: jest.fn() } }));
 
       // Now require the component after mocks
-      // eslint-disable-next-line global-require
+       
       const DocsClient = require('../app/embed/docs/DocsClient').default;
 
       // Set up fetch mock: sequence of calls
@@ -222,7 +222,6 @@ describe.skip('DocsClient component (coverage)', () => {
 
       // Render the component
       const props = { clientId: 'client-1', assistantId: 'assistant-1', configId: 'cfg-1', locale: 'en', startOpen: true };
-      // eslint-disable-next-line testing-library/render-result-naming-convention
       render(React.createElement(DocsClient, props));
 
     }); // end isolateModules

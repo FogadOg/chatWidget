@@ -1,6 +1,6 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 import { useEffect, useCallback } from 'react';
 import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode, createNetworkError } from 'lib/errorHandling';
@@ -143,7 +143,7 @@ export default function SessionManager({
       onSessionError(errorMessage);
       logError(err instanceof Error ? err.message : String(err), { assistantId, action: 'createSession' });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [assistantId, authToken, locale, getVisitorId, storeSession, onSessionCreated, onSessionError]);
 
   const validateAndRestoreSession = useCallback(async (storedSessionId: string) => {

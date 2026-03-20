@@ -318,7 +318,7 @@ export default function EmbedClient({
     return () => clearInterval(interval);
   }, [sessionId, sessionStorageKey]);
 
-  /* eslint-disable react-hooks/exhaustive-deps */
+   
   useEffect(() => {
     // Use props instead of URL params
     const clientIdParam = initialClientId;
@@ -365,7 +365,7 @@ export default function EmbedClient({
       setIsEmbedded(true);
     }
   }, [initialClientId, initialAssistantId, initialConfigId]);
-  /* eslint-enable react-hooks/exhaustive-deps */
+   
 
   // Apply widget behavior settings when config is loaded
   useEffect(() => {
