@@ -7,13 +7,13 @@ describe('Home Page', () => {
   it('renders the main heading', () => {
     render(<Home />);
 
-    expect(screen.getByText('Companin Chat Widget')).toBeInTheDocument();
+    expect(screen.getByText('Customer Support AI Assistant Widget')).toBeInTheDocument();
   });
 
   it('renders the description', () => {
     render(<Home />);
 
-    expect(screen.getByText('AI-powered chat widget for your website. Embed intelligent conversations anywhere with just a few lines of code.')).toBeInTheDocument();
+    expect(screen.getByText('Customer Support AI Assistant chat widget for your website')).toBeInTheDocument();
   });
 
   it('renders Get Started button', () => {
