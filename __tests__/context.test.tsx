@@ -3,17 +3,17 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 jest.mock("tokenlens", () => ({ getUsage: jest.fn() }));
-jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/hover-card", () => ({
+jest.mock("@/components/ui/hover-card", () => ({
   HoverCard: ({ children }: any) => <div data-testid="hovercard">{children}</div>,
   HoverCardContent: ({ children }: any) => <div>{children}</div>,
   HoverCardTrigger: ({ children }: any) => <div>{children}</div>,
 }));
-jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/progress", () => ({
+jest.mock("@/components/ui/progress", () => ({
   Progress: ({ value, className }: any) => (
-    <div data-testid="progress" data-value={value} className={className} />
+    <div role="progressbar" aria-valuenow={value} data-testid="progress" data-value={value} className={className} />
   ),
 }));
-jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/button", () => ({
+jest.mock("@/components/ui/button", () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 

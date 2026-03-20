@@ -5,12 +5,12 @@
 import React from "react"
 import { render } from "@testing-library/react"
 
-jest.doMock("/home/fogad/Documents/assistantProj/widget-app/components/ui/button", () => ({
+jest.doMock("@/components/ui/button", () => ({
   __esModule: true,
   Button: ({ children, ...p }: any) => <button data-testid="ctx-btn" {...p}>{children}</button>,
 }), { virtual: true })
 
-jest.doMock("/home/fogad/Documents/assistantProj/widget-app/components/ui/hover-card", () => {
+jest.doMock("@/components/ui/hover-card", () => {
   const React = require("react")
   return {
     __esModule: true,
@@ -23,7 +23,7 @@ jest.doMock("/home/fogad/Documents/assistantProj/widget-app/components/ui/hover-
   }
 }, { virtual: true })
 
-jest.doMock("/home/fogad/Documents/assistantProj/widget-app/components/ui/progress", () => ({
+jest.doMock("@/components/ui/progress", () => ({
   __esModule: true,
   Progress: ({ value, ...p }: any) => <div data-testid="progress" data-value={String(value)} {...p} />,
 }), { virtual: true })

@@ -26,7 +26,10 @@ test("Artifact renders header, close and action (with and without tooltip)", () 
     const React = require("react")
     const Provider = ({ children }: any) => <div data-testid="tooltip-provider">{children}</div>
     const Root = ({ children, ...props }: any) => <div data-testid="tooltip-root" {...props}>{children}</div>
-    const Trigger = ({ children, ...props }: any) => <span data-testid="tooltip-trigger" {...props}>{children}</span>
+    const Trigger = ({ children, asChild, ...props }: any) => {
+      if (asChild && React.isValidElement(children)) return React.cloneElement(children, props)
+      return <span data-testid="tooltip-trigger" {...props}>{children}</span>
+    }
     const Content = ({ children, ...props }: any) => <div data-testid="tooltip-content" {...props}>{children}</div>
     return { __esModule: true, TooltipProvider: Provider, Tooltip: Root, TooltipTrigger: Trigger, TooltipContent: Content }
   })
@@ -63,7 +66,10 @@ test("CheckpointTrigger renders Button and Tooltip when tooltip provided", () =>
   jest.doMock("../src/components/ui/tooltip", () => {
     const React = require("react")
     const Root = ({ children }: any) => <div data-testid="tooltip-root">{children}</div>
-    const Trigger = ({ children, ...props }: any) => <span data-testid="tooltip-trigger" {...props}>{children}</span>
+    const Trigger = ({ children, asChild, ...props }: any) => {
+      if (asChild && React.isValidElement(children)) return React.cloneElement(children, props)
+      return <span data-testid="tooltip-trigger" {...props}>{children}</span>
+    }
     const Content = ({ children }: any) => <div data-testid="tooltip-content">{children}</div>
     return { __esModule: true, Tooltip: Root, TooltipTrigger: Trigger, TooltipContent: Content }
   })
@@ -97,7 +103,7 @@ test("Controls renders underlying primitive", () => {
 
 test("Confirmation returns null without approval and renders when provided", () => {
   jest.resetModules()
-  jest.doMock("/home/fogad/Documents/assistantProj/widget-app/src/components/ui/alert", () => ({ __esModule: true, Alert: ({ children, ...p }: any) => <div data-testid="alert" {...p}>{children}</div>, AlertDescription: ({ children, ...p }: any) => <div data-testid="alert-desc" {...p}>{children}</div> }))
+  jest.doMock("@/components/ui/alert", () => ({ __esModule: true, Alert: ({ children, ...p }: any) => <div data-testid="alert" {...p}>{children}</div>, AlertDescription: ({ children, ...p }: any) => <div data-testid="alert-desc" {...p}>{children}</div> }))
   const { Confirmation, ConfirmationTitle } = require("../src/components/ai-elements/confirmation")
   const { queryByTestId, getByTestId } = render(<Confirmation state="approval-responded" approval={{ id: "1", approved: true }} />)
   expect(getByTestId("alert")).toBeTruthy()

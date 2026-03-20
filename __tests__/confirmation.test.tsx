@@ -7,7 +7,7 @@ import { render } from "@testing-library/react"
 
 // Mock ui primitives used by Confirmation
 jest.mock(
-  "/home/fogad/Documents/assistantProj/widget-app/components/ui/alert",
+  "@/components/ui/alert",
   () => ({
     Alert: ({ children, ...p }: any) => <div data-slot="alert" {...p}>{children}</div>,
     AlertDescription: ({ children, ...p }: any) => <div data-slot="alert-desc" {...p}>{children}</div>,
@@ -16,7 +16,7 @@ jest.mock(
 )
 
 jest.mock(
-  "/home/fogad/Documents/assistantProj/widget-app/components/ui/button",
+  "@/components/ui/button",
   () => ({ Button: ({ children, ...p }: any) => <button {...p}>{children}</button> }),
   { virtual: true }
 )

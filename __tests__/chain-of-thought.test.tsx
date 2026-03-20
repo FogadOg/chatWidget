@@ -19,7 +19,7 @@ jest.mock("@radix-ui/react-use-controllable-state", () => ({
 }))
 
 // Simple UI primitives mocks: Collapsible will inject onClick handler onto trigger
-jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/collapsible", () => {
+jest.mock("@/components/ui/collapsible", () => {
   const React = require("react")
 
   const Collapsible = ({ children, open, onOpenChange }: any) => {
@@ -37,7 +37,13 @@ jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/collapsi
   }
 
   const CollapsibleTrigger = ({ children, ...props }: any) => {
-    return React.createElement("button", { "data-testid": "cot-trigger", ...props }, children)
+    const { open } = props as any
+    const attrs: any = { "data-testid": "cot-trigger", ...props }
+    if (typeof open !== "undefined") {
+      attrs["data-state"] = open ? "open" : "closed"
+      attrs["aria-expanded"] = String(!!open)
+    }
+    return React.createElement("button", attrs, children)
   }
 
   const CollapsibleContent = ({ children, ...props }: any) => {
@@ -47,7 +53,7 @@ jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/collapsi
   return { __esModule: true, Collapsible, CollapsibleTrigger, CollapsibleContent }
 }, { virtual: true })
 
-jest.mock("/home/fogad/Documents/assistantProj/widget-app/components/ui/badge", () => ({ Badge: ({ children, ...p }: any) => <span {...p}>{children}</span> }), { virtual: true })
+jest.mock("@/components/ui/badge", () => ({ Badge: ({ children, ...p }: any) => <span {...p}>{children}</span> }), { virtual: true })
 
 jest.mock("lucide-react", () => ({
   __esModule: true,
