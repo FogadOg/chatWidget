@@ -11,10 +11,10 @@ export default function Home() {
             </svg>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Companin Chat Widget
+            Companin Customer Support AI Assistant Widget
           </h1>
           <p className="max-w-md text-lg leading-7 text-zinc-600 dark:text-zinc-400">
-            AI-powered chat widget for your website. Embed intelligent conversations anywhere with just a few lines of code.
+            Customer Support AI Assistant widget for your website. Embed intelligent conversations anywhere with just a few lines of code.
           </p>
         </div>
         <div className="flex flex-col gap-4 w-full max-w-md">

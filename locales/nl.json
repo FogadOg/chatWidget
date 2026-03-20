@@ -17,8 +17,8 @@
     "minimize": "Chat minimaliseren"
   },
   "newMessageAnnouncement": "Nieuw bericht: {message}",
-  "viewUncertaintyLog": "Bekijk assistentens onzekerheidslogg",
-  "uncertaintyResponsesHint": "De assistent heeft onzekerheid aangegeven in sommige antwoorden",
+  "viewUncertaintyLog": "Bekijk het onzekerheidslogboek van Customer Support AI Assistant",
+  "uncertaintyResponsesHint": "Customer Support AI Assistant heeft onzekerheid getoond in sommige antwoorden",
   "closeFeedback": "Sluit feedback",
   "unreadMessages": {
     "one": "{count} ongelezen bericht",
@@ -28,7 +28,7 @@
     "one": "{count} bron",
     "other": "{count} bronnen"
   },
-  "assistantTyping": "Assistent is aan het typen",
+  "assistantTyping": "Customer Support AI Assistant is aan het typen",
   "rateConversation": "Hoe was uw ervaring?",
   "feedbackPositive": "Goed",
   "feedbackNeutral": "Oké",

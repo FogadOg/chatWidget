@@ -17,8 +17,8 @@
     "minimize": "Chat minimieren"
   },
   "newMessageAnnouncement": "Neue Nachricht: {message}",
-  "viewUncertaintyLog": "Assistent: vis usikkerhetslogg",
-  "uncertaintyResponsesHint": "Assistenten har vist usikkerhet i noen svar",
+  "viewUncertaintyLog": "Customer Support AI Assistant Unsicherheitsprotokoll anzeigen",
+  "uncertaintyResponsesHint": "Customer Support AI Assistant hat in einigen Antworten Unsicherheit angezeigt",
   "closeFeedback": "Lukk tilbakemelding",
   "unreadMessages": {
     "one": "{count} ungelesene Nachricht",
@@ -28,7 +28,7 @@
     "one": "{count} Quelle",
     "other": "{count} Quellen"
   },
-  "assistantTyping": "Assistent tippt",
+  "assistantTyping": "Customer Support AI Assistant tippt",
   "rateConversation": "Wie war Ihre Erfahrung?",
   "feedbackPositive": "Gut",
   "feedbackNeutral": "Okay",

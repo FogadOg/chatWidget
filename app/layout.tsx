@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Companin Chat Widget",
-  description: "AI-powered chat widget for your website",
+  title: "Companin Customer Support AI Assistant Widget",
+  description: "Customer Support AI Assistant chat widget for your website",
 };
 
 export default function RootLayout({

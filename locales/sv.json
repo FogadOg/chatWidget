@@ -17,8 +17,8 @@
     "minimize": "Minimera chatt"
   },
   "newMessageAnnouncement": "Nytt meddelande: {message}",
-  "viewUncertaintyLog": "Visa assistentens osäkerhetslogg",
-  "uncertaintyResponsesHint": "Assistenten har visat osäkerhet i vissa svar",
+  "viewUncertaintyLog": "Visa Customer Support AI Assistant osäkerhetslogg",
+  "uncertaintyResponsesHint": "Customer Support AI Assistant har visat osäkerhet i vissa svar",
   "closeFeedback": "Stäng feedback",
   "unreadMessages": {
     "one": "{count} olast meddelande",
@@ -28,7 +28,7 @@
     "one": "{count} kalla",
     "other": "{count} kallor"
   },
-  "assistantTyping": "Assistenten skriver",
+  "assistantTyping": "Customer Support AI Assistant skriver",
   "rateConversation": "Hur var din upplevelse?",
   "feedbackPositive": "Bra",
   "feedbackNeutral": "Okej",

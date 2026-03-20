@@ -17,8 +17,8 @@
     "minimize": "Riduci chat"
   },
   "newMessageAnnouncement": "Nuovo messaggio: {message}",
-  "viewUncertaintyLog": "Visualizza registro di incertezza dell'assistente",
-  "uncertaintyResponsesHint": "L'assistente ha mostrato incertezza in alcune risposte",
+  "viewUncertaintyLog": "Visualizza il registro di incertezza di Customer Support AI Assistant",
+  "uncertaintyResponsesHint": "Customer Support AI Assistant ha mostrato incertezza in alcune risposte",
   "closeFeedback": "Chiudi feedback",
   "unreadMessages": {
     "one": "{count} messaggio non letto",
@@ -28,7 +28,7 @@
     "one": "{count} fonte",
     "other": "{count} fonti"
   },
-  "assistantTyping": "L'assistente sta scrivendo",
+  "assistantTyping": "Customer Support AI Assistant sta scrivendo",
   "rateConversation": "Com'è stata la tua esperienza?",
   "feedbackPositive": "Buono",
   "feedbackNeutral": "Okay",

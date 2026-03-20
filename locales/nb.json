@@ -17,8 +17,8 @@
     "minimize": "Minimer chat"
   },
   "newMessageAnnouncement": "Ny melding: {message}",
-  "viewUncertaintyLog": "Vis assistentens usikkerhetslogg",
-  "uncertaintyResponsesHint": "Assistenten har vist usikkerhet i noen svar",
+  "viewUncertaintyLog": "Vis Customer Support AI Assistant usikkerhetslogg",
+  "uncertaintyResponsesHint": "Customer Support AI Assistant har vist usikkerhet i noen svar",
   "closeFeedback": "Lukk tilbakemelding",
   "unreadMessages": {
     "one": "{count} ulest melding",
@@ -28,7 +28,7 @@
     "one": "{count} kilde",
     "other": "{count} kilder"
   },
-  "assistantTyping": "Assistenten skriver",
+  "assistantTyping": "Customer Support AI Assistant skriver",
   "rateConversation": "Hvordan var opplevelsen din?",
   "feedbackPositive": "Bra",
   "feedbackNeutral": "Greit",
