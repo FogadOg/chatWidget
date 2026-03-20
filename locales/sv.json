@@ -63,12 +63,12 @@
   "skipFeedback": "Hoppa över",
   "thankYouFeedback": "Tack för din feedback!",
   "feedbackSubmitted": "Feedback skickat framgångsrikt",
-  "chainOfThought": "Chain of Thought",
-  "modelSelectorTitle": "Model Selector",
-  "prevBranch": "Previous branch",
-  "nextBranch": "Next branch",
-  "of": "of",
-  "imageLabel": "Image",
-  "attachmentLabel": "Attachment"
+  "chainOfThought": "Tankegång",
+  "modelSelectorTitle": "Modellväljare",
+  "prevBranch": "Föregående gren",
+  "nextBranch": "Nästa gren",
+  "of": "av",
+  "imageLabel": "Bild",
+  "attachmentLabel": "Bilaga"
   ,"poweredBy": "Drivs av "
 }

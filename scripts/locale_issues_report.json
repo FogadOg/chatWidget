@@ -1,102 +1,83 @@
 {
   "de.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 2,
-    "untranslated_sample": [
-      "chat",
-      "feedbackNeutral"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "es.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 1,
-    "untranslated_sample": [
-      "chat"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "fr.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 3,
-    "untranslated_sample": [
-      "chat",
-      "sourcesCount.one",
-      "sourcesCount.other"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "it.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 2,
-    "untranslated_sample": [
-      "chat",
-      "feedbackNeutral"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "nb.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 2,
-    "untranslated_sample": [
-      "send",
-      "chat"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "nl.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 1,
-    "untranslated_sample": [
-      "chat"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "pt.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 1,
-    "untranslated_sample": [
-      "chat"
-    ],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "sv.json": {
-    "total_keys": 33,
+    "total_keys": 66,
     "empty_values_count": 0,
     "empty_values_sample": [],
     "untranslated_count": 0,

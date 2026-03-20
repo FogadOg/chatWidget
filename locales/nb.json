@@ -1,7 +1,7 @@
 {
   "typeYourMessage": "Skriv meldingen din...",
   "typeYourMessageLabel": "Skriv meldingen din",
-  "send": "Send",
+  "send": "Send melding",
   "sending": "Sender...",
   "failedToSendMessage": "Kunne ikke sende melding",
   "failedToLoadWidget": "Kunne ikke laste widgeten",
@@ -9,7 +9,7 @@
   "sessionOrAuthError": "Økt eller autentiseringstoken ikke tilgjengelig. Vennligst sjekk widget-konfigurasjonen din.",
   "networkErrorConnect": "Nettverksfeil: Kunne ikke koble til API",
   "failedToCreateSession": "Kunne ikke opprette økt",
-  "chat": "Chat",
+  "chat": "Samtale",
   "chatMessages": "Chatmeldinger",
   "chatControl": {
     "open": "Åpne chat",
@@ -63,12 +63,12 @@
   "skipFeedback": "Hopp over",
   "thankYouFeedback": "Takk for tilbakemeldingen!",
   "feedbackSubmitted": "Tilbakemelding sendt",
-  "chainOfThought": "Chain of Thought",
-  "modelSelectorTitle": "Model Selector",
-  "prevBranch": "Previous branch",
-  "nextBranch": "Next branch",
-  "of": "of",
-  "imageLabel": "Image",
-  "attachmentLabel": "Attachment"
+  "chainOfThought": "Tankerekke",
+  "modelSelectorTitle": "Modellvelger",
+  "prevBranch": "Forrige gren",
+  "nextBranch": "Neste gren",
+  "of": "av",
+  "imageLabel": "Bilde",
+  "attachmentLabel": "Vedlegg"
   ,"poweredBy": "Drevet av "
 }

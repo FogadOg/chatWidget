@@ -9,7 +9,7 @@
   "sessionOrAuthError": "Sessão ou token de autenticação não disponível. Por favor verifique a configuração do seu widget.",
   "networkErrorConnect": "Erro de rede: Não foi possível conectar à API",
   "failedToCreateSession": "Falha ao criar sessão",
-  "chat": "Chat",
+  "chat": "Conversa",
   "chatMessages": "Mensagens do chat",
   "chatControl": {
     "open": "Abrir chat",
@@ -52,7 +52,7 @@
   "parametersLabel": "Parâmetros",
   "resultLabel": "Resultado",
   "errorLabel": "Erro",
-  "consoleTitle": "Console",
+  "consoleTitle": "Registro",
   "consoleNoOutput": "Sem saída do console",
   "rateConversation": "Como foi sua experiência?",
   "feedbackPositive": "Bom",
@@ -63,12 +63,12 @@
   "skipFeedback": "Pular",
   "thankYouFeedback": "Obrigado pelo seu feedback!",
   "feedbackSubmitted": "Feedback enviado com sucesso",
-  "chainOfThought": "Chain of Thought",
-  "modelSelectorTitle": "Model Selector",
-  "prevBranch": "Previous branch",
-  "nextBranch": "Next branch",
-  "of": "of",
-  "imageLabel": "Image",
-  "attachmentLabel": "Attachment"
+  "chainOfThought": "Raciocínio",
+  "modelSelectorTitle": "Seletor de modelo",
+  "prevBranch": "Ramo anterior",
+  "nextBranch": "Próximo ramo",
+  "of": "de",
+  "imageLabel": "Imagem",
+  "attachmentLabel": "Anexo"
   ,"poweredBy": "Desenvolvido por "
 }

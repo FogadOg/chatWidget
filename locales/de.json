@@ -9,7 +9,7 @@
   "sessionOrAuthError": "Sitzung oder Authentifizierungstoken nicht verfügbar. Bitte überprüfen Sie Ihre Widget-Konfiguration.",
   "networkErrorConnect": "Netzwerkfehler: Konnte nicht mit der API verbinden",
   "failedToCreateSession": "Sitzung konnte nicht erstellt werden",
-  "chat": "Chat",
+  "chat": "Unterhaltung",
   "chatMessages": "Chat-Nachrichten",
   "chatControl": {
     "open": "Chat öffnen",
@@ -56,19 +56,19 @@
   "consoleNoOutput": "Keine Konsolenausgabe",
   "rateConversation": "Wie war Ihre Erfahrung?",
   "feedbackPositive": "Gut",
-  "feedbackNeutral": "Okay",
   "feedbackNegative": "Schlecht",
   "feedbackCommentPlaceholder": "Weitere Kommentare? (optional)",
   "submitFeedback": "Feedback senden",
   "skipFeedback": "Überspringen",
   "thankYouFeedback": "Vielen Dank für Ihr Feedback!",
-  "feedbackSubmitted": "Feedback erfolgreich gesendet"
-  ,"chainOfThought": "Chain of Thought",
-  "modelSelectorTitle": "Model Selector",
-  "prevBranch": "Previous branch",
-  "nextBranch": "Next branch",
-  "of": "of",
-  "imageLabel": "Image",
-  "attachmentLabel": "Attachment"
-  ,"poweredBy": "Bereitgestellt von "
+  "feedbackSubmitted": "Feedback erfolgreich gesendet",
+  "chainOfThought": "Gedankengang",
+  "modelSelectorTitle": "Modellauswahl",
+  "prevBranch": "Vorheriger Verlauf",
+  "nextBranch": "Nächster Verlauf",
+  "of": "von",
+  "imageLabel": "Bild",
+  "attachmentLabel": "Anhang",
+  "feedbackNeutral": "Neutral",
+  "poweredBy": "Bereitgestellt von "
 }

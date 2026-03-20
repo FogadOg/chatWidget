@@ -9,7 +9,7 @@
   "sessionOrAuthError": "Session ou jeton d'authentification non disponible. Veuillez vérifier la configuration de votre widget.",
   "networkErrorConnect": "Erreur réseau : Impossible de se connecter à l'API",
   "failedToCreateSession": "Échec de la création de la session",
-  "chat": "Chat",
+  "chat": "Conversation",
   "chatMessages": "Messages du chat",
   "chatControl": {
     "open": "Ouvrir le chat",
@@ -25,8 +25,8 @@
     "other": "{count} messages non lus"
   },
   "sourcesCount": {
-    "one": "{count} source",
-    "other": "{count} sources"
+    "one": "{count} référence",
+    "other": "{count} références"
   },
   "assistantTyping": "Customer Support AI Assistant est en train d'écrire",
   "appTitle": "Customer Support AI Assistant Widget de chat",
@@ -52,7 +52,7 @@
   "parametersLabel": "Paramètres",
   "resultLabel": "Résultat",
   "errorLabel": "Erreur",
-  "consoleTitle": "Console",
+  "consoleTitle": "Journal",
   "consoleNoOutput": "Aucune sortie de la console",
   "rateConversation": "Comment était votre expérience ?",
   "feedbackPositive": "Bien",
@@ -63,12 +63,12 @@
   "skipFeedback": "Ignorer",
   "thankYouFeedback": "Merci pour vos commentaires !",
   "feedbackSubmitted": "Commentaires envoyés avec succès",
-  "chainOfThought": "Chain of Thought",
-  "modelSelectorTitle": "Model Selector",
-  "prevBranch": "Previous branch",
-  "nextBranch": "Next branch",
-  "of": "of",
-  "imageLabel": "Image",
-  "attachmentLabel": "Attachment"
+  "chainOfThought": "Chaîne de raisonnement",
+  "modelSelectorTitle": "Sélecteur de modèle",
+  "prevBranch": "Branche précédente",
+  "nextBranch": "Branche suivante",
+  "of": "de",
+  "imageLabel": "Illustration",
+  "attachmentLabel": "Pièce jointe"
   ,"poweredBy": "Propulsé par "
 }

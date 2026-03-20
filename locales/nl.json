@@ -9,7 +9,7 @@
   "sessionOrAuthError": "Sessie of authenticatietoken niet beschikbaar. Controleer uw widget-configuratie.",
   "networkErrorConnect": "Netwerkfout: Kon niet verbinden met API",
   "failedToCreateSession": "Sessie aanmaken mislukt",
-  "chat": "Chat",
+  "chat": "Gesprek",
   "chatMessages": "Chatberichten",
   "chatControl": {
     "open": "Chat openen",
@@ -49,10 +49,10 @@
   "statusCompleted": "Voltooid",
   "statusError": "Fout",
   "statusDenied": "Geweigerd",
-  "parametersLabel": "Parameters",
+  "parametersLabel": "Instellingen",
   "resultLabel": "Resultaat",
   "errorLabel": "Fout",
-  "consoleTitle": "Console",
+  "consoleTitle": "Logboek",
   "consoleNoOutput": "Geen console-uitvoer",
   "rateConversation": "Hoe was uw ervaring?",
   "feedbackPositive": "Goed",
@@ -63,12 +63,12 @@
   "skipFeedback": "Overslaan",
   "thankYouFeedback": "Bedankt voor uw feedback!",
   "feedbackSubmitted": "Feedback succesvol verzonden",
-  "chainOfThought": "Chain of Thought",
-  "modelSelectorTitle": "Model Selector",
-  "prevBranch": "Previous branch",
-  "nextBranch": "Next branch",
-  "of": "of",
-  "imageLabel": "Image",
-  "attachmentLabel": "Attachment"
-  ,"poweredBy": "Mogelijk gemaakt door "
+  "chainOfThought": "Redenering",
+  "modelSelectorTitle": "Modelselector",
+  "prevBranch": "Vorige tak",
+  "nextBranch": "Volgende tak",
+  "of": "van",
+  "imageLabel": "Afbeelding",
+  "attachmentLabel": "Bijlage",
+  "poweredBy": "Mogelijk gemaakt door "
 }
