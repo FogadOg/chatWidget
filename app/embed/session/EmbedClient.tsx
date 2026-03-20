@@ -15,7 +15,7 @@ import type {
 } from '../../../types/widget';
 import { ButtonLike } from '../../../hooks/useClickedButtons';
 import { logPerf } from '../../../lib/logger';
-import { trackEvent } from '../../../lib/api';
+import { trackEvent, embedOriginHeader } from '../../../lib/api';
 import FeedbackDialog from '../../../components/FeedbackDialog';
 import {
   createSessionError,
@@ -506,6 +506,7 @@ export default function EmbedClient({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...embedOriginHeader(initialParentOrigin),
         },
       });
 
@@ -595,6 +596,7 @@ export default function EmbedClient({
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
+                ...embedOriginHeader(initialParentOrigin),
               },
               body: JSON.stringify({
                   assistant_id: assistant,
@@ -696,6 +698,7 @@ export default function EmbedClient({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...embedOriginHeader(initialParentOrigin),
         },
       });
 
@@ -764,6 +767,7 @@ export default function EmbedClient({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...embedOriginHeader(initialParentOrigin),
         },
       });
 
@@ -794,6 +798,7 @@ export default function EmbedClient({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...embedOriginHeader(initialParentOrigin),
         },
       });
 
@@ -833,6 +838,7 @@ export default function EmbedClient({
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...embedOriginHeader(initialParentOrigin),
         },
       });
 
@@ -895,6 +901,7 @@ export default function EmbedClient({
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`,
+          ...embedOriginHeader(initialParentOrigin),
         },
         body: JSON.stringify({
           feedback_type: feedbackType,
@@ -1022,6 +1029,7 @@ export default function EmbedClient({
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`,
+                ...embedOriginHeader(initialParentOrigin),
               },
               body: JSON.stringify({
                 content: message,

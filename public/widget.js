@@ -28,10 +28,40 @@
   };
 
   try {
-    const script = document.currentScript;
+    var script = document.currentScript;
+    // document.currentScript can be null when scripts are injected asynchronously
+    // (e.g. by frameworks like Next.js). Try a few robust fallbacks so attributes
+    // such as `data-locale` can still be read from the host page.
     if (!script) {
-      logError("Failed to get current script reference", {});
-      return;
+      try {
+        // Prefer an explicit id on the host script if present
+        script = document.getElementById('companin-widget-script') || script;
+      } catch (e) {}
+    }
+
+    if (!script) {
+      try {
+        // Find any script tag that carries the widget-specific data attributes
+        const scripts = Array.from(document.getElementsByTagName('script'));
+        script = scripts.find(function (s) {
+          try {
+            return s && s.getAttribute && (
+              !!s.getAttribute('data-client-id') ||
+              !!s.getAttribute('data-assistant-id') ||
+              // fallback: script whose src looks like a remote widget loader
+              (s.src && /widget(\.|\/)/i.test(s.src))
+            );
+          } catch (e) {
+            return false;
+          }
+        }) || script;
+      } catch (e) {}
+    }
+
+    if (!script) {
+      // As a last resort, avoid crashing the embed and proceed with a safe stub.
+      logError("Failed to get current script reference; using fallback stub", {});
+      script = { getAttribute: function () { return null; } };
     }
 
     // Resolve powered-by text: attribute -> global locales -> default
@@ -52,6 +82,16 @@
     const detectLocale = () => {
       const explicitLocale = script.getAttribute("data-locale");
       if (explicitLocale) return explicitLocale;
+
+      // Fallback: allow host to pass locale in script src query
+      try {
+        if (script.src) {
+          const parsed = new URL(script.src, window.location.href);
+          const localeFromSrc = parsed.searchParams.get('locale');
+          if (localeFromSrc) return localeFromSrc;
+        }
+      } catch (e) {}
+
       const browserLocale = (navigator.languages && navigator.languages[0]) || navigator.language;
       return browserLocale || "en";
     };
@@ -86,18 +126,10 @@
     const explicitTargetOrigin = script.getAttribute("data-target-origin") || script.getAttribute("data-parent-origin");
     const targetOrigin = (explicitTargetOrigin && explicitTargetOrigin.trim()) || baseUrl;
 
-    // Try to load locale file from the widget host to get localized strings (non-blocking)
-    try {
-      const localeUrl = baseUrl.replace(/\/$/, '') + `/locales/${encodeURIComponent(locale)}.json`;
-      fetch(localeUrl, { cache: 'no-cache' })
-        .then((res) => (res && res.ok) ? res.json() : null)
-        .then((data) => {
-          if (data && data.poweredBy) {
-            POWERED_BY_TEXT = data.poweredBy;
-          }
-        })
-        .catch(() => {});
-    } catch (e) {}
+    // Locale fetch disabled in the embed script to avoid cross-origin issues.
+    // The embed should receive localized strings via either:
+    // 1) `data-powered-by` attribute on the script tag, or
+    // 2) a host-provided global `window.__COMPANIN_WIDGET_LOCALES__` object.
 
     // performance hint: warm up connection to widget host
     (function addPreconnectHints() {

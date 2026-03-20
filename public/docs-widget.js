@@ -87,18 +87,10 @@
     const explicitTargetOrigin = script.getAttribute("data-target-origin") || script.getAttribute("data-parent-origin");
     const targetOrigin = (explicitTargetOrigin && explicitTargetOrigin.trim()) || baseUrl;
 
-    // Try to load locale file from the widget host to get localized strings (non-blocking)
-    try {
-      const localeUrl = baseUrl.replace(/\/$/, '') + `/locales/${encodeURIComponent(locale)}.json`;
-      fetch(localeUrl, { cache: 'no-cache' })
-        .then((res) => (res && res.ok) ? res.json() : null)
-        .then((data) => {
-          if (data && data.poweredBy) {
-            POWERED_BY_TEXT = data.poweredBy;
-          }
-        })
-        .catch(() => {});
-    } catch (e) {}
+    // Locale fetch disabled in the embed script to avoid cross-origin issues.
+    // The embed should receive localized strings via either:
+    // 1) `data-powered-by` attribute on the script tag, or
+    // 2) a host-provided global `window.__COMPANIN_WIDGET_LOCALES__` object.
 
     // Create container with error handling (initially hidden)
     const container = document.createElement("div");
