@@ -36,6 +36,9 @@ jobs:
     - name: Run typecheck
       run: npm run typecheck
 
+    - name: Run tests (simulate production env)
+      run: NODE_ENV=production npx jest --runInBand --coverage
+
     - name: Build
       run: npm run build
 
