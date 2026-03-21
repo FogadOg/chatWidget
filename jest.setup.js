@@ -28,14 +28,14 @@ jest.mock('baseline-browser-mapping', () => ({
 // under CommonJS and top-level `await`/ESM dynamic imports may not be supported
 // in the test runner environment. We keep this conservative and non-recursive.
 try {
-  /* eslint-disable global-require, @typescript-eslint/no-var-requires */
+  /* eslint-disable @typescript-eslint/no-require-imports */
   const React = require('react');
 
   if (React && typeof React.act !== 'function') {
     let realAct;
     try {
       realAct = require('react-dom/test-utils').act;
-    } catch (err) {
+    } catch {
       realAct = undefined;
     }
 
@@ -43,7 +43,7 @@ try {
       React.act = (...args) => {
         const prev = React.act;
         try {
-          try { delete React.act; } catch (e) { React.act = undefined; }
+          try { delete React.act; } catch { React.act = undefined; }
           return realAct(...args);
         } finally {
           if (typeof prev === 'function') React.act = prev;
@@ -51,6 +51,6 @@ try {
       };
     }
   }
-} catch (e) {
+} catch {
   // Ignore errors — if the shim cannot be applied, tests will surface the issue.
 }
