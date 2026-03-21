@@ -33,7 +33,6 @@ if (React && !React.act) {
     try {
       // temporarily remove to avoid realAct delegating back to React.act
       // which would cause recursion
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete React.act
       return realAct(...args)
     } finally {
