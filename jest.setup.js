@@ -18,3 +18,17 @@ console.warn = (...args) => {
 jest.mock('baseline-browser-mapping', () => ({
   // empty stub
 }));
+
+// Ensure React.act is available for testing libraries that expect it.
+// Some combinations of React and testing-library expect `React.act` to exist.
+// Importing from 'react-dom/test-utils' and assigning provides compatibility.
+try {
+  // Use require here to avoid ESM/CJS interop issues in some Jest setups.
+  const React = require('react')
+  const { act } = require('react-dom/test-utils')
+  if (React && !React.act && act) {
+    React.act = act
+  }
+} catch (e) {
+  // If this fails, tests may still run; ignore silently to avoid noisy failures.
+}
