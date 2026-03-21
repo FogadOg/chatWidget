@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import React from 'react'
-import { act } from 'react-dom/test-utils'
+import { act as realAct } from 'react-dom/test-utils'
 
 // Set up environment variables for testing
 process.env.NEXT_PUBLIC_API_BASE_URL = 'https://api.test.com';
@@ -26,19 +26,21 @@ jest.mock('baseline-browser-mapping', () => ({
 // Importing from 'react-dom/test-utils' and assigning provides compatibility.
 // Ensure `React.act` exists for testing libraries that expect it.
 if (React && !React.act) {
-  // Create a lazy shim to avoid circular module initialization that can
-  // cause `act` to call back into `React.act`, producing recursion.
-  // Use `require` at call-time so the real `act` is loaded only when used.
-  /* eslint-disable-next-line @typescript-eslint/no-require-imports */
-  const makeShim = () => {
-    const { act: realAct } = require('react-dom/test-utils')
-    return function actShim(...args) {
+  // Create a safe shim that prevents recursion by temporarily removing
+  // `React.act` while calling the real `act` implementation.
+  function actShim(...args) {
+    const prev = React.act
+    try {
+      // temporarily remove to avoid realAct delegating back to React.act
+      // which would cause recursion
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete React.act
       return realAct(...args)
+    } finally {
+      React.act = prev
     }
   }
 
-  const shim = makeShim()
-  // mark shim to avoid double-wrapping
-  shim.__isActShim = true
-  React.act = shim
+  actShim.__isActShim = true
+  React.act = actShim
 }
