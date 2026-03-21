@@ -26,20 +26,19 @@ jest.mock('baseline-browser-mapping', () => ({
 // Importing from 'react-dom/test-utils' and assigning provides compatibility.
 // Ensure `React.act` exists for testing libraries that expect it.
 if (React && !React.act) {
-  // Create a safe shim that prevents recursion by temporarily removing
-  // `React.act` while calling the real `act` implementation.
-  function actShim(...args) {
-    const prev = React.act
-    try {
-      // temporarily remove to avoid realAct delegating back to React.act
-      // which would cause recursion
-      delete React.act
-      return realAct(...args)
-    } finally {
-      React.act = prev
+  // Minimal compatibility shim: assign the test-utils `act` directly to
+  // `React.act`. Use `require()` with an inline eslint-disable to avoid
+  // ESM/CJS interop issues in some Jest setups and keep the assignment simple
+  // which has worked reliably in this environment.
+  /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+  try {
+    // Use require to avoid transforming ESM imports in the test runtime.
+    const _react = require('react')
+    const { act: _act } = require('react-dom/test-utils')
+    if (_react && !_react.act && _act) {
+      _react.act = _act
     }
+  } catch (err) {
+    // ignore
   }
-
-  actShim.__isActShim = true
-  React.act = actShim
 }
