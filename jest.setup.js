@@ -24,33 +24,33 @@ jest.mock('baseline-browser-mapping', () => ({
 // (not via `npm test`), which means the project's `NODE_ENV=test` wrapper is
 // bypassed and `React.act` can be missing causing `TypeError: React.act is not a function`.
 // We add a conservative, non-recursive shim only when `React.act` is absent.
+// Use a synchronous `require`-based shim here because Jest runs this file
+// under CommonJS and top-level `await`/ESM dynamic imports may not be supported
+// in the test runner environment. We keep this conservative and non-recursive.
 try {
-  // Use dynamic ESM imports to avoid `require()` lint rules and keep this file ESM.
-  // Top-level await is supported in Node 20+ (CI uses 20.x).
-  const ReactModule = await import('react');
-  const React = ReactModule && ReactModule.default ? ReactModule.default : ReactModule;
+  /* eslint-disable global-require, @typescript-eslint/no-var-requires */
+  const React = require('react');
 
   if (React && typeof React.act !== 'function') {
-    const utils = await import('react-dom/test-utils');
-    const realAct = utils && (utils.act || utils.default?.act);
+    let realAct;
+    try {
+      realAct = require('react-dom/test-utils').act;
+    } catch (err) {
+      realAct = undefined;
+    }
+
     if (typeof realAct === 'function') {
-      // Wrap the real `act` to avoid accidental recursion if `react-dom` tries to
-      // call `React.act` internally. The wrapper temporarily removes the shim
-      // while calling the real `act`.
       React.act = (...args) => {
         const prev = React.act;
         try {
-          // remove shim so internal calls don't recurse
           try { delete React.act; } catch (e) { React.act = undefined; }
           return realAct(...args);
         } finally {
-          // restore shim
           if (typeof prev === 'function') React.act = prev;
         }
       };
     }
   }
 } catch (e) {
-  // If anything goes wrong here, it's safe to continue without the shim;
-  // the failing tests will indicate that and we can iterate.
+  // Ignore errors — if the shim cannot be applied, tests will surface the issue.
 }
