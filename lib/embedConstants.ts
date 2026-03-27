@@ -19,6 +19,7 @@ export const STORAGE_KEYS = {
   unreadPrefix: (clientId: string, assistantId: string) => `${STORAGE_PREFIX}unread-${clientId}-${assistantId}`,
   lastReadPrefix: (clientId: string, assistantId: string) => `${STORAGE_PREFIX}lastread-${clientId}-${assistantId}`,
   visitorPrefix: (clientId: string) => `${STORAGE_PREFIX}visitor-${clientId}`,
+  feedbackKey: (sessionId: string) => `${STORAGE_PREFIX}feedback-${sessionId}`,
 };
 
 /**
@@ -26,3 +27,10 @@ export const STORAGE_KEYS = {
  * Prefer explicit origin (provided by host page), otherwise fallback to '*'.
  */
 export const targetOrigin = (explicit?: string) => explicit || '*';
+
+/**
+ * Like targetOrigin but for sensitive messages (auth, chat content).
+ * Returns null when no explicit origin is available so callers can
+ * suppress the send rather than broadcasting to any origin.
+ */
+export const sensitiveOrigin = (explicit?: string): string | null => explicit || null;

@@ -1098,7 +1098,7 @@ describe('EmbedClient Component', () => {
         expect(postCalls.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
 
-      expect(trackEvent).toHaveBeenCalledWith('message_sent', expect.anything(), expect.any(Object), expect.anything());
+      expect(trackEvent).toHaveBeenCalledWith('message_sent', expect.anything(), expect.any(Object), expect.anything(), expect.anything());
     });
 
     test('handleSubmit: prevents sending empty messages', async () => {

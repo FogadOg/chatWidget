@@ -141,10 +141,6 @@
 
     function initWidget() {
       try {
-        // Reset body margins and padding to ensure proper positioning
-        document.body.style.margin = "0";
-        document.body.style.padding = "0";
-
         // Create iframe with error handling
         const iframe = document.createElement("iframe");
         const params = new URLSearchParams({

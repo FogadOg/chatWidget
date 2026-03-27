@@ -3,6 +3,7 @@
 // Accepts query parameters from the loader script and injects CSS/JS
 
 import React from 'react';
+import { sanitizeCss } from '../../../lib/cssValidator';
 
 type HeadProps = {
   searchParams: {
@@ -13,13 +14,13 @@ type HeadProps = {
 
 export default function Head({ searchParams }: HeadProps) {
   const { customCss } = searchParams;
+  const safeCss = sanitizeCss(customCss ? decodeURIComponent(customCss as string) : undefined);
 
   return (
     <>
-      {customCss && (
+      {safeCss && (
         <style
-          // the value is encoded by the loader; decode before using
-          dangerouslySetInnerHTML={{ __html: decodeURIComponent(customCss) }}
+          dangerouslySetInnerHTML={{ __html: safeCss }}
         />
       )}
     </>

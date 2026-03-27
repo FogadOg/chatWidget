@@ -215,10 +215,6 @@
 
     function initWidget() {
       try {
-        // Reset body margins and padding to ensure proper positioning
-        document.body.style.margin = "0";
-        document.body.style.padding = "0";
-
         // we no longer render a placeholder button; build iframe immediately
         const iframe = document.createElement("iframe");
         const params = new URLSearchParams({

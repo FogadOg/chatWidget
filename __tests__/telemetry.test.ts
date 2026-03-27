@@ -57,4 +57,16 @@ describe('telemetry helper', () => {
     expect(body.event_type).toBe('feedback_given');
     expect(body.metadata).toEqual({ rating: 'positive', comment: 'nice' });
   });
+
+  it('includes Authorization header when authToken is provided', async () => {
+    await trackEvent('message_sent', 'assist-1', { message: 'hello' }, 'clientA', 'tok-abc');
+    const call = (global.fetch as jest.Mock).mock.calls[0][1];
+    expect(call.headers['Authorization']).toBe('Bearer tok-abc');
+  });
+
+  it('omits Authorization header when no authToken is provided', async () => {
+    await trackEvent('message_sent', 'assist-1', { message: 'hello' }, 'clientA');
+    const call = (global.fetch as jest.Mock).mock.calls[0][1];
+    expect(call.headers).not.toHaveProperty('Authorization');
+  });
 });

@@ -27,18 +27,22 @@ import {
   WidgetErrorCode,
 } from '../../../lib/errorHandling';
 import { API } from '../../../lib/api';
-import { EMBED_EVENTS, targetOrigin } from '../../../lib/embedConstants';
+import { EMBED_EVENTS, STORAGE_KEYS, targetOrigin, sensitiveOrigin } from '../../../lib/embedConstants';
 import { BUTTON_SIZES } from '../../../lib/constants';
 import * as helpers from './helpers';
 import { onInitConfig } from './events';
+import { sanitizeCss } from '../../../lib/cssValidator';
 
 // helpers exposed so tests can call them directly
 export function injectCustomAssets(css?: string) {
   try {
     if (css) {
-      const style = document.createElement('style');
-      style.textContent = css;
-      document.head.appendChild(style);
+      const safe = sanitizeCss(css);
+      if (safe) {
+        const style = document.createElement('style');
+        style.textContent = safe;
+        document.head.appendChild(style);
+      }
     }
   } catch (err) {
     logError(err as Error, { action: 'injectCustomAssets', css });
@@ -51,7 +55,7 @@ export function applyCustomAssetsFromQuery(search?: string) {
     const params = new URLSearchParams(src);
     const css = params.get('customCss');
     if (css) {
-      injectCustomAssets(css ? decodeURIComponent(css) : undefined);
+      injectCustomAssets(decodeURIComponent(css));
     }
   } catch (err) {
     logError(err, { action: 'applyCustomAssetsFromQuery', search });
@@ -241,6 +245,10 @@ export default function EmbedClient({
     () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin)),
     [initialParentOrigin]
   );
+  const parentSensitiveOrigin = useMemo(
+    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin)),
+    [initialParentOrigin]
+  );
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -293,13 +301,15 @@ export default function EmbedClient({
       setFatalError(authError);
         try {
           if (window.parent !== window) {
-            window.parent.postMessage({ type: EMBED_EVENTS.AUTH_FAILURE, data: { message: authError } }, parentTargetOrigin);
+            if (parentSensitiveOrigin) {
+              window.parent.postMessage({ type: EMBED_EVENTS.AUTH_FAILURE, data: { message: authError } }, parentSensitiveOrigin);
+            }
           }
         } catch {
           // ignore
         }
     }
-  }, [authError, widgetConfig, initialParentOrigin, parentTargetOrigin]);
+  }, [authError, widgetConfig, initialParentOrigin, parentSensitiveOrigin]);
 
   // Periodic check for expired sessions
   useEffect(() => {
@@ -382,7 +392,9 @@ export default function EmbedClient({
       setIsCollapsed(true);
       try {
         if (window.parent !== window) {
-          window.parent.postMessage({ type: 'WIDGET_HIDE' }, parentTargetOrigin);
+          if (parentSensitiveOrigin) {
+            window.parent.postMessage({ type: 'WIDGET_HIDE' }, parentSensitiveOrigin);
+          }
         }
       } catch {
         // ignore
@@ -393,7 +405,9 @@ export default function EmbedClient({
       setIsCollapsed(!initialStartOpen && !widgetConfig.start_open);
       try {
         if (window.parent !== window) {
-          window.parent.postMessage({ type: 'WIDGET_SHOW' }, parentTargetOrigin);
+          if (parentSensitiveOrigin) {
+            window.parent.postMessage({ type: 'WIDGET_SHOW' }, parentSensitiveOrigin);
+          }
         }
       } catch {
         // ignore
@@ -554,12 +568,14 @@ export default function EmbedClient({
           if (window.parent !== window) {
             const last = loadedMessages[loadedMessages.length - 1];
             if (last) {
-              // Post a generic message event for the last message
-              window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: last }, parentTargetOrigin);
+              if (parentSensitiveOrigin) {
+                // Post a generic message event for the last message
+                window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: last }, parentSensitiveOrigin);
 
-              // If the last message is from assistant, also post a response event
-              if (last.from === 'assistant') {
-                window.parent.postMessage({ type: EMBED_EVENTS.RESPONSE, data: last }, parentTargetOrigin);
+                // If the last message is from assistant, also post a response event
+                if (last.from === 'assistant') {
+                  window.parent.postMessage({ type: EMBED_EVENTS.RESPONSE, data: last }, parentSensitiveOrigin);
+                }
               }
             }
           }
@@ -579,7 +595,7 @@ export default function EmbedClient({
     } finally {
       setIsTyping(false);
     }
-  }, [parentTargetOrigin]);
+  }, [parentSensitiveOrigin]);
 
   const createSession = async (assistant: string, token: string) => {
     try {
@@ -684,10 +700,12 @@ export default function EmbedClient({
 
       // Notify parent window of error
       if (window.parent !== window) {
-        window.parent.postMessage(
-          { type: EMBED_EVENTS.ERROR, data: { message: errorMessage } },
-          parentTargetOrigin
-        );
+        if (parentSensitiveOrigin) {
+          window.parent.postMessage(
+            { type: EMBED_EVENTS.ERROR, data: { message: errorMessage } },
+            parentSensitiveOrigin
+          );
+        }
       }
     }
   };
@@ -735,8 +753,21 @@ export default function EmbedClient({
 
           setMessages(loadedMessages);
 
+          // Restore feedback state from localStorage before hitting API
+          let alreadySubmitted = feedbackSubmitted;
+          if (!alreadySubmitted && sessionId) {
+            try {
+              const stored = localStorage.getItem(STORAGE_KEYS.feedbackKey(sessionId));
+              if (stored) {
+                setFeedbackSubmitted(true);
+                alreadySubmitted = true;
+              }
+            } catch {
+              // localStorage unavailable
+            }
+          }
           // Check if we should show feedback
-          if (loadedMessages.length > 0 && !feedbackSubmitted) {
+          if (loadedMessages.length > 0 && !alreadySubmitted) {
             checkFeedbackStatus(sessionId, token);
           }
 
@@ -880,7 +911,7 @@ export default function EmbedClient({
     setShowFeedbackDialog(false);
     // Store feedback submitted flag in localStorage
     if (sessionId) {
-      localStorage.setItem(`feedback_submitted_${sessionId}`, 'true');
+      localStorage.setItem(STORAGE_KEYS.feedbackKey(sessionId), 'true');
     }
   };
 
@@ -888,7 +919,7 @@ export default function EmbedClient({
     setShowFeedbackDialog(false);
     setFeedbackSubmitted(true); // Don't show again this session
     if (sessionId) {
-      localStorage.setItem(`feedback_submitted_${sessionId}`, 'skipped');
+      localStorage.setItem(STORAGE_KEYS.feedbackKey(sessionId), 'skipped');
     }
   };
 
@@ -1007,7 +1038,9 @@ export default function EmbedClient({
     // Notify parent about the sent message
     try {
       if (window.parent !== window) {
-        window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentTargetOrigin);
+        if (parentSensitiveOrigin) {
+          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentSensitiveOrigin);
+        }
       }
     } catch {
       // ignore
@@ -1077,7 +1110,7 @@ export default function EmbedClient({
             }
 
             // record telemetry for message sent
-            trackEvent('message_sent', initialAssistantId, { message }, initialClientId).catch(() => {});
+            trackEvent('message_sent', initialAssistantId, { message }, initialClientId, authToken ?? undefined).catch(() => {});
 
             return data.data;
           } catch (fetchError: unknown) {
@@ -1177,7 +1210,9 @@ export default function EmbedClient({
             from: 'user',
             timestamp: Date.now(),
           };
-          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentTargetOrigin);
+          if (parentSensitiveOrigin) {
+            window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentSensitiveOrigin);
+          }
         }
       } catch {
         // ignore
@@ -1234,7 +1269,9 @@ export default function EmbedClient({
             from: 'user',
             timestamp: userMsg.timestamp,
           };
-          window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentTargetOrigin);
+          if (parentSensitiveOrigin) {
+            window.parent.postMessage({ type: EMBED_EVENTS.MESSAGE, data: userMessage }, parentSensitiveOrigin);
+          }
         }
       } catch {
         // ignore

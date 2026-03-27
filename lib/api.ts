@@ -72,7 +72,8 @@ export async function trackEvent(
   eventType: string,
   assistantId?: string,
   metadata: Record<string, unknown> = {},
-  clientId?: string
+  clientId?: string,
+  authToken?: string
 ): Promise<void> {
   const BASE = getApiBaseUrl() || 'http://127.0.0.1:8000';
   const endpoint = `${BASE.replace(/\/+$/, '')}/telemetry/events/`;
@@ -92,9 +93,13 @@ export async function trackEvent(
   }
 
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
     await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
   } catch (err) {

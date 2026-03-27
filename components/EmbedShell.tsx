@@ -735,7 +735,7 @@ export default function EmbedShell({
                   </div>
                 </form>
                 <div className="p-2 text-center text-xs text-gray-500">
-                  {poweredByLabel}<a href="https://companin.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">{COMPANY_NAME}</a>
+                  {poweredByLabel}<a href="https://companin.tech" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">{COMPANY_NAME}</a>
                 </div>
               </div>
             </div>
