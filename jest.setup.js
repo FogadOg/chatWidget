@@ -11,6 +11,9 @@ console.warn = (...args) => {
   if (args[0] && typeof args[0] === 'string' && args[0].includes('[baseline-browser-mapping]')) {
     return;
   }
+  if (args[0] && typeof args[0] === 'string' && args[0].includes('missing widget_type')) {
+    return;
+  }
   originalWarn.apply(console, args);
 };
 

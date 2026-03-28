@@ -15,7 +15,6 @@ import type { WidgetConfig } from '../types/widget';
 /** Fields that are only meaningful for 'chat' widgets. */
 const CHAT_ONLY_FIELDS: ReadonlyArray<keyof WidgetConfig> = [
   'start_open',
-  'hide_on_mobile',
   'greeting_message',
   'show_timestamps',
   'show_typing_indicator',

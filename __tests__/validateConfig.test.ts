@@ -74,7 +74,6 @@ describe('validateConfig', () => {
     const config = { ...baseConfig, widget_type: 'docs' as const };
     const { config: result } = validateConfig(config, 'docs') as any;
     expect(result.start_open).toBeUndefined();
-    expect(result.hide_on_mobile).toBeUndefined();
     expect(result.greeting_message).toBeUndefined();
     expect(result.show_timestamps).toBeUndefined();
     expect(result.show_typing_indicator).toBeUndefined();

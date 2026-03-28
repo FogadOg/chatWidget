@@ -564,7 +564,7 @@ describe('DocsClient missing effect/flow coverage', () => {
       if (method === 'GET' && urlStr.includes('widget-config')) {
         return {
           ok: true,
-          json: async () => ({ data: { hide_on_mobile: true, title: { en: 'Doc Assist' }, subtitle: { en: 'Ask me' } } }),
+          json: async () => ({ data: { widget_type: 'docs', hide_on_mobile: true, title: { en: 'Doc Assist' }, subtitle: { en: 'Ask me' } } }),
         } as any
       }
 
