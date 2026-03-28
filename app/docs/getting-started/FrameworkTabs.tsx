@@ -27,7 +27,9 @@ const BASE_CONFIG = `  window.ChatWidgetConfig = {
     edgeOffset: 20
   };`;
 
-const SNIPPETS: Record<string, string> = {
+type TabKey = 'HTML / JS' | 'Next.js' | 'React' | 'Angular' | 'Vue';
+
+const SNIPPETS: Record<TabKey, string> = {
   'HTML / JS': `<script>
   (function() {
 ${BASE_CONFIG}
@@ -120,7 +122,15 @@ onMounted(() => {
 </template>`,
 };
 
-const TABS = Object.keys(SNIPPETS);
+const LANGUAGES: Record<TabKey, string> = {
+  'HTML / JS': 'html',
+  'Next.js': 'tsx',
+  'React': 'tsx',
+  'Angular': 'typescript',
+  'Vue': 'vue',
+};
+
+const TABS = Object.keys(SNIPPETS) as TabKey[];
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -152,9 +162,59 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function HighlightedCode({ code, language }: { code: string; language: string }) {
+  const [html, setHtml] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    let rafId: number;
+
+    const highlight = async () => {
+      try {
+        const { codeToHtml } = await import('shiki');
+        const result = await codeToHtml(code, {
+          lang: language,
+          themes: {
+            light: 'one-dark-pro',
+            dark: 'one-dark-pro',
+          },
+        });
+        rafId = requestAnimationFrame(() => {
+          if (!cancelled) setHtml(result);
+        });
+      } catch {
+        // fallback to plain text on error
+      }
+    };
+
+    rafId = requestAnimationFrame(() => { highlight(); });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+    };
+  }, [code, language]);
+
+  if (!html) {
+    return (
+      <pre className="overflow-x-auto p-5 text-sm text-zinc-100 font-mono leading-relaxed">
+        <code>{code}</code>
+      </pre>
+    );
+  }
+
+  return (
+    <div
+      className="overflow-x-auto [&_.shiki]:!bg-transparent [&_pre]:!bg-transparent [&_pre]:p-5 [&_code]:font-mono [&_code]:text-sm [&_code]:leading-relaxed"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
 export default function FrameworkTabs() {
-  const [active, setActive] = useState(TABS[0]);
+  const [active, setActive] = useState<TabKey>(TABS[0]);
   const snippet = SNIPPETS[active];
+  const language = LANGUAGES[active];
 
   return (
     <div className="rounded-lg bg-zinc-900 dark:bg-zinc-800 overflow-hidden">
@@ -179,9 +239,7 @@ export default function FrameworkTabs() {
       </div>
 
       {/* Code block */}
-      <pre className="overflow-x-auto p-5 text-sm text-zinc-100 font-mono leading-relaxed">
-        <code>{snippet}</code>
-      </pre>
+      <HighlightedCode code={snippet} language={language} />
     </div>
   );
 }
