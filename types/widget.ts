@@ -48,6 +48,7 @@ export type Flow = {
 
 export type WidgetConfig = {
   id: string;
+  widget_type?: 'chat' | 'docs';
   primary_color: string;
   secondary_color: string;
   background_color: string;

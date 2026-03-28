@@ -404,7 +404,18 @@ export default function EmbedShell({
                                     isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
                                   }`}
                                 >
-                                  {button.icon && <span>{button.icon}</span>}
+                                  {button.icon && (() => {
+                                    const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+                                    // lazy require lucide-react to avoid circular imports in some builds
+                                    try {
+                                      // eslint-disable-next-line @typescript-eslint/no-var-requires
+                                      const Icons = require('lucide-react');
+                                      const IconComp = Icons[name];
+                                      return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;
+                                    } catch (e) {
+                                      return <span>{button.icon}</span>;
+                                    }
+                                  })()}
                                   {getText(button.label) || 'Button'}
                                 </button>
                               );
@@ -660,7 +671,17 @@ export default function EmbedShell({
                                       isClicked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
                                     }`}
                                   >
-                                    {button.icon && <span>{button.icon}</span>}
+                                    {button.icon && (() => {
+                                      const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+                                      try {
+                                        // eslint-disable-next-line @typescript-eslint/no-var-requires
+                                        const Icons = require('lucide-react');
+                                        const IconComp = Icons[name];
+                                        return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;
+                                      } catch (e) {
+                                        return <span>{button.icon}</span>;
+                                      }
+                                    })()}
                                     {getText(button.label) || 'Button'}
                                   </button>
                                 );

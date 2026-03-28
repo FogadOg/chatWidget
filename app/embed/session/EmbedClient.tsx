@@ -32,6 +32,7 @@ import { BUTTON_SIZES } from '../../../lib/constants';
 import * as helpers from './helpers';
 import { onInitConfig } from './events';
 import { sanitizeCss } from '../../../lib/cssValidator';
+import { validateConfig } from '../../../lib/validateConfig';
 
 // helpers exposed so tests can call them directly
 export function injectCustomAssets(css?: string) {
@@ -850,7 +851,7 @@ export default function EmbedClient({
         if (typeof postedEdgeOffset.current !== 'undefined') {
           configData.edge_offset = postedEdgeOffset.current;
         }
-        setWidgetConfig(configData);
+        setWidgetConfig(validateConfig(configData, 'chat'));
       } else {
         throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
       }

@@ -19,6 +19,7 @@ import { useWidgetAuth } from '../../../hooks/useWidgetAuth'
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation'
 import { getLocaleDirection, t as translate } from '../../../lib/i18n'
 import { API } from '../../../lib/api'
+import { validateConfig } from '../../../lib/validateConfig'
 import {
   MessageBranch,
   MessageBranchContent,
@@ -353,6 +354,9 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       const data = await response.json();
 
       if (response.ok) {
+        if (data?.data) {
+          data.data = validateConfig(data.data, 'docs');
+        }
         setWidgetConfig(data);
       } else {
         console.error('Failed to fetch widget config:', data);
