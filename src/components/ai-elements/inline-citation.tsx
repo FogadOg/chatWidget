@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
+import en from "../../../locales/en.json";
 import {
   type ComponentProps,
   createContext,
@@ -214,7 +215,7 @@ export const InlineCitationCarouselPrev = ({
 
   return (
     <button
-      aria-label="Previous"
+      aria-label={en.previousCitation}
       className={cn("shrink-0", className)}
       onClick={handleClick}
       type="button"
@@ -241,7 +242,7 @@ export const InlineCitationCarouselNext = ({
 
   return (
     <button
-      aria-label="Next"
+      aria-label={en.nextCitation}
       className={cn("shrink-0", className)}
       onClick={handleClick}
       type="button"

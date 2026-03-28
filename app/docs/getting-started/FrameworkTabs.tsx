@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 
 const BASE_CONFIG = `  window.ChatWidgetConfig = {
     configId: 'YOUR_CONFIG_ID',
@@ -135,6 +136,7 @@ const TABS = Object.keys(SNIPPETS) as TabKey[];
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { translations } = useWidgetTranslation();
 
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
@@ -154,10 +156,10 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      aria-label="Copy code snippet"
+      aria-label={translations.copyCodeSnippet as string}
       className="px-3 py-1 text-xs font-medium rounded-md bg-zinc-700 text-zinc-200 hover:bg-zinc-600 transition-colors shrink-0"
     >
-      {copied ? 'Copied!' : 'Copy'}
+      {copied ? translations.copied as string : translations.copy as string}
     </button>
   );
 }

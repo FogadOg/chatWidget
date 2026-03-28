@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { LanguageModelUsage } from "ai";
 import { type ComponentProps, createContext, useContext } from "react";
 import { getUsage } from "tokenlens";
+import en from "../../../locales/en.json";
 
 const PERCENT_MAX = 100;
 const ICON_RADIUS = 10;
@@ -68,7 +69,7 @@ const ContextIcon = () => {
 
   return (
     <svg
-      aria-label="Model context usage"
+      aria-label={en.modelContextUsage}
       height="20"
       role="img"
       style={{ color: "currentcolor" }}

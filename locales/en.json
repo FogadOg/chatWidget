@@ -69,6 +69,21 @@
   "closeFeedback": "Close feedback",
   "skipFeedback": "Skip",
   "thankYouFeedback": "Thank you for your feedback!",
-  "feedbackSubmitted": "Feedback submitted successfully"
+  "feedbackSubmitted": "Feedback submitted successfully",
+  "feedbackThumbsUp": "Thumbs up",
+  "feedbackThumbsDown": "Thumbs down",
+  "feedbackSubmittedMessage": "Feedback submitted",
+  "openChat": "Open Chat",
+  "minimizeChat": "Minimize Chat",
+  "copyCodeSnippet": "Copy code snippet",
+  "copied": "Copied!",
+  "copy": "Copy",
+  "uploadFiles": "Upload files",
+  "submitMessage": "Submit",
+  "removeAttachment": "Remove attachment",
+  "previousCitation": "Previous",
+  "nextCitation": "Next",
+  "modelContextUsage": "Model context usage",
+  "previewTitle": "Preview"
   ,"poweredBy": "Powered by "
 }

@@ -684,7 +684,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                             type="button"
                                             onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_up')}
                                             className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                            title="Thumbs up"
+                                            title={t.feedbackThumbsUp}
                                             aria-label={translate(activeLocale, 'feedbackPositive')}
                                           >
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -695,7 +695,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                             type="button"
                                             onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_down')}
                                             className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                            title="Thumbs down"
+                                            title={t.feedbackThumbsDown}
                                             aria-label={translate(activeLocale, 'feedbackNegative')}
                                           >
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -706,7 +706,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                       )}
                                       {message.from === 'assistant' && messageFeedbackSubmitted.has(message.key) && (
                                         <div className="mt-2 text-xs opacity-50">
-                                          Feedback submitted
+                                          {t.feedbackSubmittedMessage}
                                         </div>
                                       )}
                                     </div>
