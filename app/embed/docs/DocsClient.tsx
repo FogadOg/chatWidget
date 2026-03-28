@@ -355,7 +355,11 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
       if (response.ok) {
         if (data?.data) {
-          data.data = validateConfig(data.data, 'docs');
+          const { config: validatedConfig, typeMismatch } = validateConfig(data.data, 'docs');
+          data.data = validatedConfig;
+          if (typeMismatch) {
+            setError('Configuration warning: this config is set to "chat" type but is running in the docs widget. Check your widget_type setting in the admin.');
+          }
         }
         setWidgetConfig(data);
       } else {
@@ -629,6 +633,11 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
               <DialogDescription className='px-6 text-sm text-muted-foreground'>
                 {getLocalizedText(widgetConfig?.data?.subtitle, activeLocale) || 'How can we help you today?'}
               </DialogDescription>
+              {error && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 px-6 py-2 text-sm" role="alert">
+                  {error}
+                </div>
+              )}
               <DialogDescription asChild>
                 <div className='p-6'>
                   <div className="flex flex-col min-h-0">

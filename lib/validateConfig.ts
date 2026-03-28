@@ -3,8 +3,8 @@
  *
  * Validates a raw config object against the expected widget_type.
  * - In development: throws on mismatch to surface problems early.
- * - In production: warns and returns a sanitized config with
- *   chat-only fields stripped when type is 'docs'.
+ * - In production: warns, sets typeMismatch flag, sanitizes config
+ *   (strips chat-only fields when type is 'docs'), and continues.
  *
  * Legacy configs that omit widget_type are inferred from their content
  * and a deprecation warning is logged.
@@ -28,6 +28,12 @@ const CHAT_ONLY_FIELDS: ReadonlyArray<keyof WidgetConfig> = [
 
 const getIsDev = () => process.env.NODE_ENV === 'development';
 
+export type ValidateConfigResult = {
+  config: WidgetConfig;
+  /** True when the config's widget_type does not match the expected runtime type. */
+  typeMismatch: boolean;
+};
+
 /**
  * Infer widget_type from config fields when widget_type is absent.
  * Returns 'chat' as safe default.
@@ -47,13 +53,13 @@ export function inferWidgetType(config: Partial<WidgetConfig>): 'chat' | 'docs' 
 /**
  * Validate rawConfig against the expected expectedType.
  *
- * Returns a (possibly sanitized) config safe to use at runtime.
- * Throws in dev if there is a type mismatch; warns in prod.
+ * Returns { config, typeMismatch } where config is safe to use at runtime.
+ * Throws in dev if there is a type mismatch; warns + returns typeMismatch=true in prod.
  */
 export function validateConfig(
   rawConfig: Partial<WidgetConfig>,
   expectedType: 'chat' | 'docs'
-): WidgetConfig {
+): ValidateConfigResult {
   // Infer type if missing (legacy config).
   let resolvedType = rawConfig.widget_type;
   if (!resolvedType) {
@@ -65,6 +71,8 @@ export function validateConfig(
     );
   }
 
+  let typeMismatch = false;
+
   if (resolvedType !== expectedType) {
     const msg =
       `[widget] Type mismatch: config "${rawConfig.id}" has widget_type="${resolvedType}" ` +
@@ -74,6 +82,7 @@ export function validateConfig(
       throw new Error(msg);
     }
     console.warn(msg);
+    typeMismatch = true;
   }
 
   // For docs runtime, strip chat-only fields to avoid confusing the runtime.
@@ -84,5 +93,5 @@ export function validateConfig(
     }
   }
 
-  return sanitized as WidgetConfig;
+  return { config: sanitized as WidgetConfig, typeMismatch };
 }

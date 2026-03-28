@@ -57,20 +57,22 @@ describe('validateConfig', () => {
 
   it('accepts a chat config for chat runtime', () => {
     const config = { ...baseConfig, widget_type: 'chat' as const };
-    const result = validateConfig(config, 'chat');
+    const { config: result, typeMismatch } = validateConfig(config, 'chat');
     expect(result.widget_type).toBe('chat');
     expect(result.id).toBe('cfg-1');
+    expect(typeMismatch).toBe(false);
   });
 
   it('accepts a docs config for docs runtime', () => {
     const config = { ...baseConfig, widget_type: 'docs' as const };
-    const result = validateConfig(config, 'docs');
+    const { config: result, typeMismatch } = validateConfig(config, 'docs');
     expect(result.widget_type).toBe('docs');
+    expect(typeMismatch).toBe(false);
   });
 
   it('strips chat-only fields when type is docs', () => {
     const config = { ...baseConfig, widget_type: 'docs' as const };
-    const result = validateConfig(config, 'docs') as any;
+    const { config: result } = validateConfig(config, 'docs') as any;
     expect(result.start_open).toBeUndefined();
     expect(result.hide_on_mobile).toBeUndefined();
     expect(result.greeting_message).toBeUndefined();
@@ -84,7 +86,7 @@ describe('validateConfig', () => {
 
   it('preserves non-chat fields for docs runtime', () => {
     const config = { ...baseConfig, widget_type: 'docs' as const };
-    const result = validateConfig(config, 'docs');
+    const { config: result } = validateConfig(config, 'docs');
     expect(result.id).toBe('cfg-1');
     expect(result.primary_color).toBe('#000');
     expect(result.font_family).toBe('Inter');
@@ -99,12 +101,12 @@ describe('validateConfig', () => {
     );
   });
 
-  it('warns (not throws) in production on type mismatch', () => {
+  it('warns (not throws) in production on type mismatch and sets typeMismatch=true', () => {
     process.env.NODE_ENV = 'production';
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const config = { ...baseConfig, widget_type: 'chat' as const };
-    // Chat config loaded by docs runtime — should warn in prod, not throw
-    expect(() => validateConfig(config, 'docs')).not.toThrow();
+    const { typeMismatch } = validateConfig(config, 'docs');
+    expect(typeMismatch).toBe(true);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Type mismatch')
     );

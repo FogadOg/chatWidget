@@ -851,7 +851,11 @@ export default function EmbedClient({
         if (typeof postedEdgeOffset.current !== 'undefined') {
           configData.edge_offset = postedEdgeOffset.current;
         }
-        setWidgetConfig(validateConfig(configData, 'chat'));
+        const { config: validatedConfig, typeMismatch } = validateConfig(configData, 'chat');
+        setWidgetConfig(validatedConfig);
+        if (typeMismatch) {
+          setError('Configuration warning: this config is set to "docs" type but is running in the chat widget. Check your widget_type setting in the admin.');
+        }
       } else {
         throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
       }
