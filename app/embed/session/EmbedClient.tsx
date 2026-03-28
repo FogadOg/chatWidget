@@ -329,7 +329,7 @@ export default function EmbedClient({
     return () => clearInterval(interval);
   }, [sessionId, sessionStorageKey]);
 
-   
+
   useEffect(() => {
     // Use props instead of URL params
     const clientIdParam = initialClientId;
@@ -376,7 +376,7 @@ export default function EmbedClient({
       setIsEmbedded(true);
     }
   }, [initialClientId, initialAssistantId, initialConfigId]);
-   
+
 
   // Apply widget behavior settings when config is loaded
   useEffect(() => {
@@ -1011,7 +1011,7 @@ export default function EmbedClient({
     return true;
   };
 
-  const handleSubmit = useCallback(async (e: React.FormEvent, messageText?: string) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent, messageText?: string, skipAddingUserMessage?: boolean) => {
     e.preventDefault();
     const message = messageText || input;
     if (!message.trim()) return;
@@ -1034,7 +1034,9 @@ export default function EmbedClient({
       from: 'user',
       timestamp: Date.now()
     };
-    setMessages(prev => [...prev, userMessage]);
+    if (!skipAddingUserMessage) {
+      setMessages(prev => [...prev, userMessage]);
+    }
 
     // Notify parent about the sent message
     try {
@@ -1207,7 +1209,9 @@ export default function EmbedClient({
         if (window.parent !== window) {
           const userMessage = {
             id: `temp-${Date.now()}`,
-            text: labelText || maybeText || b.action || '',
+            // Avoid falling back to the raw `action` value (e.g. 'text') as the
+            // message body — prefer labelText or maybeText and otherwise empty.
+            text: labelText || maybeText || '',
             from: 'user',
             timestamp: Date.now(),
           };
@@ -1221,7 +1225,14 @@ export default function EmbedClient({
     }
 
     if (!flowHandled) {
-      handleSubmit(new Event('submit') as unknown as React.FormEvent, b.action);
+      const userMsg: Message = {
+        id: `temp-${Date.now()}`,
+        text: labelText || b.action,
+        from: 'user',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, userMsg]);
+      handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
     }
   };
 
@@ -1258,7 +1269,7 @@ export default function EmbedClient({
     trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
 
     if (!maybeText && !flowHandled) {
-      handleSubmit(new Event('submit') as unknown as React.FormEvent, b.action);
+      handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
     }
     else {
       // also notify parent about the user message
