@@ -16,6 +16,8 @@ const config = {
     '^components/(.*)$': '<rootDir>/components/$1',
     '^hooks/(.*)$': '<rootDir>/hooks/$1',
     '^baseline-browser-mapping$': '<rootDir>/__mocks__/baseline-browser-mapping.js',
+    '^react$': '<rootDir>/node_modules/react',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
   },
 
   // Ignore specific files from test runs
@@ -26,14 +28,7 @@ const config = {
   // Ignore specific files from coverage reports
   coveragePathIgnorePatterns: [
     '<rootDir>/node_modules/',
-    '<rootDir>/components/DynamicIcon.tsx',
-    '<rootDir>/src/components/DynamicIcon.tsx',
-    '<rootDir>/src/components/ui/command.tsx',
-    '<rootDir>/src/components/ui/dropdown-menu.tsx',
-    '<rootDir>/src/components/ui/hover-card.tsx',
-    '<rootDir>/src/components/ui/input.tsx',
-    '<rootDir>/src/components/ui/label.tsx',
-    '<rootDir>/src/components/ui/progress.tsx',
+    '<rootDir>/node_modules/',
   ],
   // Collect coverage from all source files so files not imported by tests
   // still appear in the report (and will be measured against thresholds).
@@ -46,14 +41,9 @@ const config = {
     'src/**/*.{js,jsx,ts,tsx}',
     'scripts/**/*.{js,jsx,ts,tsx}',
     'types/**/*.{js,jsx,ts,tsx}',
-    '!src/components/ui/command.tsx',
-    '!src/components/ui/dropdown-menu.tsx',
-    '!src/components/ui/hover-card.tsx',
-    '!src/components/ui/input.tsx',
-    '!src/components/ui/label.tsx',
-    '!src/components/ui/progress.tsx',
     '!components/DynamicIcon.tsx',
-    '!src/components/DynamicIcon.tsx',
+    // UI files should be included in coverage; removed per-file exclusions
+    // DynamicIcon should be included in coverage — removed exclusion
     // Include all app files (pages and routes are now collected so coverage
     // shows every source file in the repo). Integration-only files will also
     // appear and will be measured against thresholds.
