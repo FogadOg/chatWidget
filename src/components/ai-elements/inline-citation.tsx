@@ -14,7 +14,10 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
-import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const ArrowLeftIcon = (props: any) => <DynamicIcon name="ArrowLeftIcon" {...props} />;
+const ArrowRightIcon = (props: any) => <DynamicIcon name="ArrowRightIcon" {...props} />;
 import en from "../../../locales/en.json";
 import {
   type ComponentProps,

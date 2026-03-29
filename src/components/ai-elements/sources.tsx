@@ -6,7 +6,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { BookIcon, ChevronDownIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const BookIcon = (props: any) => <DynamicIcon name="BookIcon" {...props} />;
+const ChevronDownIcon = (props: any) => <DynamicIcon name="ChevronDownIcon" {...props} />;
 import type { ComponentProps } from "react";
 
 export type SourcesProps = ComponentProps<"div">;

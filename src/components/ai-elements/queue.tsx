@@ -1,5 +1,5 @@
 "use client";
- 
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,10 @@ import {
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const ChevronDownIcon = (props: any) => <DynamicIcon name="ChevronDownIcon" {...props} />;
+const PaperclipIcon = (props: any) => <DynamicIcon name="PaperclipIcon" {...props} />;
 import type { ComponentProps } from "react";
 
 export type QueueMessagePart = {

@@ -1,10 +1,10 @@
 'use client';
- 
+
 
 import React, { useState } from 'react';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { t as translate } from '../lib/i18n';
-import { ThumbsUp, ThumbsDown, Minus, X } from 'lucide-react';
+import DynamicIcon from './DynamicIcon';
 import { API, embedOriginHeader } from '../lib/api';
 import { logError } from '../lib/errorHandling';
 
@@ -104,7 +104,7 @@ export default function FeedbackDialog({
           className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
           style={{ backgroundColor: `${primaryColor}20` }}
         >
-          <ThumbsUp className="w-8 h-8" style={{ color: primaryColor }} />
+          <DynamicIcon name="ThumbsUp" className="w-8 h-8" fallback={<svg />} />
         </div>
         <h3 className="text-lg font-semibold mb-2">{translate(locale, 'thankYouFeedback')}</h3>
         <p className="text-sm opacity-70">{translate(locale, 'feedbackSubmitted')}</p>
@@ -132,7 +132,7 @@ export default function FeedbackDialog({
         style={{ color: textColor }}
         aria-label={translate(locale, 'closeFeedback')}
       >
-        <X className="w-5 h-5" />
+        <DynamicIcon name="X" className="w-5 h-5" fallback={<span /> } />
       </button>
 
       {/* Title */}
@@ -153,10 +153,7 @@ export default function FeedbackDialog({
           }}
           aria-pressed={selectedRating === 'positive'}
         >
-          <ThumbsUp
-            className="w-8 h-8"
-            style={{ color: selectedRating === 'positive' ? primaryColor : textColor }}
-          />
+          <DynamicIcon name="ThumbsUp" className="w-8 h-8" fallback={<span />} />
           <span className="text-sm font-medium">{translate(locale, 'feedbackPositive')}</span>
         </button>
 
@@ -173,10 +170,7 @@ export default function FeedbackDialog({
           }}
           aria-pressed={selectedRating === 'neutral'}
         >
-          <Minus
-            className="w-8 h-8"
-            style={{ color: selectedRating === 'neutral' ? primaryColor : textColor }}
-          />
+          <DynamicIcon name="Minus" className="w-8 h-8" fallback={<span />} />
           <span className="text-sm font-medium">{translate(locale, 'feedbackNeutral')}</span>
         </button>
 
@@ -193,10 +187,7 @@ export default function FeedbackDialog({
           }}
           aria-pressed={selectedRating === 'negative'}
         >
-          <ThumbsDown
-            className="w-8 h-8"
-            style={{ color: selectedRating === 'negative' ? primaryColor : textColor }}
-          />
+          <DynamicIcon name="ThumbsDown" className="w-8 h-8" fallback={<span />} />
           <span className="text-sm font-medium">{translate(locale, 'feedbackNegative')}</span>
         </button>
       </div>

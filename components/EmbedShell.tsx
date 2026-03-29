@@ -4,6 +4,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import InteractionButtons from './InteractionButtons';
 import MessageBubble from './MessageBubble';
+import DynamicIcon from './DynamicIcon';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import { t as translate } from '../lib/i18n';
 import type {
@@ -406,14 +407,9 @@ export default function EmbedShell({
                                 >
                                   {button.icon && (() => {
                                     const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-                                    // lazy require lucide-react to avoid circular imports in some builds
-                                    try {
-                                      const Icons = require('lucide-react');
-                                      const IconComp = Icons[name];
-                                      return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;
-                                    } catch (e) {
-                                      return <span>{button.icon}</span>;
-                                    }
+                                    return (
+                                      <DynamicIcon name={name} className="w-4 h-4" fallback={<span>{button.icon}</span>} />
+                                    );
                                   })()}
                                   {getText(button.label) || 'Button'}
                                 </button>
@@ -672,13 +668,9 @@ export default function EmbedShell({
                                   >
                                     {button.icon && (() => {
                                       const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-                                      try {
-                                        const Icons = require('lucide-react');
-                                        const IconComp = Icons[name];
-                                        return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;
-                                      } catch (e) {
-                                        return <span>{button.icon}</span>;
-                                      }
+                                      return (
+                                        <DynamicIcon name={name} className="w-4 h-4" fallback={<span>{button.icon}</span>} />
+                                      );
                                     })()}
                                     {getText(button.label) || 'Button'}
                                   </button>

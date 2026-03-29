@@ -4,7 +4,10 @@ import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import DynamicIcon from "@/components/DynamicIcon"
+
+const ArrowLeft = (props: any) => <DynamicIcon name="ArrowLeft" {...props} />;
+const ArrowRight = (props: any) => <DynamicIcon name="ArrowRight" {...props} />;
 
 import { cn } from "@/lib/utils"
 import { Button } from "./button"

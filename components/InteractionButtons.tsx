@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
 import React from 'react';
-import * as Icons from 'lucide-react';
+import DynamicIcon from './DynamicIcon';
 import type { FlowButton } from '../types/widget';
 
 // generic button type, falls back to FlowButton for most widgets
@@ -49,8 +49,7 @@ export default function InteractionButtons({
           >
             {button.icon && (() => {
               const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-              const IconComp = (Icons as any)[name];
-              return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;
+              return <DynamicIcon name={name} className="w-4 h-4" fallback={<span>{button.icon}</span>} />;
             })()}
             {(() => {
               // prefer localized label when available

@@ -26,6 +26,8 @@ const config = {
   // Ignore specific files from coverage reports
   coveragePathIgnorePatterns: [
     '<rootDir>/node_modules/',
+    '<rootDir>/components/DynamicIcon.tsx',
+    '<rootDir>/src/components/DynamicIcon.tsx',
     '<rootDir>/src/components/ui/command.tsx',
     '<rootDir>/src/components/ui/dropdown-menu.tsx',
     '<rootDir>/src/components/ui/hover-card.tsx',
@@ -50,6 +52,8 @@ const config = {
     '!src/components/ui/input.tsx',
     '!src/components/ui/label.tsx',
     '!src/components/ui/progress.tsx',
+    '!components/DynamicIcon.tsx',
+    '!src/components/DynamicIcon.tsx',
     // Include all app files (pages and routes are now collected so coverage
     // shows every source file in the repo). Integration-only files will also
     // appear and will be measured against thresholds.

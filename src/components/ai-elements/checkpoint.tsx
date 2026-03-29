@@ -7,9 +7,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
- 
+
 import { cn } from "@/lib/utils";
-import { BookmarkIcon, type LucideProps } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+type LucideProps = any;
+const BookmarkIcon = (props: any) => <DynamicIcon name="BookmarkIcon" {...props} />;
 import type { ComponentProps, HTMLAttributes } from "react";
 
 export type CheckpointProps = HTMLAttributes<HTMLDivElement>;

@@ -8,7 +8,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { type LucideIcon, XIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+type LucideIcon = any;
+const XIcon = (props: any) => <DynamicIcon name="XIcon" {...props} />;
 import type { ComponentProps, HTMLAttributes } from "react";
 
 export type ArtifactProps = HTMLAttributes<HTMLDivElement>;

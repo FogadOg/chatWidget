@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowDownIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const ArrowDownIcon = (props: any) => <DynamicIcon name="ArrowDownIcon" {...props} />;
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";

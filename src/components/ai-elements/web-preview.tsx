@@ -14,7 +14,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const ChevronDownIcon = (props: any) => <DynamicIcon name="ChevronDownIcon" {...props} />;
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import en from "../../../locales/en.json";

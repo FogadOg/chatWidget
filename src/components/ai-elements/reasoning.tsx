@@ -7,7 +7,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const BrainIcon = (props: any) => <DynamicIcon name="BrainIcon" {...props} />;
+const ChevronDownIcon = (props: any) => <DynamicIcon name="ChevronDownIcon" {...props} />;
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";

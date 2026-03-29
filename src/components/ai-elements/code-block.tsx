@@ -2,7 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import DynamicIcon from "@/components/DynamicIcon";
+
+const CheckIcon = (props: any) => <DynamicIcon name="CheckIcon" {...props} />;
+const CopyIcon = (props: any) => <DynamicIcon name="CopyIcon" {...props} />;
 import {
   type ComponentProps,
   createContext,
