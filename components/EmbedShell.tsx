@@ -408,7 +408,6 @@ export default function EmbedShell({
                                     const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
                                     // lazy require lucide-react to avoid circular imports in some builds
                                     try {
-                                      // eslint-disable-next-line @typescript-eslint/no-var-requires
                                       const Icons = require('lucide-react');
                                       const IconComp = Icons[name];
                                       return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;
@@ -674,7 +673,6 @@ export default function EmbedShell({
                                     {button.icon && (() => {
                                       const name = (button.icon as string).split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
                                       try {
-                                        // eslint-disable-next-line @typescript-eslint/no-var-requires
                                         const Icons = require('lucide-react');
                                         const IconComp = Icons[name];
                                         return IconComp ? <IconComp className="w-4 h-4" /> : <span>{button.icon}</span>;

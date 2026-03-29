@@ -28,12 +28,12 @@ export default function GettingStartedPage() {
         <section className="flex flex-col gap-3">
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Prerequisites</h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            Before you begin, you'll need the following from your dashboard:
+            Before you begin, you&apos;ll need the following from your dashboard:
           </p>
           <ul className="flex flex-col gap-2 pl-5 list-disc text-zinc-600 dark:text-zinc-400">
             <li>
               <span className="font-medium text-zinc-900 dark:text-zinc-100">Client ID</span>
-              {' '}— from your organization's API keys
+              {' '}— from your organization&apos;s API keys
             </li>
             <li>
               <span className="font-medium text-zinc-900 dark:text-zinc-100">Assistant ID</span>

@@ -85,7 +85,7 @@ export function validateConfig(
   }
 
   // For docs runtime, strip chat-only fields to avoid confusing the runtime.
-  let sanitized: Partial<WidgetConfig> = { ...rawConfig, widget_type: resolvedType };
+  const sanitized: Partial<WidgetConfig> = { ...rawConfig, widget_type: resolvedType };
   if (expectedType === 'docs') {
     for (const field of CHAT_ONLY_FIELDS) {
       delete (sanitized as Record<string, unknown>)[field as string];
