@@ -38,19 +38,8 @@ export default function DynamicIcon({ name, className, fallback, importer }: Pro
   const [Icon, setIcon] = useState<React.ComponentType<any> | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    const loader = importer ? importer() : import('lucide-react')
-    loader
-      .then((mod) => {
-        const Comp = (mod as any)[name];
-        if (mounted && Comp) setIcon(() => Comp);
-      })
-      .catch(() => {
-        /* ignore */
-      });
-    return () => {
-      mounted = false;
-    };
+    const { promise, cancel } = loadAndSetIcon(name, importer, (comp) => setIcon(comp))
+    return () => cancel()
   }, [name, importer]);
 
   if (Icon) {
@@ -72,4 +61,32 @@ export function loadIcon(name: string, importer?: () => Promise<Record<string, a
       return Comp ?? null
     })
     .catch(() => null)
+}
+
+// Testable helper: performs the same dynamic-load logic as the effect but
+// exposes a `cancel` to stop updates. Returns the loader promise and a
+// cancel function. This lets tests exercise the branch without mounting the
+// component (avoiding renderer/React instance mismatches in some Jest setups).
+export function loadAndSetIcon(
+  name: string,
+  importer: (() => Promise<Record<string, any>>) | undefined,
+  onSet: (comp: React.ComponentType<any> | null) => void,
+) {
+  let mounted = true
+  const loader = importer ? importer() : import('lucide-react')
+  const promise = loader
+    .then((mod) => {
+      const Comp = (mod as any)[name]
+      if (mounted && Comp) onSet(() => Comp)
+    })
+    .catch(() => {
+      /* ignore */
+    })
+
+  return {
+    promise,
+    cancel: () => {
+      mounted = false
+    },
+  }
 }
