@@ -514,7 +514,7 @@ export default function EmbedShell({
                 ...fontStyles
               }}
               className={`${btnWidth} ${btnHeight} text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 hover:opacity-90`}
-              title={t.openChat}
+              title={typeof t.openChat === 'string' ? t.openChat : String(t.openChat)}
             >
                 {widgetConfig?.bot_avatar ? (
                   <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className={`${btnIcon} rounded-full object-cover`} />
@@ -559,7 +559,7 @@ export default function EmbedShell({
                     onClick={toggleCollapsed}
                     style={{ backgroundColor: secondaryColor }}
                     className="w-6 h-6 rounded flex items-center justify-center transition-opacity hover:opacity-90"
-                    title={t.minimizeChat}
+                    title={typeof t.minimizeChat === 'string' ? t.minimizeChat : String(t.minimizeChat)}
                     aria-label={minimizeChatLabel}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

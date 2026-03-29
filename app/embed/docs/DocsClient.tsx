@@ -1,6 +1,6 @@
 'use client'
 
- 
+
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronLeftIcon } from 'lucide-react'
@@ -684,7 +684,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                             type="button"
                                             onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_up')}
                                             className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                            title={t.feedbackThumbsUp}
+                                            title={typeof t.feedbackThumbsUp === 'string' ? t.feedbackThumbsUp : String(t.feedbackThumbsUp)}
                                             aria-label={translate(activeLocale, 'feedbackPositive')}
                                           >
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -695,7 +695,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                             type="button"
                                             onClick={() => handleSubmitMessageFeedback(message.key, 'thumbs_down')}
                                             className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1"
-                                            title={t.feedbackThumbsDown}
+                                            title={typeof t.feedbackThumbsDown === 'string' ? t.feedbackThumbsDown : String(t.feedbackThumbsDown)}
                                             aria-label={translate(activeLocale, 'feedbackNegative')}
                                           >
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -706,7 +706,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                       )}
                                       {message.from === 'assistant' && messageFeedbackSubmitted.has(message.key) && (
                                         <div className="mt-2 text-xs opacity-50">
-                                          {t.feedbackSubmittedMessage}
+                                          {typeof t.feedbackSubmittedMessage === 'string' ? t.feedbackSubmittedMessage : String(t.feedbackSubmittedMessage)}
                                         </div>
                                       )}
                                     </div>
