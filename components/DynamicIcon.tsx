@@ -7,18 +7,7 @@ type Props = {
   fallback?: React.ReactNode;
 };
 
-export default function DynamicIcon({ name, className, fallback }: Props) {
-  if (process.env.NODE_ENV === 'test' || typeof (global as any).jest !== 'undefined') {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require('lucide-react');
-      const Comp = (mod as any)[name];
-      return Comp ? <Comp className={className} /> : <>{fallback ?? null}</>;
-    } catch (e) {
-      return <>{fallback ?? null}</>;
-    }
-  }
-
+function RuntimeDynamicIcon({ name, className, fallback }: Props) {
   const [Icon, setIcon] = useState<React.ComponentType<any> | null>(null);
 
   useEffect(() => {
@@ -42,4 +31,29 @@ export default function DynamicIcon({ name, className, fallback }: Props) {
   }
 
   return <>{fallback ?? null}</>;
+}
+
+function resolveSyncIcon(name: string): React.ComponentType<any> | null {
+  try {
+    const mod = require('lucide-react')
+    return (mod as any)[name] ?? null
+  } catch {
+    return null
+  }
+}
+
+function SyncDynamicIcon({ name, className, fallback }: Props) {
+  const Comp = resolveSyncIcon(name)
+  if (!Comp) {
+    return <>{fallback ?? null}</>
+  }
+  return React.createElement(Comp, { className })
+}
+
+export default function DynamicIcon(props: Props) {
+  const isTestEnv = process.env.NODE_ENV === 'test' || typeof (global as any).jest !== 'undefined'
+  if (isTestEnv) {
+    return <SyncDynamicIcon {...props} />
+  }
+  return <RuntimeDynamicIcon {...props} />
 }

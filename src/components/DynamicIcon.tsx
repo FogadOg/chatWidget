@@ -15,29 +15,11 @@ type Props = {
   importer?: () => Promise<Record<string, any>>;
 };
 
-export default function DynamicIcon({ name, className, fallback, importer }: Props) {
-  // In test environments, synchronous require ensures Jest module mocks for
-  // `lucide-react` are applied and test IDs rendered. Avoids hook usage in
-  // mocked environments where dynamic import or hooks may behave differently.
-  // Consumers may pass `forceAsync=true` in tests to bypass this and force
-  // the dynamic-import path for coverage of that branch.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { forceAsync } = (arguments[0] as Props) || { forceAsync: false }
-
-  if (!forceAsync && (process.env.NODE_ENV === 'test' || typeof (global as any).jest !== 'undefined')) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require('lucide-react');
-      const Comp = (mod as any)[name];
-      return Comp ? <Comp className={className} /> : <>{fallback ?? null}</>;
-    } catch (e) {
-      return <>{fallback ?? null}</>;
-    }
-  }
-
+function RuntimeDynamicIcon({ name, className, fallback, importer }: Props) {
   const [Icon, setIcon] = useState<React.ComponentType<any> | null>(null);
 
   useEffect(() => {
+    if (!name) return
     const { promise, cancel } = loadAndSetIcon(name, importer, (comp) => setIcon(comp))
     return () => cancel()
   }, [name, importer]);
@@ -48,6 +30,25 @@ export default function DynamicIcon({ name, className, fallback, importer }: Pro
   }
 
   return <>{fallback ?? null}</>;
+}
+
+function SyncDynamicIcon({ name, className, fallback }: Pick<Props, 'name' | 'className' | 'fallback'>) {
+  const Comp = resolveSyncIcon(name)
+  if (!Comp) {
+    return <>{fallback ?? null}</>
+  }
+  return React.createElement(Comp, { className })
+}
+
+export default function DynamicIcon(props: Props) {
+  const { forceAsync = false } = props
+  const isTestEnv = process.env.NODE_ENV === 'test' || typeof (global as any).jest !== 'undefined'
+
+  if (!forceAsync && isTestEnv) {
+    return <SyncDynamicIcon {...props} />
+  }
+
+  return <RuntimeDynamicIcon {...props} />
 }
 
 // Export a helper for loading icons so tests can exercise the dynamic-import
@@ -61,6 +62,16 @@ export function loadIcon(name: string, importer?: () => Promise<Record<string, a
       return Comp ?? null
     })
     .catch(() => null)
+}
+
+export function resolveSyncIcon(name: string): React.ComponentType<any> | null {
+  try {
+    const mod = require('lucide-react')
+    const Comp = (mod as any)[name]
+    return Comp ?? null
+  } catch {
+    return null
+  }
 }
 
 // Testable helper: performs the same dynamic-load logic as the effect but
