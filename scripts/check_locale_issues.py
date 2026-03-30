@@ -68,7 +68,7 @@ def main():
             if isinstance(loc_val, str) and (loc_val.strip().startswith('PL:') or 'TODO' in loc_val or '__MISSING__' in loc_val):
                 suspicious_markers.append(k)
             if loc_val == en_val and isinstance(en_val, str):
-                untranslated.append(k)
+                untranslated.append({'key': k, 'value': loc_val})
             en_ph = extract_placeholders(en_val)
             loc_ph = extract_placeholders(loc_val)
             if en_ph != loc_ph:
