@@ -38,8 +38,15 @@ for locale, data in r.items():
     print(f"{locale}:")
     # untranslated
     for k in data.get('untranslated_sample', []):
+        # `k` can be a string key or a dict containing a 'key' field.
+        if isinstance(k, dict):
+            key_str = k.get('key') or next((v for v in k.values() if isinstance(v, str)), None)
+            if not key_str:
+                key_str = repr(k)
+        else:
+            key_str = k
         # print concise marker with key only
-        print(f"::warning file=widget-app/locales/{locale},line=1::{locale} untranslated {k}")
+        print(f"::warning file=widget-app/locales/{locale},line=1::{locale} untranslated {key_str}")
     # placeholder mismatches
     for item in data.get('placeholder_mismatches_sample', []):
         k = item.get('key') if isinstance(item, dict) else item
