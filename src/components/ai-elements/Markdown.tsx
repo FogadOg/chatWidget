@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-const ReactMarkdown: any = typeof require !== 'undefined' ? require("react-markdown") : (null as any);
-const remarkGfm: any = typeof require !== 'undefined' ? require("remark-gfm") : (null as any);
+
+const resolveCjsEsm = (mod: any) => mod?.default ?? mod;
+const ReactMarkdown: any =
+  typeof require !== 'undefined' ? resolveCjsEsm(require("react-markdown")) : (null as any);
+const remarkGfm: any =
+  typeof require !== 'undefined' ? resolveCjsEsm(require("remark-gfm")) : (null as any);
 
 type Props = {
   content: string;
@@ -44,14 +48,9 @@ export default function Markdown({ content }: Props) {
 
   return (
     <div className="prose max-w-full">
-      {(() => {
-        const R = ReactMarkdown as any;
-        return (
-          <R remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins}>
-            {content}
-          </R>
-        );
-      })()}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins}>
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }
