@@ -174,6 +174,24 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
   const [parentOrigin, setParentOrigin] = useState<string>('*');
 
+  const resolveParentOrigin = useCallback((): string | undefined => {
+    if (typeof window === 'undefined') return undefined;
+
+    try {
+      if (document.referrer) {
+        return new URL(document.referrer).origin;
+      }
+
+      if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+        return window.location.ancestorOrigins[0];
+      }
+    } catch (e) {
+      console.warn('Could not determine parent origin');
+    }
+
+    return undefined;
+  }, []);
+
   useEffect(() => {
     helpersScrollToBottom(conversationEndRef.current, scrollAreaRef.current);
   }, [messages]);
@@ -502,7 +520,12 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   // Initialize session on mount
   useEffect(() => {
     if (clientId && assistantId) {
-      getAuthToken(clientId).then((token) => {
+      const detectedParentOrigin = resolveParentOrigin();
+      if (detectedParentOrigin) {
+        setParentOrigin(detectedParentOrigin);
+      }
+
+      getAuthToken(clientId, detectedParentOrigin).then((token) => {
         if (token) {
           // Fetch widget config
           fetchWidgetConfig(configId, token);
@@ -518,6 +541,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
           setError(authError);
         } else {
           console.error('No token and no authError - check getAuthToken implementation');
+          setError('Failed to authenticate');
         }
       }).catch(err => {
         console.error('Error getting auth token:', err);
@@ -526,7 +550,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     } else {
       console.warn('Missing clientId or assistantId');
     }
-  }, [clientId, assistantId, configId, authError, createSession, validateAndRestoreSession, fetchWidgetConfig]);
+  }, [clientId, assistantId, configId, createSession, validateAndRestoreSession, fetchWidgetConfig, getAuthToken, resolveParentOrigin]);
 
   // Periodic check for expired sessions
   useEffect(() => {
@@ -544,21 +568,11 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
   // Detect parent origin
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        // Try to get parent origin from document.referrer
-        if (document.referrer) {
-          const url = new URL(document.referrer);
-          setParentOrigin(url.origin);
-        } else if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
-          // Safari and some other browsers support ancestorOrigins
-          setParentOrigin(window.location.ancestorOrigins[0]);
-        }
-      } catch (e) {
-        console.warn('Could not determine parent origin, using wildcard');
-      }
+    const detected = resolveParentOrigin();
+    if (detected) {
+      setParentOrigin(detected);
     }
-  }, []);
+  }, [resolveParentOrigin]);
 
   // Apply hide_on_mobile from widget config for docs widget
   useEffect(() => {
