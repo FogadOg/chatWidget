@@ -1,5 +1,5 @@
 import { API } from '../../../lib/api';
-import { logError } from '../../../lib/logger';
+import { logError } from '../../../lib/errorHandling';
 import { getOrCreateVisitorId, getStoredSessionByKey, storeSessionByKey } from '../../../lib/sessionStorage';
 import { STORAGE_PREFIX } from '../../../lib/constants';
 import type { Message, SourceData } from '../../../types/widget';
@@ -80,7 +80,13 @@ export function storeSession(sessionStorageKey: string, sessionId: string, expir
   storeSessionByKey(sessionStorageKey, sessionId, expiresAt);
 }
 
-export async function loadSessionMessages(sessionId: string, token: string, setMessages: (msgs: Message[]) => void) {
+export async function loadSessionMessages(
+  sessionId: string,
+  token: string,
+  setMessages?: ((msgs: Message[]) => void) | boolean
+) {
+  const setMessagesFn = typeof setMessages === 'function' ? setMessages : undefined;
+  const hasCallback = !!setMessagesFn;
   try {
     const response = await fetch(API.sessionMessages(sessionId), {
       method: 'GET',
@@ -112,9 +118,19 @@ export async function loadSessionMessages(sessionId: string, token: string, setM
           sources: (m.sources as SourceData[]) || [],
         };
       });
-      setMessages(loaded);
+      if (setMessagesFn) setMessagesFn(loaded);
     }
-  } catch (_e) {
-    logError((_e as Error).message || String(_e), { action: 'loadSessionMessages', sessionId });
+  } catch (err) {
+    // If a callback was provided, log and swallow the error so callers that
+    // just requested messages are not forced to handle the exception. If no
+    // callback was given (typical for programmatic reloads after submit),
+    // rethrow and let the caller (e.g. `handleSubmit`) log with the correct
+    // contextual information.
+    const e = err as Error;
+    if (!hasCallback) {
+      throw err;
+    }
+
+    logError(e, { action: 'loadSessionMessages', sessionId, isInitial: false });
   }
 }

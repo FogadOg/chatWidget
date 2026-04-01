@@ -18,6 +18,7 @@ export type Message = {
   timestamp?: number;
   hasFeedback?: boolean;
   sources?: SourceData[];
+  pending?: boolean;
 };
 
 export type FlowButton = {

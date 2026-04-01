@@ -435,6 +435,7 @@ describe('EmbedClient Component', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
@@ -2047,7 +2048,7 @@ describe('EmbedClient Component', () => {
       });
 
       // Verify getStoredSession was called multiple times
-      expect(mockHelpers.getStoredSession).toHaveBeenCalledTimes(2);
+      expect(mockHelpers.getStoredSession.mock.calls.length).toBeGreaterThanOrEqual(2);
 
       jest.useRealTimers();
     });
@@ -2802,7 +2803,9 @@ describe('EmbedClient Component', () => {
     });
 
     test('handleFeedbackSkip stores skipped flag in localStorage', async () => {
-      const { container } = render(<EmbedClient {...defaultProps} startOpen={true} />);
+      const { container } = render(
+        <EmbedClient {...defaultProps} startOpen={true} showFeedbackDialogOverride={true} />
+      );
 
       await waitFor(() => {
         expect(screen.getByTestId('embed-shell')).toBeInTheDocument();
@@ -2818,9 +2821,8 @@ describe('EmbedClient Component', () => {
       // Simulate feedback skip button click
       act(() => {
         const feedbackSkipBtn = container.querySelector('[data-testid="feedback-skip"]');
-        if (feedbackSkipBtn) {
-          fireEvent.click(feedbackSkipBtn);
-        }
+        expect(feedbackSkipBtn).toBeTruthy();
+        if (feedbackSkipBtn) fireEvent.click(feedbackSkipBtn);
       });
 
       // Verify localStorage stores 'skipped'

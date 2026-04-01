@@ -1,0 +1,101 @@
+{
+  "de.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "es.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "fr.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "it.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "nb.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "nl.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "pl.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "pt.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  },
+  "sv.json": {
+    "total_keys": 88,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 0,
+    "placeholder_mismatches_sample": []
+  }
+}

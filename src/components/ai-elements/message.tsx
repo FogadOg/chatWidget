@@ -19,6 +19,7 @@ import {
   ChevronRightIcon,
   PaperclipIcon,
   XIcon,
+  ClockIcon,
 } from "lucide-react";
 import en from "../../../locales/en.json";
 import type { ComponentProps, HTMLAttributes, ReactElement, ComponentType } from "react";
@@ -36,6 +37,7 @@ if (process.env.JEST_WORKER_ID) {
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
+  pending?: boolean;
 };
 
 export const Message = ({ className, from, ...props }: MessageProps) => (
@@ -49,7 +51,9 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
   />
 );
 
-export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
+export type MessageContentProps = HTMLAttributes<HTMLDivElement> & {
+  pending?: boolean;
+};
 
 export const MessageContent = ({
   children,
@@ -58,7 +62,7 @@ export const MessageContent = ({
 }: MessageContentProps) => (
   <div
     className={cn(
-      "is-user:dark flex w-fit max-w-full min-w-0 flex-col gap-2 overflow-hidden text-sm",
+      "is-user:dark relative flex w-fit max-w-full min-w-0 flex-col gap-2 overflow-hidden text-sm",
       "group-[.is-user]:ml-auto group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
       "group-[.is-assistant]:text-foreground",
       className
@@ -66,6 +70,11 @@ export const MessageContent = ({
     {...props}
   >
     {children}
+    {props.pending && (
+      <span className="absolute -top-2 -right-2 inline-flex items-center rounded-full bg-background/80 p-1 text-muted-foreground text-xs">
+        <ClockIcon className="size-3" />
+      </span>
+    )}
   </div>
 );
 

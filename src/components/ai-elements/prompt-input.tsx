@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import en from "../../../locales/en.json";
+import { queueMessage, registerServiceWorker, isOnline, getQueuedMessages, removeQueuedMessage } from "@/lib/offline";
 import {
   type ChangeEvent,
   type ChangeEventHandler,
@@ -459,6 +460,8 @@ export type PromptInputProps = Omit<
     message: PromptInputMessage,
     event: FormEvent<HTMLFormElement>
   ) => void | Promise<void>;
+  /** Called when message is queued locally due to offline state */
+  onQueue?: (message: PromptInputMessage & { id: string }) => void;
 };
 
 export const PromptInput = ({
@@ -615,6 +618,60 @@ export const PromptInput = ({
     }
   }, [files, syncHiddenInput]);
 
+  // Register service worker and track online state
+  const [online, setOnline] = useState<boolean>(isOnline());
+  useEffect(() => {
+    // register SW for offline caching and background sync
+    try {
+      registerServiceWorker();
+    } catch {}
+
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  // When we detect we're back online, attempt to resend queued messages by calling onSubmit
+  useEffect(() => {
+    if (!usingProvider && !onSubmit) return; // nothing to call
+    const tryFlush = async () => {
+      if (!isOnline()) return;
+      const queued = await getQueuedMessages();
+      // flush in sequence order
+      for (const item of queued.sort((a: any, b: any) => (a.seq || 0) - (b.seq || 0))) {
+        try {
+          // call parent onSubmit with queued message
+          await onSubmit?.({ text: item.text, files: item.files } as PromptInputMessage, {} as FormEvent<HTMLFormElement>);
+          await removeQueuedMessage(item.id);
+        } catch (e) {
+          // stop on failure to preserve order
+          break;
+        }
+      }
+    };
+
+    const onOnlineFlush = () => tryFlush();
+    const onSWMessage = (ev: MessageEvent) => {
+      if (ev?.data?.type === "FLUSH_QUEUE") {
+        tryFlush();
+      }
+    };
+
+    window.addEventListener("online", onOnlineFlush);
+    navigator.serviceWorker?.addEventListener?.("message", onSWMessage as any);
+    // try immediately if already online
+    if (isOnline()) tryFlush();
+    return () => {
+      window.removeEventListener("online", onOnlineFlush);
+      navigator.serviceWorker?.removeEventListener?.("message", onSWMessage as any);
+    };
+  }, [onSubmit, usingProvider]);
+
   // Attach drop handlers on nearest form and document (opt-in)
   useEffect(() => {
     const form = formRef.current;
@@ -748,6 +805,39 @@ export const PromptInput = ({
     )
       .then((convertedFiles: FileUIPart[]) => {
         try {
+          // If offline, queue message locally instead of calling onSubmit
+          if (typeof window !== "undefined" && !isOnline()) {
+            const id = nanoid();
+            // seq uses timestamp to preserve order
+            const seq = Date.now();
+            const queued = { id, seq, text, files: convertedFiles, timestamp: Date.now() };
+            queueMessage(queued);
+            // Inform the host page about the queued message so it can render a pending UI
+            try {
+              window.dispatchEvent(
+                new CustomEvent("companin:queued-message", { detail: queued })
+              );
+            } catch (e) {
+              /* ignore */
+            }
+            // attempt to register background sync (best-effort)
+            if (navigator.serviceWorker && 'serviceWorker' in navigator) {
+              try {
+                navigator.serviceWorker.ready.then((reg) => {
+                  if ((reg as any).sync && (reg as any).sync.register) {
+                    try { (reg as any).sync.register('companin-send-queue'); } catch {}
+                  }
+                });
+              } catch {}
+            }
+            // let parent optionally insert a pending-local message into the conversation
+            (onQueue as any)?.({ id, text, files: convertedFiles });
+            // clear UI
+            clear();
+            if (usingProvider) controller.textInput.clear();
+            return;
+          }
+
           const result = onSubmit({ text, files: convertedFiles }, event);
 
           // Handle both sync and async onSubmit
@@ -797,6 +887,12 @@ export const PromptInput = ({
         ref={formRef}
         {...props}
       >
+        {!online && (
+          <div className="mb-2 rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+            <strong className="block">{en.offlineBannerTitle}</strong>
+            <span className="block text-xs">{en.offlineBannerDesc}</span>
+          </div>
+        )}
         <InputGroup className="overflow-hidden">{children}</InputGroup>
       </form>
     </>

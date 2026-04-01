@@ -1,4 +1,4 @@
- 
+
 'use client';
 
 import React from 'react';
@@ -13,6 +13,7 @@ type Message = {
   from: 'user' | 'assistant';
   timestamp?: number;
   sources?: Source[];
+  pending?: boolean;
 };
 
 type Props = {
@@ -98,14 +99,63 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
   }
 
   // user message
+  const isPending = Boolean(message.pending);
+  const attempts = (message as any).attempts || 0;
+
+  const bubbleStyle: React.CSSProperties = isPending
+    ? {
+        backgroundColor: 'transparent',
+        color: '#374151',
+        borderRadius: `${messageBubbleRadius}px`,
+        border: '1px dashed rgba(31,41,55,0.08)',
+        opacity: 0.9,
+        ...fontStyles,
+      }
+    : {
+        backgroundColor: '#111827',
+        color: '#ffffff',
+        borderRadius: `${messageBubbleRadius}px`,
+        ...fontStyles,
+      };
+
   return (
     <div className={`flex w-full justify-end`}>
-      <div className="flex flex-col items-end w-full">
-        <div className={`max-w-[80%] p-2`} style={{ backgroundColor: '#111827', color: '#ffffff', borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-          <div>{message.text}</div>
+      <div className="flex flex-col items-end w-full" aria-live={isPending ? 'polite' : undefined}>
+        <div className={`max-w-[80%] p-2`} style={bubbleStyle} data-pending={isPending ? 'true' : 'false'}>
+          <div style={{ opacity: isPending ? 0.9 : 1 }}>{message.text}</div>
         </div>
+
+        {isPending && (
+          <div className="mt-1 flex items-center gap-3">
+            {attempts === 0 && (
+              <span className="text-xs opacity-70 flex items-center gap-1" style={{ color: '#6b7280' }}>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                <span className="text-xs">{translate(locale, 'offlineStatus')}</span>
+              </span>
+            )}
+
+            {attempts > 0 && attempts < 3 && (
+              <span className="text-xs opacity-70 flex items-center gap-1" style={{ color: '#6b7280' }}>
+                <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /></svg>
+                <span className="text-xs">{translate(locale, 'deliveringStatus', { vars: { attempt: attempts } })}</span>
+              </span>
+            )}
+
+            {attempts >= 3 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs opacity-70" style={{ color: '#ef4444' }}>{translate(locale, 'failedSend')}</span>
+                <button type="button" className="text-xs underline" onClick={() => {
+                  try {
+                    window.dispatchEvent(new CustomEvent('companin:retry-queued', { detail: { id: message.id } }));
+                  } catch {}
+                }}>{translate(locale, 'retry')}</button>
+              </div>
+            )}
+          </div>
+        )}
+
         {showTimestamps && message.timestamp && (
-          <span className="mt-1 text-xs opacity-50" style={{ color: textColor }}>{new Date(message.timestamp).toLocaleTimeString()}</span>
+          <span className="mt-1 text-xs opacity-50" style={{ color: '#6b7280' }}>{new Date(message.timestamp).toLocaleTimeString()}</span>
         )}
       </div>
     </div>

@@ -1,0 +1,130 @@
+/* Minimal offline queue using IndexedDB (no external deps). */
+const DB_NAME = "companin-offline";
+const STORE_NAME = "message-queue";
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function queueMessage(item: any) {
+  try {
+    // ensure attempts metadata exists
+    const queued = { ...item, attempts: item.attempts || 0, lastAttempt: item.lastAttempt || 0 };
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(queued);
+    return tx.complete;
+  } catch (e) {
+    // fail silently
+  }
+}
+
+export async function getQueuedMessages(): Promise<any[]> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function removeQueuedMessage(id: string) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(id);
+    return tx.complete;
+  } catch (e) {
+    // ignore
+  }
+}
+
+export async function incrementAttempt(id: string) {
+  try {
+    const db = await openDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(id as any);
+      req.onsuccess = () => {
+        const item = req.result;
+        if (!item) return resolve();
+        item.attempts = (item.attempts || 0) + 1;
+        item.lastAttempt = Date.now();
+        store.put(item);
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Attempt to flush queue by calling provided send function for each item in sequence.
+export async function flushQueue(sendFn: (item: any) => Promise<void>) {
+  const items = await getQueuedMessages();
+  for (const item of items.sort((a, b) => (a.seq || 0) - (b.seq || 0))) {
+    try {
+      await sendFn(item);
+      await removeQueuedMessage(item.id);
+    } catch (e) {
+      // increment attempt count for the failed item so UI can show delivering/failed
+      try { await incrementAttempt(item.id); } catch {}
+      // stop on first failure to preserve order
+      break;
+    }
+  }
+}
+
+// Service worker registration helper
+export function registerServiceWorker(swPath = "/sw.js") {
+  if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register(swPath)
+      .then((registration) => {
+        try {
+          // If an API URL is configured at build time, pass it to the SW so it can
+          // attempt background delivery when possible. Use NEXT_PUBLIC_OFFLINE_API
+          // if present in the environment.
+          const api = (process && (process.env as any)?.NEXT_PUBLIC_OFFLINE_API) || null;
+          if (api) {
+            // If the service worker is active, post message; otherwise wait until it becomes active.
+            if (registration.active) {
+              registration.active.postMessage({ type: 'SET_API', apiUrl: api });
+            } else if (registration.installing) {
+              registration.installing.addEventListener('statechange', () => {
+                if (registration.active) {
+                  registration.active.postMessage({ type: 'SET_API', apiUrl: api });
+                }
+              });
+            }
+          }
+        } catch (_) {
+          // ignore messaging failures
+        }
+      })
+      .catch(() => {
+        // ignore registration failures
+      });
+  }
+}
+
+export function isOnline() {
+  return typeof navigator !== "undefined" ? navigator.onLine : true;
+}
