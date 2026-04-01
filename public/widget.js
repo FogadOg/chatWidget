@@ -7,13 +7,14 @@
   let POWERED_BY_TEXT = (typeof window !== 'undefined' && window[`__${COMPANY_NAME.toUpperCase()}_WIDGET_LOCALES__`] && window[`__${COMPANY_NAME.toUpperCase()}_WIDGET_LOCALES__`].poweredBy) || 'Powered by ';
   const BASE_WIDGET_HOST = 'https://widget.companin.tech';
 
-  // Prevent multiple initializations (dynamic flag based on company name)
-  const globalFlagName = `__${COMPANY_NAME.toUpperCase()}_WIDGET__`;
-  if (window[globalFlagName]) {
-    console.warn(COMPANY_NAME + ' Widget: Already initialized');
-    return;
-  }
-  window[globalFlagName] = true;
+  const REGISTRY_KEY = `__${COMPANY_NAME.toUpperCase()}_WIDGET_INSTANCES__`;
+  const sanitizeInstanceId = (value) => String(value || 'default').replace(/[^a-zA-Z0-9_-]/g, '-');
+  const getOrCreateRegistry = () => {
+    if (!window[REGISTRY_KEY] || typeof window[REGISTRY_KEY] !== 'object') {
+      window[REGISTRY_KEY] = {};
+    }
+    return window[REGISTRY_KEY];
+  };
 
   // Error tracking
   const errors = [];
@@ -45,6 +46,20 @@
         const scripts = Array.from(document.getElementsByTagName('script'));
         script = scripts.find(function (s) {
           try {
+            if (s.getAttribute && s.getAttribute('data-companin-widget-bound') === 'true') return false;
+          } catch (e) {}
+          try {
+            return s && s.getAttribute && (
+              !!s.getAttribute('data-client-id') ||
+              !!s.getAttribute('data-assistant-id') ||
+              // fallback: script whose src looks like a remote widget loader
+              (s.src && /widget(\.|\/)/i.test(s.src))
+            );
+          } catch (e) {
+            return false;
+          }
+        }) || scripts.find(function (s) {
+          try {
             return s && s.getAttribute && (
               !!s.getAttribute('data-client-id') ||
               !!s.getAttribute('data-assistant-id') ||
@@ -63,6 +78,10 @@
       logError("Failed to get current script reference; using fallback stub", {});
       script = { getAttribute: function () { return null; } };
     }
+
+    try {
+      if (script && script.setAttribute) script.setAttribute('data-companin-widget-bound', 'true');
+    } catch (e) {}
 
     // Resolve powered-by text: attribute -> global locales -> default
     try {
@@ -96,6 +115,11 @@
       return browserLocale || "en";
     };
     const locale = detectLocale();
+    const explicitInstanceId =
+      script.getAttribute("data-instance-id") ||
+      script.getAttribute("data-widget-id") ||
+      script.getAttribute("data-instance") ||
+      script.getAttribute("data-key");
     const startOpen = script.getAttribute("data-start-open") === "true";
 
     // Validate required attributes
@@ -158,9 +182,21 @@
       }
     })();
 
+    const requestedInstanceId = explicitInstanceId || `${clientId}::${assistantId}::${configId}::${locale}`;
+    const registry = getOrCreateRegistry();
+    let instanceId = sanitizeInstanceId(requestedInstanceId);
+    if (registry[instanceId]) {
+      let copyIndex = 2;
+      while (registry[`${instanceId}-${copyIndex}`]) {
+        copyIndex += 1;
+      }
+      instanceId = `${instanceId}-${copyIndex}`;
+    }
+    const containerId = `${WIDGET_SCRIPT_ID}-container-${instanceId}`;
+
     // Create container with error handling
     const container = document.createElement("div");
-    container.id = WIDGET_SCRIPT_ID + '-container';
+    container.id = containerId;
     const COMPACT_BUTTON_MAX_SIZE = 64;
     const COMPACT_BUTTON_OUTER_PADDING = 8;
     const parsePixelValue = (value) => {
@@ -285,7 +321,7 @@
 
       // Ensure any hardcoded right positioning is removed (defensive):
       try {
-        const _c = document.getElementById(WIDGET_SCRIPT_ID + '-container');
+        const _c = document.getElementById(containerId);
         if (_c) {
           // also sanitize raw style attribute if present
           const s = _c.getAttribute && _c.getAttribute('style');
@@ -344,6 +380,7 @@
             timestamp: new Date().toISOString(),
             data,
             context: {
+              instanceId,
               clientId,
               assistantId,
               configId,
@@ -445,7 +482,7 @@
           });
         }
 
-        window.CompaninWidget = {
+        const widgetApi = {
           on,
           off,
           onOpen: (fn) => registerLegacyHook('open', fn),
@@ -457,12 +494,12 @@
 
           registerHooks: (hooks = {}) => {
             try {
-              if (hooks.onOpen) window.CompaninWidget.onOpen(hooks.onOpen);
-              if (hooks.onClose) window.CompaninWidget.onClose(hooks.onClose);
-              if (hooks.onMessage) window.CompaninWidget.onMessage(hooks.onMessage);
-              if (hooks.onResponse) window.CompaninWidget.onResponse(hooks.onResponse);
-              if (hooks.onAuthFailure) window.CompaninWidget.onAuthFailure(hooks.onAuthFailure);
-              if (hooks.onError) window.CompaninWidget.onError(hooks.onError);
+              if (hooks.onOpen) widgetApi.onOpen(hooks.onOpen);
+              if (hooks.onClose) widgetApi.onClose(hooks.onClose);
+              if (hooks.onMessage) widgetApi.onMessage(hooks.onMessage);
+              if (hooks.onResponse) widgetApi.onResponse(hooks.onResponse);
+              if (hooks.onAuthFailure) widgetApi.onAuthFailure(hooks.onAuthFailure);
+              if (hooks.onError) widgetApi.onError(hooks.onError);
             } catch (e) {
               logError('Failed to register hooks object', { error: e && e.message });
             }
@@ -529,11 +566,16 @@
               if (container.parentNode) {
                 container.parentNode.removeChild(container);
               }
-              delete window.CompaninWidget;
               try {
-                window[globalFlagName] = false;
+                delete registry[instanceId];
+              } catch (e) {}
+              try {
+                const remainingIds = Object.keys(registry);
+                if (window.CompaninWidget === widgetApi) {
+                  window.CompaninWidget = remainingIds.length ? registry[remainingIds[remainingIds.length - 1]] : undefined;
+                }
               } catch (e) {
-                // ignore
+                logError("Failed to update global CompaninWidget reference", { error: e && e.message });
               }
             } catch (err) {
               logError("Failed to destroy widget", { error: err.message });
@@ -541,10 +583,25 @@
           },
         };
 
+        registry[instanceId] = widgetApi;
+        window.CompaninWidgets = {
+          get: (id) => registry[id] || null,
+          list: () => Object.keys(registry),
+          destroy: (id) => {
+            const target = registry[id];
+            if (!target || typeof target.destroy !== 'function') return false;
+            target.destroy();
+            return true;
+          },
+        };
+        window.CompaninWidget = widgetApi;
+
         let allowDisplay = false;
 
         function handleMessage(event) {
           try {
+            if (event.source !== iframe.contentWindow) return;
+
             // Verify origin - always validate, even in dev mode.
             // Allow explicit host-target origin to support custom widget domains.
             const validOrigins = new Set([baseUrl, targetOrigin]);

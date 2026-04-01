@@ -1,7 +1,12 @@
-// allow accessing the global flag used by the widget script
 declare global {
   interface Window {
-    __COMPANIN_WIDGET__?: boolean;
+    CompaninWidget?: any;
+    CompaninWidgets?: {
+      get: (id: string) => any;
+      list: () => string[];
+      destroy: (id: string) => boolean;
+    };
+    __COMPANIN_WIDGET_INSTANCES__?: Record<string, any>;
   }
 }
 
@@ -18,6 +23,7 @@ describe('public/widget.js loader', () => {
 
   function inject(attrs: Record<string, string> = {}) {
     const script = document.createElement('script');
+    script.id = 'companin-widget-script';
     Object.entries(attrs).forEach(([k, v]) => script.setAttribute(k, v));
     Object.defineProperty(document, 'currentScript', {
       configurable: true,
@@ -28,13 +34,17 @@ describe('public/widget.js loader', () => {
     return script;
   }
 
+  function getContainers() {
+    return Array.from(document.querySelectorAll(`[id^="${WIDGET_SCRIPT_ID}-container-"]`));
+  }
+
   afterEach(() => {
-    const container = document.getElementById('companin-widget-container');
-    if (container && container.parentNode) container.parentNode.removeChild(container);
-    // reset global flag so subsequent injections can run
-     
-    // @ts-ignore
-    window.__COMPANIN_WIDGET__ = false;
+    getContainers().forEach((container) => {
+      if (container && container.parentNode) container.parentNode.removeChild(container);
+    });
+    try { delete window.CompaninWidget; } catch {}
+    try { delete window.CompaninWidgets; } catch {}
+    try { delete window.__COMPANIN_WIDGET_INSTANCES__; } catch {}
   });
 
   it('injects iframe and connection hints', () => {
@@ -44,10 +54,10 @@ describe('public/widget.js loader', () => {
       'data-config-id': 'cfg',
     });
 
-    const iframe = document.querySelector(`#${WIDGET_SCRIPT_ID}-container iframe`);
+    const iframe = document.querySelector(`[id^="${WIDGET_SCRIPT_ID}-container-"] iframe`);
     expect(iframe).toBeTruthy();
     // no button should exist at all
-    expect(document.querySelector(`#${WIDGET_SCRIPT_ID}-container button`)).toBeNull();
+    expect(document.querySelector(`[id^="${WIDGET_SCRIPT_ID}-container-"] button`)).toBeNull();
 
     // document head should now include connection hints
     const links = Array.from(document.head.querySelectorAll('link'));
@@ -64,8 +74,31 @@ describe('public/widget.js loader', () => {
       'data-start-open': 'true',
     });
 
-    const iframe = document.querySelector(`#${WIDGET_SCRIPT_ID}-container iframe`);
+    const iframe = document.querySelector(`[id^="${WIDGET_SCRIPT_ID}-container-"] iframe`);
     expect(iframe).toBeTruthy();
-    expect(document.querySelector(`#${WIDGET_SCRIPT_ID}-container button`)).toBeNull();
+    expect(document.querySelector(`[id^="${WIDGET_SCRIPT_ID}-container-"] button`)).toBeNull();
+  });
+
+  it('supports multiple chat widget instances on one page', () => {
+    inject({
+      'data-client-id': 'c1',
+      'data-assistant-id': 'a1',
+      'data-config-id': 'cfg1',
+      'data-instance-id': 'chat-left',
+    });
+
+    inject({
+      'data-client-id': 'c2',
+      'data-assistant-id': 'a2',
+      'data-config-id': 'cfg2',
+      'data-instance-id': 'chat-right',
+    });
+
+    const containers = getContainers();
+    expect(containers).toHaveLength(2);
+    expect(window.CompaninWidgets).toBeDefined();
+    expect(window.CompaninWidgets?.list().sort()).toEqual(['chat-left', 'chat-right']);
+    expect(window.CompaninWidgets?.get('chat-left')).toBeTruthy();
+    expect(window.CompaninWidgets?.get('chat-right')).toBeTruthy();
   });
 });

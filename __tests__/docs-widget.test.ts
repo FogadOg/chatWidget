@@ -7,12 +7,17 @@ declare const __dirname: string;
 
 declare global {
   interface Window {
-    __COMPANIN_DOCS_WIDGET__?: boolean;
     CompaninDocsWidget?: any;
+    CompaninDocsWidgets?: {
+      get: (id: string) => any;
+      list: () => string[];
+      destroy: (id: string) => boolean;
+    };
+    __COMPANIN_DOCS_WIDGET_INSTANCES__?: Record<string, any>;
   }
 }
 
-import { DOCS_WIDGET_SCRIPT_ID, COMPANY_NAME } from '../lib/constants';
+import { DOCS_WIDGET_SCRIPT_ID } from '../lib/constants';
 
 const fs = require('fs');
 const path = require('path');
@@ -26,6 +31,7 @@ describe('public/docs-widget.js loader', () => {
 
   function inject(attrs: Record<string, string> = {}) {
     const script = document.createElement('script');
+    script.id = 'companin-docs-widget-script';
     Object.entries(attrs).forEach(([k, v]) => script.setAttribute(k, v));
     Object.defineProperty(document, 'currentScript', {
       configurable: true,
@@ -36,12 +42,21 @@ describe('public/docs-widget.js loader', () => {
     return script;
   }
 
+  function getContainers() {
+    return Array.from(document.querySelectorAll(`[id^="${DOCS_WIDGET_SCRIPT_ID}-container-"]`));
+  }
+
+  function getFirstContainer() {
+    return document.querySelector(`[id^="${DOCS_WIDGET_SCRIPT_ID}-container-"]`) as HTMLElement | null;
+  }
+
   afterEach(() => {
-    const container = document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`);
-    if (container && container.parentNode) container.parentNode.removeChild(container);
-    try { window.__COMPANIN_DOCS_WIDGET__ = false; } catch {}
-    try { window[`__${COMPANY_NAME.toUpperCase()}_DOCS_WIDGET__`] = false; } catch {}
+    getContainers().forEach((container) => {
+      if (container && container.parentNode) container.parentNode.removeChild(container);
+    });
     try { delete (window as any).CompaninDocsWidget; } catch {}
+    try { delete (window as any).CompaninDocsWidgets; } catch {}
+    try { delete (window as any).__COMPANIN_DOCS_WIDGET_INSTANCES__; } catch {}
   });
 
   it('injects container and iframe correctly', () => {
@@ -51,7 +66,7 @@ describe('public/docs-widget.js loader', () => {
       'data-config-id': 'cfg',
     });
 
-    const container = document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`);
+    const container = getFirstContainer();
     expect(container).toBeTruthy();
     expect(container?.style.display).toBe('none');
 
@@ -63,7 +78,7 @@ describe('public/docs-widget.js loader', () => {
   it('requires required attributes', () => {
     // no attrs -> error path: container not created
     inject({});
-    expect(document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`)).toBeNull();
+    expect(getFirstContainer()).toBeNull();
   });
 
   it('exports API methods', () => {
@@ -121,7 +136,7 @@ describe('public/docs-widget.js loader', () => {
       'data-config-id': 'cfg',
     });
 
-    const iframe = document.querySelector(`#${DOCS_WIDGET_SCRIPT_ID}-container iframe`) as HTMLIFrameElement;
+    const iframe = document.querySelector(`[id^="${DOCS_WIDGET_SCRIPT_ID}-container-"] iframe`) as HTMLIFrameElement;
     Object.defineProperty(iframe, 'contentWindow', {
       writable: true,
       value: {
@@ -155,7 +170,7 @@ describe('public/docs-widget.js loader', () => {
     });
 
     // create fake iframe contentWindow
-    const iframe = document.querySelector(`#${DOCS_WIDGET_SCRIPT_ID}-container iframe`) as HTMLIFrameElement;
+    const iframe = document.querySelector(`[id^="${DOCS_WIDGET_SCRIPT_ID}-container-"] iframe`) as HTMLIFrameElement;
     const postSpy = jest.fn();
     Object.defineProperty(iframe, 'contentWindow', {
       writable: true,
@@ -178,10 +193,31 @@ describe('public/docs-widget.js loader', () => {
       'data-assistant-id': 'a',
       'data-config-id': 'cfg',
     });
-    const container = document.getElementById(`${DOCS_WIDGET_SCRIPT_ID}-container`)!;
+    const container = getFirstContainer()!;
     window.CompaninDocsWidget.show();
     expect(container.style.display).toBe('block');
     window.CompaninDocsWidget.hide();
     expect(container.style.display).toBe('none');
+  });
+
+  it('supports multiple docs widget instances on one page', () => {
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+      'data-instance-id': 'docs-left',
+    });
+
+    inject({
+      'data-client-id': 'c',
+      'data-assistant-id': 'a',
+      'data-config-id': 'cfg',
+      'data-instance-id': 'docs-right',
+    });
+
+    const containers = getContainers();
+    expect(containers).toHaveLength(2);
+    expect(window.CompaninDocsWidgets).toBeDefined();
+    expect(window.CompaninDocsWidgets?.list().sort()).toEqual(['docs-left', 'docs-right']);
   });
 });

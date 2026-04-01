@@ -89,6 +89,27 @@ Create a simple HTML file on any website or local server:
 |-----------|-------------|---------|---------|
 | `data-locale` | Language code (ISO 639-1) | `en` | `es`, `fr`, `de` |
 | `data-dev` | Use localhost instead of production | `false` | `true` |
+| `data-instance-id` | Unique id when running multiple widgets on one page | auto-generated | `chat-left`, `docs-right` |
+
+### Multiple Widgets on One Page
+
+```html
+<script
+  src="https://widget.companin.tech/widget.js"
+  data-client-id="..."
+  data-assistant-id="..."
+  data-config-id="..."
+  data-instance-id="chat-left"
+></script>
+
+<script
+  src="https://widget.companin.tech/docs-widget.js"
+  data-client-id="..."
+  data-assistant-id="..."
+  data-config-id="..."
+  data-instance-id="docs-right"
+></script>
+```
 
 ## 🎮 JavaScript API
 
@@ -114,7 +135,20 @@ window.CompaninWidget.onClose(() => console.log('Widget closed'));
 window.CompaninWidget.onMessage((msg) => console.log('Message event', msg));
 window.CompaninWidget.onResponse((resp) => console.log('Response event', resp));
 window.CompaninWidget.onAuthFailure((err) => console.warn('Auth failure', err));
+
+// Multiple chat widgets on one page
+window.CompaninWidgets.list();
+const leftChat = window.CompaninWidgets.get('chat-left');
+leftChat?.sendMessage('Hello from left widget');
+
+// Multiple docs widgets on one page
+window.CompaninDocsWidgets.list();
+const rightDocs = window.CompaninDocsWidgets.get('docs-right');
+rightDocs?.open();
 ```
+
+When multiple widgets are embedded, `window.CompaninWidget` and `window.CompaninDocsWidget`
+still point to the most recently initialized instance for backward compatibility.
 
 ## 📨 PostMessage Events
 
