@@ -17,6 +17,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        # ensure full history so tools that need commit ranges (gitleaks) work
+        fetch-depth: 0
+        fetch-tags: true
+        persist-credentials: true
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
