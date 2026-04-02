@@ -124,9 +124,6 @@ export function disableDebug(): void {
  *   }
  */
 export function useDebugMode(): boolean {
-  // Lazy import of React to keep this file tree-shakeable
-   
-  const { useState, useEffect } = require('react') as typeof import('react');
   const [active, setActive] = useState<boolean>(() => detectDebugMode());
 
   useEffect(() => {

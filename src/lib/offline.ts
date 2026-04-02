@@ -16,6 +16,14 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+function waitForTx(tx: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 export async function queueMessage(item: any) {
   try {
     // ensure attempts metadata exists
@@ -23,7 +31,8 @@ export async function queueMessage(item: any) {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).put(queued);
-    return tx.complete;
+    await waitForTx(tx);
+    return;
   } catch (e) {
     // fail silently
   }
@@ -48,7 +57,8 @@ export async function removeQueuedMessage(id: string) {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).delete(id);
-    return tx.complete;
+    await waitForTx(tx);
+    return;
   } catch (e) {
     // ignore
   }

@@ -116,6 +116,39 @@ describe('validateConfig', () => {
     const config = { ...baseConfig, widget_type: 'chat' as const };
     expect(() => validateConfig(config, 'docs')).toThrow('Type mismatch');
   });
+
+  it('throws MissingFieldError in development when id is absent', () => {
+    process.env.NODE_ENV = 'development';
+    const { id: _, ...noId } = baseConfig as any;
+    expect(() => validateConfig(noId, 'chat')).toThrow(MissingFieldError);
+    expect(() => validateConfig(noId, 'chat')).toThrow(/id/);
+  });
+
+  it('warns (not throws) in production when id is absent', () => {
+    process.env.NODE_ENV = 'production';
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { id: _, ...noId } = baseConfig as any;
+    expect(() => validateConfig(noId, 'chat')).not.toThrow();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('id'));
+  });
+
+  it('throws MissingFieldError in development when primary_color is absent', () => {
+    process.env.NODE_ENV = 'development';
+    const { primary_color: _, ...noPrimary } = baseConfig as any;
+    expect(() => validateConfig(noPrimary, 'chat')).toThrow(MissingFieldError);
+    expect(() => validateConfig(noPrimary, 'chat')).toThrow(/primary_color/);
+  });
+
+  it('MissingFieldError thrown by validateConfig includes a docLink', () => {
+    process.env.NODE_ENV = 'development';
+    const { id: _, ...noId } = baseConfig as any;
+    try {
+      validateConfig(noId, 'chat');
+    } catch (e) {
+      expect(e).toBeInstanceOf(MissingFieldError);
+      expect((e as MissingFieldError).docLink).toContain('docs.companin.tech');
+    }
+  });
 });
 
 // ── MissingFieldError ─────────────────────────────────────────────────────────

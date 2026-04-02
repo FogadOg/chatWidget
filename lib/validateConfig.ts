@@ -108,16 +108,39 @@ export function inferWidgetType(config: Partial<WidgetConfig>): 'chat' | 'docs' 
   return 'chat'; // safe default; docs widgets should send widget_type explicitly
 }
 
+/** Required fields every widget config must have. */
+const REQUIRED_FIELDS: ReadonlyArray<keyof WidgetConfig> = [
+  'id',
+  'primary_color',
+  'background_color',
+  'text_color',
+];
+
 /**
  * Validate rawConfig against the expected expectedType.
  *
  * Returns { config, typeMismatch } where config is safe to use at runtime.
  * Throws in dev if there is a type mismatch; warns + returns typeMismatch=true in prod.
+ * Throws MissingFieldError for any required field that is absent.
  */
 export function validateConfig(
   rawConfig: Partial<WidgetConfig>,
   expectedType: 'chat' | 'docs'
 ): ValidateConfigResult {
+  // Check required fields — throw in dev, warn in prod (mirrors type-mismatch behaviour).
+  for (const field of REQUIRED_FIELDS) {
+    if (rawConfig[field] === undefined || rawConfig[field] === null) {
+      const err = new MissingFieldError(
+        field as string,
+        `https://docs.companin.tech/widget/configuration#${field as string}`,
+      );
+      if (getIsDev()) {
+        throw err;
+      }
+      console.warn(err.message);
+    }
+  }
+
   // Infer type if missing (legacy config).
   let resolvedType = rawConfig.widget_type;
   if (!resolvedType) {

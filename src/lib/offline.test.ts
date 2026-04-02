@@ -45,11 +45,20 @@ class FakeStore {
 class FakeTransaction {
   complete: Promise<void>;
   private resolveComplete!: () => void;
+  // Event handler slots expected by waitForTx
+  oncomplete: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+
   constructor(private store: FakeStore) {
     this.complete = new Promise((res) => { this.resolveComplete = res; });
-    // resolve on next tick to simulate async commit
-    setTimeout(() => this.resolveComplete(), 0);
+    // resolve on next tick to simulate async commit and invoke oncomplete
+    setTimeout(() => {
+      this.resolveComplete();
+      if (this.oncomplete) this.oncomplete();
+    }, 0);
   }
+
   objectStore() {
     return this.store;
   }

@@ -37,9 +37,12 @@ function buildEmbedFile(src, dst) {
 
   const source = fs.readFileSync(srcPath, 'utf8');
 
-  // Strip any existing generated header so re-runs stay idempotent
-  const stripped = source.startsWith('// ===')
-    ? source.replace(/^\/\/ =+[\s\S]*?\/\/ =+\n/, '')
+  // Strip any existing generated header so re-runs stay idempotent.
+  // Match only the exact 5-line block we write, anchored to the start of the
+  // file, to avoid accidentally truncating any '// ===' comments in the source.
+  const HEADER_RE = /^\/\/ =+\n\/\/ AUTO-GENERATED FILE[^\n]*\n\/\/ Source:[^\n]*\n\/\/ Regenerate:[^\n]*\n\/\/ =+\n/;
+  const stripped = HEADER_RE.test(source)
+    ? source.replace(HEADER_RE, '')
     : source;
 
   fs.writeFileSync(dstPath, header + stripped, 'utf8');
