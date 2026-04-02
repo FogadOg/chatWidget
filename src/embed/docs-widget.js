@@ -1,8 +1,3 @@
-// =============================================================================
-// AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY
-// Source: src/embed/docs-widget.js
-// Regenerate: npm run build:embed
-// =============================================================================
 (function () {
   // Local constants to mirror centralized app constants
   const STORAGE_PREFIX = 'companin-';

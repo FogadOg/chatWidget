@@ -1,8 +1,3 @@
-// =============================================================================
-// AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY
-// Source: src/embed/widget.js
-// Regenerate: npm run build:embed
-// =============================================================================
 /* eslint-disable @typescript-eslint/no-unused-vars */
 (function () {
   // Local constants to mirror centralized app constants (keeps single-place edits easy)

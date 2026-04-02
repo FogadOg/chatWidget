@@ -19,25 +19,25 @@ class FakeStore {
     this.map.set(val.id, val);
     const req = new FakeRequest();
     req.result = val;
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
   getAll() {
     const req = new FakeRequest();
     req.result = Array.from(this.map.values());
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
   delete(id: string) {
     this.map.delete(id);
     const req = new FakeRequest();
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
   get(id: string) {
     const req = new FakeRequest();
     req.result = this.map.get(id);
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
 }
@@ -95,8 +95,8 @@ describe('offline IndexedDB behaviors', () => {
         req.result = fakeDB as any;
         // call onupgradeneeded then onsuccess async
         setTimeout(() => {
-          req.onupgradeneeded && req.onupgradeneeded();
-          req.onsuccess && req.onsuccess();
+          if (req.onupgradeneeded) req.onupgradeneeded();
+          if (req.onsuccess) req.onsuccess();
         }, 0);
         return req as any;
       }
@@ -189,7 +189,7 @@ describe('offline IndexedDB behaviors', () => {
 
     // craft a registration object where `installing.addEventListener` captures
     // the handler so tests can simulate the statechange and set `active`.
-    let registrationObj: any = {
+    const registrationObj: any = {
       active: null,
       installing: {
         addEventListener: (_evt: string, handler: () => void) => {
@@ -207,7 +207,7 @@ describe('offline IndexedDB behaviors', () => {
     // simulate the installing -> active transition
     registrationObj.active = { postMessage: postMock };
     // invoke the captured handler to mimic the 'statechange' event
-    registrationObj._handler && registrationObj._handler();
+    if (registrationObj._handler) registrationObj._handler();
 
     expect(postMock).toHaveBeenCalledWith({ type: 'SET_API', apiUrl: 'https://example.com/api' });
 

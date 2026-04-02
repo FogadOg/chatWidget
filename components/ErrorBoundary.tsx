@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { logError } from '../lib/logger';
+import { reportError } from '../lib/monitoring';
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
@@ -30,6 +31,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       error: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
+    });
+
+    // Forward to monitoring backend / Sentry if configured
+    reportError(error, {
+      componentStack: errorInfo.componentStack ?? undefined,
     });
 
     this.setState({ errorInfo });

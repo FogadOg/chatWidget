@@ -454,7 +454,7 @@ export default function EmbedClient({
         if (data.type !== 'QUEUE_FLUSH_RESULT' || !Array.isArray(data.results)) return;
 
         setMessages((prev) => {
-          let next = [...prev];
+          const next = [...prev];
           for (const res of data.results) {
             const idx = next.findIndex((m) => m.id === res.id);
             if (res.success) {
@@ -1758,7 +1758,7 @@ export default function EmbedClient({
     const originalDispatch = window.dispatchEvent;
     // only override in environments where `window.dispatchEvent` exists
     if (originalDispatch) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (window as any).dispatchEvent = (ev: any) => {
         try {
           if (!(ev instanceof Event)) {
@@ -1774,7 +1774,7 @@ export default function EmbedClient({
     return () => {
       window.removeEventListener('message', handleHostMessage);
       if (originalDispatch) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (window as any).dispatchEvent = originalDispatch;
       }
     };

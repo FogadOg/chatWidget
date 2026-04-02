@@ -1,8 +1,8 @@
 // ensure logger treats this as development mode
 // TypeScript warns that NODE_ENV is readonly; just ignore it for test
- 
+
 // @ts-ignore
- 
+
 (process.env as any).NODE_ENV = 'development';
 
 import { logError, logWarn, logInfo, logDebug, logPerf, getWindowUrl } from '../lib/logger';
@@ -14,7 +14,7 @@ describe('logger convenience functions', () => {
     jest.spyOn(console, 'info').mockImplementation(() => {});
     jest.spyOn(console, 'debug').mockImplementation(() => {});
     // stub fetch for perf tests
-     
+
     (global as any).fetch = jest.fn().mockResolvedValue({});
   });
 
@@ -24,27 +24,47 @@ describe('logger convenience functions', () => {
 
   it('logError calls console.error in development', () => {
     logError('test error', { foo: 'bar' });
-    expect(console.error).toHaveBeenCalledWith('[Widget Error] test error', { foo: 'bar' });
+    expect(console.error).toHaveBeenCalledWith(
+      '%c[Widget] Error: test error',
+      'color: #ef4444; font-weight: bold',
+      { foo: 'bar' }
+    );
   });
 
   it('logError prints empty string when context is undefined', () => {
     logError('no context');
-    expect(console.error).toHaveBeenLastCalledWith('[Widget Error] no context', '');
+    expect(console.error).toHaveBeenLastCalledWith(
+      '%c[Widget] Error: no context',
+      'color: #ef4444; font-weight: bold',
+      ''
+    );
   });
 
   it('logWarn calls console.warn in development', () => {
     logWarn('test warn');
-    expect(console.warn).toHaveBeenCalledWith('[Widget Warning] test warn', '');
+    expect(console.warn).toHaveBeenCalledWith(
+      '%c[Widget] Warn: test warn',
+      'color: #eab308; font-weight: bold',
+      ''
+    );
   });
 
   it('logInfo calls console.info in development', () => {
     logInfo('test info');
-    expect(console.info).toHaveBeenCalledWith('[Widget Info] test info', '');
+    expect(console.info).toHaveBeenCalledWith(
+      '%c[Widget] test info',
+      'color: #3b82f6; font-weight: bold',
+      ''
+    );
   });
 
   it('logDebug calls console.debug in development', () => {
     logDebug('test debug');
-    expect(console.debug).toHaveBeenCalledWith('test debug', '');
+    expect(console.debug).toHaveBeenCalledWith(
+      '%c[Widget] test debug',
+      'color: #9ca3af; font-weight: normal',
+      ''
+    );
   });
 
   it('logPerf logs a perf message', () => {
@@ -62,7 +82,7 @@ describe('logger convenience functions', () => {
   describe('getWindowUrl helper', () => {
     it('returns undefined when global window is unavailable', () => {
       // pass null to bypass default global
-       
+
       expect(getWindowUrl(null as any)).toBeUndefined();
     });
 
@@ -82,7 +102,7 @@ describe('logger convenience functions', () => {
 describe('logger in production', () => {
   // logger type is a class, but we only treat it as an object in tests
   // using any avoids signature mismatches
-   
+
   let prodLog: any;
   let fetchSpy: jest.Mock;
 
@@ -90,15 +110,15 @@ describe('logger in production', () => {
     jest.restoreAllMocks();
     jest.resetModules();
     // NODE_ENV is readonly on process.env; ignore type error
-     
+
     // @ts-ignore
     process.env.NODE_ENV = 'production';
     // require inside test to pick up new env; singleton is exported as `logger`
-     
+
     const mod = require('../lib/logger');
     prodLog = mod.logger;
     fetchSpy = jest.fn().mockResolvedValue({});
-     
+
     (global as any).fetch = fetchSpy;
   });
 
@@ -116,9 +136,9 @@ describe('logger in production', () => {
   });
 
   it('sendToErrorTracking does not throw if fetch missing', () => {
-     
+
     delete (global as any).fetch;
-     
+
     expect(() => (prodLog as any).sendToErrorTracking('error', 'no fetch')).not.toThrow();
   });
 
