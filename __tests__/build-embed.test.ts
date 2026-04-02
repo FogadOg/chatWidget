@@ -1,0 +1,95 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { execSync } from 'child_process';
+
+const ROOT = process.cwd();
+
+describe('scripts/build-embed.js', () => {
+  it('copies embed files to public/ with header and is idempotent', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'embed-build-'));
+
+    // prepare minimal project layout in tmp
+    fs.mkdirSync(path.join(tmp, 'scripts'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, 'src', 'embed'), { recursive: true });
+
+    const scriptSrc = path.join(ROOT, 'scripts', 'build-embed.js');
+    const docsSrc = path.join(ROOT, 'src', 'embed', 'docs-widget.js');
+    const widgetSrc = path.join(ROOT, 'src', 'embed', 'widget.js');
+
+    // copy script and sources
+    fs.copyFileSync(scriptSrc, path.join(tmp, 'scripts', 'build-embed.js'));
+    const docsContent = fs.readFileSync(docsSrc, 'utf8');
+    const widgetContent = fs.readFileSync(widgetSrc, 'utf8');
+    fs.writeFileSync(path.join(tmp, 'src', 'embed', 'docs-widget.js'), docsContent, 'utf8');
+    fs.writeFileSync(path.join(tmp, 'src', 'embed', 'widget.js'), widgetContent, 'utf8');
+    // ensure output dir exists (script does not create it)
+    fs.mkdirSync(path.join(tmp, 'public'), { recursive: true });
+
+    // Run build script by requiring the repo script in-process so Jest collects
+    // coverage for the original `scripts/build-embed.js`. We mock `fs` so the
+    // script reads sources from our tmp layout and writes outputs into tmp.
+    const realFs = fs;
+    jest.resetModules();
+    jest.isolateModules(() => {
+      jest.doMock('fs', () => ({
+        readFileSync: (p: string, enc: string) => {
+          if (p.endsWith(path.join('src', 'embed', 'docs-widget.js'))) return realFs.readFileSync(path.join(tmp, 'src', 'embed', 'docs-widget.js'), 'utf8');
+          if (p.endsWith(path.join('src', 'embed', 'widget.js'))) return realFs.readFileSync(path.join(tmp, 'src', 'embed', 'widget.js'), 'utf8');
+          return realFs.readFileSync(p, enc);
+        },
+        writeFileSync: (p: string, data: string, enc: string) => {
+          // mirror writes into the tmp directory preserving relative path
+          const rel = path.relative(ROOT, p);
+          const target = path.join(tmp, rel);
+          realFs.mkdirSync(path.dirname(target), { recursive: true });
+          realFs.writeFileSync(target, data, enc);
+        },
+        mkdirSync: (p: string, opts: any) => {
+          const rel = path.relative(ROOT, p);
+          return realFs.mkdirSync(path.join(tmp, rel), opts);
+        },
+        copyFileSync: realFs.copyFileSync,
+        existsSync: (p: string) => true,
+      }));
+
+      // require the repo script (coverage will map to this file)
+      require(path.join(ROOT, 'scripts', 'build-embed.js'));
+    });
+
+    const outDocs = fs.readFileSync(path.join(tmp, 'public', 'docs-widget.js'), 'utf8');
+    const outWidget = fs.readFileSync(path.join(tmp, 'public', 'widget.js'), 'utf8');
+
+    // header should be present at start
+    expect(outDocs.startsWith('// =============================================================================')).toBe(true);
+    expect(outWidget.startsWith('// =============================================================================')).toBe(true);
+
+    // output should end with original source content (header + stripped)
+    expect(outDocs.endsWith(docsContent)).toBe(true);
+    expect(outWidget.endsWith(widgetContent)).toBe(true);
+
+    // Idempotency: run again and ensure files unchanged
+    const beforeDocs = outDocs;
+    const beforeWidget = outWidget;
+    jest.resetModules();
+    // clear cached module then require again to simulate re-run
+    delete require.cache[require.resolve(path.join(tmp, 'scripts', 'build-embed.js'))];
+    require(path.join(tmp, 'scripts', 'build-embed.js'));
+    const afterDocs = fs.readFileSync(path.join(tmp, 'public', 'docs-widget.js'), 'utf8');
+    const afterWidget = fs.readFileSync(path.join(tmp, 'public', 'widget.js'), 'utf8');
+    expect(afterDocs).toBe(beforeDocs);
+    expect(afterWidget).toBe(beforeWidget);
+
+    // Now simulate source already containing a generated header and ensure no duplicate headers
+    const header = `// =============================================================================\n// AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY\n// Source: src/embed/docs-widget.js\n// Regenerate: npm run build:embed\n// =============================================================================\n`;
+    fs.writeFileSync(path.join(tmp, 'src', 'embed', 'docs-widget.js'), header + docsContent, 'utf8');
+    // write header to source and require again
+    jest.resetModules();
+    delete require.cache[require.resolve(path.join(tmp, 'scripts', 'build-embed.js'))];
+    require(path.join(tmp, 'scripts', 'build-embed.js'));
+    const singleHeaderOut = fs.readFileSync(path.join(tmp, 'public', 'docs-widget.js'), 'utf8');
+    // header should appear exactly once at start
+    expect(singleHeaderOut.indexOf(header)).toBe(0);
+    expect(singleHeaderOut.substr(header.length).startsWith(header)).toBe(false);
+  });
+});

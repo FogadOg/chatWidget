@@ -20,6 +20,14 @@ interface LogContext {
   [key: string]: unknown;
 }
 
+/** CSS styles applied to each log level prefix in browser devtools. */
+const LEVEL_STYLES: Record<LogLevel, string> = {
+  debug: 'color: #9ca3af; font-weight: normal',
+  info:  'color: #3b82f6; font-weight: bold',
+  warn:  'color: #eab308; font-weight: bold',
+  error: 'color: #ef4444; font-weight: bold',
+};
+
 /**
  * Logger that respects environment settings
  * In production, errors should be sent to a logging service
@@ -28,6 +36,14 @@ interface LogContext {
 class Logger {
   private isDevelopment: boolean;
   private perfBlacklist: Set<string> = new Set(['fetchAssistantDetails','fetchWidgetConfig']);
+  private context: string;
+  private defaultContext: LogContext;
+
+  withContext(extra: LogContext): Logger {
+    const child = new Logger(this.context);
+    child.defaultContext = { ...this.defaultContext, ...extra };
+    return child;
+  }
   private errorBuffer: Array<{
     level: LogLevel;
     message: string;
@@ -37,10 +53,24 @@ class Logger {
     url: string;
   }> = [];
 
-  constructor() {
+  constructor(context = 'Widget') {
     // consider anything other than production as "development" for logging purposes
-    // this ensures jest (NODE_ENV="test") will still produce console output in tests
+    // this ensures jest (NODE_ENV="test") will still produce console output in tests.
     this.isDevelopment = process.env.NODE_ENV !== 'production';
+    this.context = context;
+    this.defaultContext = {};
+  }
+
+  /** Format a message prefix with optional context label. */
+  private prefix(level: LogLevel): [string, string] {
+    const label = `[${this.context}]`;
+    return [`%c${label}`, LEVEL_STYLES[level]];
+  }
+
+  /** Merge caller-supplied context with this logger's default context. */
+  private mergedCtx(ctx?: LogContext): LogContext | undefined {
+    const merged = { ...this.defaultContext, ...ctx };
+    return Object.keys(merged).length > 0 ? merged : undefined;
   }
 
   /**
@@ -48,10 +78,11 @@ class Logger {
    */
   error(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      console.error(`[Widget Error] ${message}`, context || '');
+      const [pfx, style] = this.prefix('error');
+      console.error(`${pfx} Error: ${message}`, style, this.mergedCtx(context) ?? '');
     } else {
       // In production, send to a configurable tracking endpoint
-      this.sendToErrorTracking('error', message, context);
+      this.sendToErrorTracking('error', message, this.mergedCtx(context));
     }
   }
 
@@ -60,7 +91,8 @@ class Logger {
    */
   warn(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      console.warn(`[Widget Warning] ${message}`, context || '');
+      const [pfx, style] = this.prefix('warn');
+      console.warn(`${pfx} Warn: ${message}`, style, this.mergedCtx(context) ?? '');
     }
   }
 
@@ -69,7 +101,8 @@ class Logger {
    */
   info(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      console.info(`[Widget Info] ${message}`, context || '');
+      const [pfx, style] = this.prefix('info');
+      console.info(`${pfx} ${message}`, style, this.mergedCtx(context) ?? '');
     }
   }
 
@@ -78,8 +111,8 @@ class Logger {
    */
   debug(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      // omit prefix to reduce verbosity
-      console.debug(message, context || '');
+      const [pfx, style] = this.prefix('debug');
+      console.debug(`${pfx} ${message}`, style, this.mergedCtx(context) ?? '');
     }
   }
 
@@ -137,6 +170,21 @@ class Logger {
 
 // Export singleton instance
 export const logger = new Logger();
+
+/**
+ * Create a new logger scoped to a named context.
+ *
+ * @param context  Label shown in the console prefix, e.g. `'API'`, `'Chat'`.
+ *
+ * @example
+ *   const log = createLogger('API');
+ *   log.info('Fetching session');          // [API] Fetching session
+ *   const bound = log.withContext({ userId: '123' });
+ *   bound.error('Auth failed');            // [API] Error: Auth failed {userId: '123'}
+ */
+export function createLogger(context?: string): Logger {
+  return new Logger(context);
+}
 
 // Convenience exports
 export const logError = (message: string, context?: LogContext) => logger.error(message, context);

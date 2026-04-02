@@ -19,25 +19,25 @@ class FakeStore {
     this.map.set(val.id, val);
     const req = new FakeRequest();
     req.result = val;
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
   getAll() {
     const req = new FakeRequest();
     req.result = Array.from(this.map.values());
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
   delete(id: string) {
     this.map.delete(id);
     const req = new FakeRequest();
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
   get(id: string) {
     const req = new FakeRequest();
     req.result = this.map.get(id);
-    setTimeout(() => req.onsuccess && req.onsuccess());
+    setTimeout(() => { if (req.onsuccess) req.onsuccess(); });
     return req;
   }
 }
@@ -45,11 +45,20 @@ class FakeStore {
 class FakeTransaction {
   complete: Promise<void>;
   private resolveComplete!: () => void;
+  // Event handler slots expected by waitForTx
+  oncomplete: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+
   constructor(private store: FakeStore) {
     this.complete = new Promise((res) => { this.resolveComplete = res; });
-    // resolve on next tick to simulate async commit
-    setTimeout(() => this.resolveComplete(), 0);
+    // resolve on next tick to simulate async commit and invoke oncomplete
+    setTimeout(() => {
+      this.resolveComplete();
+      if (this.oncomplete) this.oncomplete();
+    }, 0);
   }
+
   objectStore() {
     return this.store;
   }
@@ -95,8 +104,8 @@ describe('offline IndexedDB behaviors', () => {
         req.result = fakeDB as any;
         // call onupgradeneeded then onsuccess async
         setTimeout(() => {
-          req.onupgradeneeded && req.onupgradeneeded();
-          req.onsuccess && req.onsuccess();
+          if (req.onupgradeneeded) req.onupgradeneeded();
+          if (req.onsuccess) req.onsuccess();
         }, 0);
         return req as any;
       }
@@ -189,7 +198,7 @@ describe('offline IndexedDB behaviors', () => {
 
     // craft a registration object where `installing.addEventListener` captures
     // the handler so tests can simulate the statechange and set `active`.
-    let registrationObj: any = {
+    const registrationObj: any = {
       active: null,
       installing: {
         addEventListener: (_evt: string, handler: () => void) => {
@@ -207,7 +216,7 @@ describe('offline IndexedDB behaviors', () => {
     // simulate the installing -> active transition
     registrationObj.active = { postMessage: postMock };
     // invoke the captured handler to mimic the 'statechange' event
-    registrationObj._handler && registrationObj._handler();
+    if (registrationObj._handler) registrationObj._handler();
 
     expect(postMock).toHaveBeenCalledWith({ type: 'SET_API', apiUrl: 'https://example.com/api' });
 

@@ -87,7 +87,7 @@ async function sendQueuedToApi() {
 
       await removeQueued(item.id);
       results.push({ id: item.id, success: true, serverMessage: serverData?.data || null });
-    } catch (err) {
+    } catch (_err) {
       results.push({ id: item.id, success: false });
       // stop on first failure to preserve order
       break;

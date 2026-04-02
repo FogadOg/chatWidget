@@ -40,6 +40,15 @@ const eslintConfig = defineConfig([
     // project-specific ignores formerly in .eslintignore
     "coverage/**",
     "coverage/lcov-report/**",
+    // Generated public assets that are linted during build but not authored here
+    "public/docs-widget.js",
+    "public/widget.js",
+    "public/sw.js",
+    // Source for the generated embed scripts — plain browser JS, not TypeScript
+    "src/embed/docs-widget.js",
+    "src/embed/widget.js",
+    // Plain Node.js CommonJS helper scripts (not TypeScript modules)
+    "scripts/**",
   ]),
 ]);
 

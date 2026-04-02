@@ -1,4 +1,4 @@
-import { validateConfig, inferWidgetType } from '../lib/validateConfig';
+import { validateConfig, inferWidgetType, MissingFieldError, InvalidValueError } from '../lib/validateConfig';
 
 const baseConfig = {
   id: 'cfg-1',
@@ -115,5 +115,110 @@ describe('validateConfig', () => {
     process.env.NODE_ENV = 'development';
     const config = { ...baseConfig, widget_type: 'chat' as const };
     expect(() => validateConfig(config, 'docs')).toThrow('Type mismatch');
+  });
+
+  it('throws MissingFieldError in development when id is absent', () => {
+    process.env.NODE_ENV = 'development';
+    const { id: _, ...noId } = baseConfig as any;
+    expect(() => validateConfig(noId, 'chat')).toThrow(MissingFieldError);
+    expect(() => validateConfig(noId, 'chat')).toThrow(/id/);
+  });
+
+  it('warns (not throws) in production when id is absent', () => {
+    process.env.NODE_ENV = 'production';
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { id: _, ...noId } = baseConfig as any;
+    expect(() => validateConfig(noId, 'chat')).not.toThrow();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('id'));
+  });
+
+  it('throws MissingFieldError in development when primary_color is absent', () => {
+    process.env.NODE_ENV = 'development';
+    const { primary_color: _, ...noPrimary } = baseConfig as any;
+    expect(() => validateConfig(noPrimary, 'chat')).toThrow(MissingFieldError);
+    expect(() => validateConfig(noPrimary, 'chat')).toThrow(/primary_color/);
+  });
+
+  it('MissingFieldError thrown by validateConfig includes a docLink', () => {
+    process.env.NODE_ENV = 'development';
+    const { id: _, ...noId } = baseConfig as any;
+    try {
+      validateConfig(noId, 'chat');
+    } catch (e) {
+      expect(e).toBeInstanceOf(MissingFieldError);
+      expect((e as MissingFieldError).docLink).toContain('docs.companin.tech');
+    }
+  });
+});
+
+// ── MissingFieldError ─────────────────────────────────────────────────────────
+
+describe('MissingFieldError', () => {
+  it('is an instance of Error', () => {
+    expect(new MissingFieldError('apiKey')).toBeInstanceOf(Error);
+  });
+
+  it('has the correct name', () => {
+    expect(new MissingFieldError('apiKey').name).toBe('MissingFieldError');
+  });
+
+  it('message includes the field name', () => {
+    const err = new MissingFieldError('apiKey');
+    expect(err.message).toContain('apiKey');
+  });
+
+  it('message includes actionable add-field hint', () => {
+    const err = new MissingFieldError('apiKey');
+    expect(err.message).toContain('apiKey');
+    expect(err.message.toLowerCase()).toContain('missing');
+  });
+
+  it('appends docLink when provided', () => {
+    const err = new MissingFieldError('apiKey', '/docs/configuration#apiKey');
+    expect(err.message).toContain('/docs/configuration#apiKey');
+  });
+
+  it('omits docLink section when not provided', () => {
+    const err = new MissingFieldError('apiKey');
+    expect(err.message).not.toContain('See:');
+  });
+});
+
+// ── InvalidValueError ─────────────────────────────────────────────────────────
+
+describe('InvalidValueError', () => {
+  const validOptions = ['top-left', 'bottom-right', 'bottom-left'] as const;
+
+  it('is an instance of Error', () => {
+    expect(new InvalidValueError('position', 'top-center', validOptions)).toBeInstanceOf(Error);
+  });
+
+  it('has the correct name', () => {
+    expect(new InvalidValueError('position', 'top-center', validOptions).name).toBe('InvalidValueError');
+  });
+
+  it('message includes the field name', () => {
+    const err = new InvalidValueError('position', 'top-center', validOptions);
+    expect(err.message).toContain('position');
+  });
+
+  it('message includes the received value', () => {
+    const err = new InvalidValueError('position', 'top-center', validOptions);
+    expect(err.message).toContain('top-center');
+  });
+
+  it('message includes at least one valid option', () => {
+    const err = new InvalidValueError('position', 'top-center', validOptions);
+    expect(err.message).toContain('bottom-right');
+  });
+
+  it('appends docLink when provided', () => {
+    const err = new InvalidValueError('position', 'top-center', validOptions, '/docs/configuration#position');
+    expect(err.message).toContain('/docs/configuration#position');
+  });
+
+  it('omits docLink section when not provided', () => {
+    const err = new InvalidValueError('position', 'top-center', validOptions);
+    expect(err.message).not.toContain('See:');
   });
 });

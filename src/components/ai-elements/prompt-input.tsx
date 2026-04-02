@@ -473,6 +473,7 @@ export const PromptInput = ({
   maxFiles,
   maxFileSize,
   onError,
+  onQueue,
   onSubmit,
   children,
   ...props
