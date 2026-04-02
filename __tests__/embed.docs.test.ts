@@ -180,7 +180,6 @@ describe('bootstrap — valid attributes', () => {
   it('skips a script whose getAttribute throws and continues searching', () => {
     const bad = document.createElement('script');
     // override getAttribute to simulate a broken script node
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     bad.getAttribute = () => { throw new Error('boom'); };
     document.body.appendChild(bad);

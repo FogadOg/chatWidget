@@ -1,4 +1,4 @@
-/* eslint-env jest */
+/* global jest, describe, test, expect, beforeEach, afterEach */
 describe('widget edge cases', () => {
   beforeEach(() => {
     jest.resetModules();
