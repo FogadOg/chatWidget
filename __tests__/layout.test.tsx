@@ -66,7 +66,6 @@ describe('RootLayout', () => {
       await act(async () => {
         // Call as an async function to avoid React 19's "async Client Component"
         // restriction in jsdom. This renders the resolved JSX directly.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const jsx = await (RootLayout as any)({ children: testChild });
         render(jsx);
       });
@@ -86,7 +85,6 @@ describe('RootLayout', () => {
 
     try {
       await act(async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const jsx = await (RootLayout as any)({ children: testChild });
         render(jsx);
       });
@@ -117,7 +115,6 @@ describe('RootLayout', () => {
 
     try {
       await act(async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const jsx = await (RootLayout as any)({ children: <div>Nonce Test</div> });
         render(jsx);
       });
@@ -155,7 +152,6 @@ describe('RootLayout', () => {
 
     try {
       await act(async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const jsx = await (RootLayout as any)({ children: testChild });
         expect(() => render(jsx)).not.toThrow();
       });

@@ -104,7 +104,10 @@ export function createHandshake(options: { allowedOrigins: string[] }) {
   const listeners = new Map<WidgetMessageType, MessageHandler[]>();
   const handshakeToken = generateToken();
 
-  function on<T extends WidgetMessage>(type: T['type'], handler: MessageHandler<T>) {
+  function on<K extends WidgetMessage['type']>(
+    type: K,
+    handler: (msg: Extract<WidgetMessage, { type: K }>) => void
+  ) {
     if (!listeners.has(type)) listeners.set(type, []);
     listeners.get(type)!.push(handler as MessageHandler);
   }
@@ -154,7 +157,10 @@ export function createHostHandshake(options: {
   const { iframe, widgetOrigin } = options;
   const listeners = new Map<WidgetMessageType, MessageHandler[]>();
 
-  function on<T extends WidgetMessage>(type: T['type'], handler: MessageHandler<T>) {
+  function on<K extends WidgetMessage['type']>(
+    type: K,
+    handler: (msg: Extract<WidgetMessage, { type: K }>) => void
+  ) {
     if (!listeners.has(type)) listeners.set(type, []);
     listeners.get(type)!.push(handler as MessageHandler);
   }
