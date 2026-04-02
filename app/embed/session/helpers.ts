@@ -19,6 +19,14 @@ export function lastReadStorageKey(clientId: string, assistantId: string) {
   return `${STORAGE_PREFIX}lastread-${clientId}-${assistantId}`;
 }
 
+export function flowResponsesStorageKey(sessionId: string) {
+  return `${STORAGE_PREFIX}flow-${sessionId}`;
+}
+
+export function localMessagesStorageKey(sessionId: string) {
+  return `${STORAGE_PREFIX}local-msgs-${sessionId}`;
+}
+
 export function getVisitorId(clientId: string) {
   const visitorKey = `${STORAGE_PREFIX}visitor-${clientId}`;
   return getOrCreateVisitorId(visitorKey, 'widget');
