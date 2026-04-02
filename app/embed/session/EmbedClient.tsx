@@ -1475,6 +1475,13 @@ export default function EmbedClient({
         }]);
       }
 
+      // Remove the optimistic temp message before reloading — the server version
+      // (with a real UUID) will be returned by loadSessionMessages, so keeping the
+      // temp entry would produce a duplicate user bubble in the UI.
+      if (!skipAddingUserMessage) {
+        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+      }
+
       // Reload all messages from server
       await loadSessionMessages(sessionId, authToken);
     } catch (err: unknown) {
@@ -1758,7 +1765,7 @@ export default function EmbedClient({
     const originalDispatch = window.dispatchEvent;
     // only override in environments where `window.dispatchEvent` exists
     if (originalDispatch) {
-       
+
       (window as any).dispatchEvent = (ev: any) => {
         try {
           if (!(ev instanceof Event)) {
@@ -1774,7 +1781,7 @@ export default function EmbedClient({
     return () => {
       window.removeEventListener('message', handleHostMessage);
       if (originalDispatch) {
-         
+
         (window as any).dispatchEvent = originalDispatch;
       }
     };

@@ -79,6 +79,8 @@ const nextConfig: NextConfig = {
           },
           // Cross-origin isolation headers
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          // Default to same-origin for most responses, but specific asset
+          // routes (widget bootstrap and static assets) are relaxed below.
           { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
       },
@@ -94,6 +96,21 @@ const nextConfig: NextConfig = {
           // Allow embedding only from the configured origins
           { key: 'X-Frame-Options', value: origins.length > 0 ? `ALLOW-FROM ${origins[0]}` : 'SAMEORIGIN' },
           // Embed iframes are cross-origin resources — relax CORP
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      // ── Widget bootstrap and static assets: allow cross-origin loading ──
+      {
+        // widget.js is often served from a separate dev server (eg. localhost:3001)
+        source: '/widget.js',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
+        // Next.js static assets under _next may be requested cross-origin
+        source: '/_next/static/:path*',
+        headers: [
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },

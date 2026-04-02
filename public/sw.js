@@ -17,7 +17,15 @@ self.addEventListener('activate', (evt) => {
 self.addEventListener('fetch', (evt) => {
   // Cache-first strategy for same-origin requests
   if (evt.request.method !== 'GET') return;
-  const url = new URL(evt.request.url);
+  // Guard against empty or non-parseable URLs (e.g. data:, blob:, or empty
+  // synthetic requests) that would throw inside new URL().
+  let url;
+  try {
+    if (!evt.request.url) return;
+    url = new URL(evt.request.url);
+  } catch {
+    return;
+  }
   if (url.origin === self.location.origin) {
     evt.respondWith(
       caches.match(evt.request).then((cached) => cached || fetch(evt.request))
