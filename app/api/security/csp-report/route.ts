@@ -33,12 +33,24 @@ interface ReportingApiReport {
 }
 
 // Simple in-memory rate limiter to prevent report flooding.
+// Note: This is best-effort and not suitable for multi-process or serverless
+// deployments. Replace with Redis or an upstream WAF for production scale.
 const reportCounts = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 100; // max reports per IP per minute
 const WINDOW_MS = 60_000;
+const MAX_MAP_ENTRIES = 10000;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+
+  // Cleanup stale entries if the map grows too large
+  if (reportCounts.size > MAX_MAP_ENTRIES) {
+    for (const [k, v] of reportCounts) {
+      if (now > v.resetAt) reportCounts.delete(k);
+      if (reportCounts.size <= MAX_MAP_ENTRIES) break;
+    }
+  }
+
   const entry = reportCounts.get(ip);
   if (!entry || now > entry.resetAt) {
     reportCounts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
@@ -59,33 +71,49 @@ export async function POST(request: Request): Promise<NextResponse> {
       return new NextResponse(null, { status: 429 });
     }
 
-    const contentType = request.headers.get('content-type') ?? '';
-    let payload: CspViolationReport | ReportingApiReport[] | null = null;
+    // Protect against extremely large payloads
+    const MAX_PAYLOAD = 20_000; // bytes
+    const text = await request.text();
+    if (text.length > MAX_PAYLOAD) {
+      return new NextResponse(null, { status: 413 });
+    }
 
+    let payload: CspViolationReport | ReportingApiReport[] | null = null;
     try {
-      payload = await request.json();
+      payload = JSON.parse(text) as unknown as CspViolationReport | ReportingApiReport[];
     } catch {
       return new NextResponse(null, { status: 400 });
     }
 
     const structured = normalizeReport(payload, ip);
 
-    // Forward to external SIEM if configured
+    // Forward to external SIEM if configured (validate URL scheme)
     const siemEndpoint = process.env.CSP_REPORT_SIEM_ENDPOINT;
-    if (siemEndpoint) {
+    if (siemEndpoint && /^https?:\/\//i.test(siemEndpoint)) {
       try {
         await fetch(siemEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(structured),
         });
-      } catch {
+      } catch (e) {
         // Non-fatal: still log locally
+        console.warn('[CSP_REPORT] forwarding to SIEM failed', e);
       }
+    } else if (siemEndpoint) {
+      console.warn('[CSP_REPORT] invalid CSP_REPORT_SIEM_ENDPOINT, skipping forward');
     }
 
-    // Structured log for collection by log aggregators
-    console.log('[CSP_REPORT]', JSON.stringify(structured));
+    // Structured log for collection by log aggregators (truncate large fields)
+    try {
+      const safe = (obj: unknown) => {
+        const s = JSON.stringify(obj);
+        return s.length > 2000 ? s.slice(0, 2000) + '...[truncated]' : s;
+      };
+      console.log('[CSP_REPORT]', safe(structured));
+    } catch {
+      // ignore logging errors
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {

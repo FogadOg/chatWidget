@@ -76,12 +76,20 @@ export type WidgetMessage =
 
 function generateToken(): string {
   const arr = new Uint8Array(24);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     crypto.getRandomValues(arr);
+    return Array.from(arr)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
   }
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+
+  // Fallback for environments without a crypto implementation.
+  // Use Math.random-based entropy as a last resort.
+  let s = '';
+  for (let i = 0; i < 24; i++) {
+    s += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+  }
+  return s;
 }
 
 function isValidMessage(data: unknown): data is WidgetMessage {

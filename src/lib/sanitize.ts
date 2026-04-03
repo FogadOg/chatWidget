@@ -114,20 +114,27 @@ const PURIFY_CONFIG: DOMPurify.Config = {
 
 // Ensure external links open in a new tab and cannot inject javascript:
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A') {
-    const href = node.getAttribute('href') ?? '';
-    if (/^javascript:/i.test(href)) {
-      node.removeAttribute('href');
+  try {
+    // Some nodes passed to hooks may not be Elements; guard accordingly.
+    if (!(node instanceof Element)) return;
+    const tag = node.tagName ? node.tagName.toUpperCase() : '';
+    if (tag === 'A') {
+      const href = node.getAttribute('href') ?? '';
+      if (/^javascript:/i.test(href)) {
+        node.removeAttribute('href');
+      }
+      if (node.getAttribute('target') === '_blank') {
+        node.setAttribute('rel', 'noopener noreferrer');
+      }
     }
-    if (node.getAttribute('target') === '_blank') {
-      node.setAttribute('rel', 'noopener noreferrer');
+    if (tag === 'IMG') {
+      const src = node.getAttribute('src') ?? '';
+      if (/^javascript:/i.test(src)) {
+        node.removeAttribute('src');
+      }
     }
-  }
-  if (node.tagName === 'IMG') {
-    const src = node.getAttribute('src') ?? '';
-    if (/^javascript:/i.test(src)) {
-      node.removeAttribute('src');
-    }
+  } catch {
+    // Keep sanitizer robust; don't throw from hooks.
   }
 });
 
