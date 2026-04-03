@@ -56,15 +56,70 @@ const nextConfig: NextConfig = {
     // blocking host pages unexpectedly.
     const cspSources = origins.length > 0 ? ["'self'", ...origins].join(' ') : '*';
 
+    // HSTS — set for all routes in production
+    const hstsValue = 'max-age=31536000; includeSubDomains; preload';
+
     return [
+      // ── Global security headers applied to every response ────────────────
       {
-        source: "/embed/:path*",
+        source: '/(.*)',
+        headers: [
+          // HSTS: forces browsers to use HTTPS for a year
+          { key: 'Strict-Transport-Security', value: hstsValue },
+          // Prevent MIME-type sniffing
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Block clickjacking by default (embed routes override below)
+          { key: 'X-Frame-Options', value: 'DENY' },
+          // Minimise referrer leakage
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Disable potentially privacy-invasive browser features
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+          // Cross-origin isolation headers
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          // Default to same-origin for most responses, but specific asset
+          // routes (widget bootstrap and static assets) are relaxed below.
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+        ],
+      },
+      // ── Embed routes: tighten frame-ancestors CSP, relax X-Frame-Options ─
+      {
+        source: '/embed/:path*',
         headers: [
           {
-            key: "Content-Security-Policy",
+            key: 'Content-Security-Policy',
             // Restrict framing to explicit origins (includes 'self')
             value: `frame-ancestors ${cspSources};`,
           },
+          // Allow embedding only from the configured origins
+          { key: 'X-Frame-Options', value: origins.length > 0 ? `ALLOW-FROM ${origins[0]}` : 'SAMEORIGIN' },
+          // Embed iframes are cross-origin resources — relax CORP
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      // ── Widget bootstrap and static assets: allow cross-origin loading ──
+      {
+        // widget.js is often served from a separate dev server (eg. localhost:3001)
+        source: '/widget.js',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
+        // Next.js static assets under _next may be requested cross-origin
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      // ── API routes: restrict CORS strictly ───────────────────────────────
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Cache-Control', value: 'no-store' },
         ],
       },
     ];

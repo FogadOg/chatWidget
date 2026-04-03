@@ -232,6 +232,68 @@ export default function EmbedClient({
   const { getAuthToken, authToken, authError } = useWidgetAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  // Tracks whether the initial loadSessionMessages has completed at least once.
+  // Used to prevent the local-message persist effect from wiping localStorage
+  // before loadSessionMessages has had a chance to read and restore the data.
+  const hasLoadedMessagesRef = useRef(false);
+
+  // Restore flow responses from localStorage when a session is (re-)established.
+  // Must be declared AFTER sessionId to avoid Temporal Dead Zone errors.
+  // Replace state outright (don't append) to avoid duplicates on repeated triggers.
+  useEffect(() => {
+    if (!sessionId) return;
+    const key = helpers.flowResponsesStorageKey(sessionId);
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const parsed = JSON.parse(stored) as FlowResponse[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFlowResponses(parsed);
+        }
+      }
+    } catch {
+      // ignore – corrupt / unavailable storage
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  // Persist flow responses to localStorage whenever they change so they survive reloads.
+  useEffect(() => {
+    if (!sessionId) return;
+    const key = helpers.flowResponsesStorageKey(sessionId);
+    try {
+      if (flowResponses.length > 0) {
+        localStorage.setItem(key, JSON.stringify(flowResponses));
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      // ignore – storage unavailable or quota exceeded
+    }
+  }, [flowResponses, sessionId]);
+
+  // Persist local-only temp messages (interaction button user bubbles that are
+  // never sent to the server) so they survive hard reloads.
+  // Only clear the localStorage entry after initial messages have been loaded,
+  // to avoid wiping the data before loadSessionMessages can restore it.
+  useEffect(() => {
+    if (!sessionId) return;
+    const key = helpers.localMessagesStorageKey(sessionId);
+    try {
+      const localOnly = messages.filter(
+        (m) => m.id.startsWith('temp-') && !(m as any).pending
+      );
+      if (localOnly.length > 0) {
+        localStorage.setItem(key, JSON.stringify(localOnly));
+      } else if (hasLoadedMessagesRef.current) {
+        // Only remove once we've confirmed via loadSessionMessages that there
+        // really are no local messages (i.e. this isn't a stale empty state).
+        localStorage.removeItem(key);
+      }
+    } catch {
+      // ignore
+    }
+  }, [messages, sessionId]);
   const authTokenRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEmbedded, setIsEmbedded] = useState(false);
@@ -546,9 +608,33 @@ export default function EmbedClient({
         // replacing/adding all server-sourced messages.
         setMessages(prev => {
           const serverIds = new Set(loadedMessages.map(m => m.id));
-          const localOnly = prev.filter(m => m.id.startsWith('temp-') && !serverIds.has(m.id) && !(m as any).pending);
-          return [...loadedMessages, ...localOnly].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+          // In-memory local messages (normal operation — page not hard-reloaded)
+          const inMemoryLocal = prev.filter(
+            (m) => m.id.startsWith('temp-') && !serverIds.has(m.id) && !(m as any).pending
+          );
+          // Persisted local messages (hard-reload recovery)
+          let storedLocal: Message[] = [];
+          try {
+            const raw = localStorage.getItem(helpers.localMessagesStorageKey(sessionId));
+            if (raw) {
+              const parsed = JSON.parse(raw) as Message[];
+              if (Array.isArray(parsed)) {
+                const inMemoryIds = new Set(inMemoryLocal.map((m) => m.id));
+                storedLocal = parsed.filter(
+                  (m) => !serverIds.has(m.id) && !inMemoryIds.has(m.id)
+                );
+              }
+            }
+          } catch {
+            // ignore
+          }
+          const allLocal = [...inMemoryLocal, ...storedLocal];
+          return [...loadedMessages, ...allLocal].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
         });
+
+        // Mark that at least one real load has completed so the persist effect
+        // knows it's safe to remove stale localStorage entries.
+        hasLoadedMessagesRef.current = true;
 
         // Notify parent window about the latest message(s)
         try {
@@ -1019,7 +1105,23 @@ export default function EmbedClient({
           // shape (e.g. tests or local fixtures), use them directly to
           // preserve `pending` flags and other local-only fields.
           if (Array.isArray(data.data.messages) && (data.data.messages as any)[0] && (data.data.messages as any)[0].text) {
-            setMessages(data.data.messages as Message[]);
+            const preloadedMessages = data.data.messages as Message[];
+            const preloadedIds = new Set(preloadedMessages.map((m: Message) => m.id));
+            let storedLocalPre: Message[] = [];
+            try {
+              const rawPre = localStorage.getItem(helpers.localMessagesStorageKey(sessionId));
+              if (rawPre) {
+                const parsedPre = JSON.parse(rawPre) as Message[];
+                if (Array.isArray(parsedPre)) {
+                  storedLocalPre = parsedPre.filter((m) => !preloadedIds.has(m.id));
+                }
+              }
+            } catch { /* ignore */ }
+            const mergedPre = [...preloadedMessages, ...storedLocalPre].sort(
+              (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
+            );
+            setMessages(mergedPre);
+            hasLoadedMessagesRef.current = true;
 
             // Restore feedback state from localStorage before hitting API
             let alreadySubmitted = feedbackSubmitted;
@@ -1065,7 +1167,26 @@ export default function EmbedClient({
               } as Message;
             });
 
-          setMessages(loadedMessages);
+          // Merge server messages with any local-only temp messages (e.g. button
+          // click user bubbles that were never sent to the server).
+          const serverIds = new Set(loadedMessages.map((m) => m.id));
+          let storedLocal: Message[] = [];
+          try {
+            const raw = localStorage.getItem(helpers.localMessagesStorageKey(sessionId));
+            if (raw) {
+              const parsed = JSON.parse(raw) as Message[];
+              if (Array.isArray(parsed)) {
+                storedLocal = parsed.filter((m) => !serverIds.has(m.id));
+              }
+            }
+          } catch {
+            // ignore
+          }
+          const mergedMessages = [...loadedMessages, ...storedLocal].sort(
+            (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
+          );
+          setMessages(mergedMessages);
+          hasLoadedMessagesRef.current = true;
 
           // Restore feedback state from localStorage before hitting API
           let alreadySubmitted = feedbackSubmitted;
@@ -1475,6 +1596,13 @@ export default function EmbedClient({
         }]);
       }
 
+      // Remove the optimistic temp message before reloading — the server version
+      // (with a real UUID) will be returned by loadSessionMessages, so keeping the
+      // temp entry would produce a duplicate user bubble in the UI.
+      if (!skipAddingUserMessage) {
+        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+      }
+
       // Reload all messages from server
       await loadSessionMessages(sessionId, authToken);
     } catch (err: unknown) {
@@ -1758,7 +1886,7 @@ export default function EmbedClient({
     const originalDispatch = window.dispatchEvent;
     // only override in environments where `window.dispatchEvent` exists
     if (originalDispatch) {
-       
+
       (window as any).dispatchEvent = (ev: any) => {
         try {
           if (!(ev instanceof Event)) {
@@ -1774,7 +1902,7 @@ export default function EmbedClient({
     return () => {
       window.removeEventListener('message', handleHostMessage);
       if (originalDispatch) {
-         
+
         (window as any).dispatchEvent = originalDispatch;
       }
     };

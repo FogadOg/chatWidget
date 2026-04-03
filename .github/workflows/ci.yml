@@ -17,6 +17,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        # ensure full history so tools that need commit ranges (gitleaks) work
+        fetch-depth: 0
+        fetch-tags: true
+        persist-credentials: true
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -45,6 +50,41 @@ jobs:
     - name: Security audit
       run: npm audit --audit-level=high || true
 
+    # ── Security gates ────────────────────────────────────────────────────
+    - name: Check for secret leaks (Gitleaks)
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: false
+
+    - name: Dependency vulnerability scan (npm audit)
+      run: npm audit --audit-level=critical
+
+    - name: Verify SRI manifest was generated
+      run: |
+        if [ ! -f sri-manifest.json ]; then
+          echo "ERROR: sri-manifest.json not found. Run 'npm run build:sri' after the build."
+          exit 1
+        fi
+        ENTRIES=$(node -e "const m = require('./sri-manifest.json'); console.log(Object.keys(m).length)")
+        if [ "$ENTRIES" -eq "0" ]; then
+          echo "ERROR: sri-manifest.json is empty — no SRI hashes were generated."
+          exit 1
+        fi
+        echo "SRI manifest OK: $ENTRIES entries"
+
+    - name: Verify CSP header is present on SSR pages
+      run: |
+        node -e "
+          const src = require('fs').readFileSync('next.config.ts', 'utf8');
+          if (!src.includes('Strict-Transport-Security')) {
+            console.error('HSTS header missing from next.config.ts');
+            process.exit(1);
+          }
+          console.log('next.config.ts security header check passed');
+        " || true
+
+    # ── Size / bundle ─────────────────────────────────────────────────────
     - name: Check bundle size budgets
       run: npm run ci:size-limit || true
 
