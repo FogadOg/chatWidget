@@ -1,7 +1,12 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+
+// Dynamically import react-markdown and remark-gfm at runtime so Jest
+// doesn't try to parse ESM exports from node_modules during tests.
+// When not yet loaded we render plain text so server/test environments stay compatible.
+type MDComponents = Record<string, React.ComponentType<any>>;
 import { t as translate } from '../lib/i18n';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
 import type { WidgetConfig } from '../types/widget';
@@ -35,6 +40,48 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
   const hasSources = message.from === 'assistant' && Array.isArray(message.sources) && message.sources.length > 0;
   const sourceCount = message.sources?.length || 0;
 
+  const [copied, setCopied] = useState(false);
+  const [ReactMarkdown, setReactMarkdown] = useState<React.ComponentType<any> | null>(null);
+  const [remarkGfm, setRemarkGfm] = useState<any>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([import('react-markdown').then(m => m.default || m).catch(() => null), import('remark-gfm').then(m => m.default || m).catch(() => null)])
+      .then(([RM, gfm]) => {
+        if (mounted) {
+          // React state setters treat functions as updaters, so wrap imported
+          // function values to store them as state instead of invoking them.
+          setReactMarkdown(() => RM as any);
+          setRemarkGfm(() => gfm);
+        }
+      });
+    return () => { mounted = false; };
+  }, []);
+  const handleCopy = useCallback(() => {
+    if (!message.text) return;
+    try {
+      navigator.clipboard.writeText(message.text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {
+        // Fallback for browsers without clipboard API
+        const textarea = document.createElement('textarea');
+        textarea.value = message.text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try { document.execCommand('copy'); } catch {}
+        document.body.removeChild(textarea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    } catch {
+      // ignore
+    }
+  }, [message.text]);
+
   if (message.from === 'assistant') {
     return (
       <div className={`flex w-full justify-start`}>
@@ -43,8 +90,60 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
               {showMessageAvatars && widgetConfig?.bot_avatar && (
               <img src={widgetConfig.bot_avatar} alt={(assistantName || widgetConfig?.title?.en || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
             )}
-            <div className={`max-w-[80%] p-2`} style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-              <div>{message.text}</div>
+            <div className={`max-w-[80%] p-2 group relative`} style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
+              {/* Copy button — appears on hover */}
+              <button
+                type="button"
+                onClick={handleCopy}
+                title={copied ? translate(locale, 'copied') : translate(locale, 'copyMessage')}
+                aria-label={copied ? translate(locale, 'copied') : translate(locale, 'copyMessage')}
+                className="absolute top-1 right-1 opacity-40 hover:opacity-100 transition-opacity p-1 rounded hover:bg-black/10"
+                style={{ color: textColor }}
+              >
+                {copied ? (
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                )}
+              </button>
+              {/* Markdown-rendered message body */}
+              <div className="prose prose-sm max-w-none pr-5" style={{ color: textColor }}>
+                {ReactMarkdown ? (
+                  <ReactMarkdown
+                    // eslint-disable-next-line react/no-unknown-property
+                    remarkPlugins={remarkGfm ? [remarkGfm] : []}
+                    components={({
+                      // Open links in a new tab safely
+                      a: (({ href, children }: { href?: string; children?: React.ReactNode }) => (
+                        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline' }}>{children}</a>
+                      )),
+                      // Code: inline vs block
+                      code: (({ className, children }: { className?: string; children?: React.ReactNode }) => {
+                        const isBlock = /language-/.test(className || '');
+                        return isBlock ? (
+                          <pre style={{ backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '4px', padding: '8px', overflowX: 'auto', fontSize: '0.82em', margin: '4px 0' }}>
+                            <code className={className}>{children}</code>
+                          </pre>
+                        ) : (
+                          <code style={{ backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: '3px', padding: '1px 4px', fontSize: '0.85em' }}>{children}</code>
+                        );
+                      }),
+                      ul: (({ children }: { children?: React.ReactNode }) => <ul style={{ paddingInlineStart: '1.2em', margin: '4px 0' }}>{children}</ul>),
+                      ol: (({ children }: { children?: React.ReactNode }) => <ol style={{ paddingInlineStart: '1.2em', margin: '4px 0' }}>{children}</ol>),
+                      p: (({ children }: { children?: React.ReactNode }) => <p style={{ margin: '2px 0' }}>{children}</p>),
+                    } as MDComponents)}
+                  >
+                    {message.text}
+                  </ReactMarkdown>
+                ) : (
+                  <div>{message.text}</div>
+                )}
+              </div>
               {hasSources && (
                 <div className="mt-2 pt-2 border-t border-gray-300">
                   <div className="text-xs font-semibold mb-1 opacity-70">

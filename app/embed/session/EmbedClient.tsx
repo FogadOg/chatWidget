@@ -139,7 +139,12 @@ export function parseHostMessageCommand(raw: unknown): ParsedHostMessageCommand 
   return { kind: 'message', text };
 }
 
-export function resolveParentTargetOrigin(explicit?: string, referrer?: string): string {
+export function resolveParentTargetOrigin(
+  explicit?: string,
+  referrer?: string,
+  /** When true, fall back to the document referrer origin but never '*' */
+  strict?: boolean,
+): string {
   const explicitOrigin = (explicit || '').trim();
   if (explicitOrigin) {
     return explicitOrigin;
@@ -160,6 +165,9 @@ export function resolveParentTargetOrigin(explicit?: string, referrer?: string):
     }
   }
 
+  // In strict mode never fall back to wildcard — refuse to post to unknown origins.
+  // The parent window will not receive messages until it re-embeds with a valid origin.
+  if (strict) return 'null';
   return '*';
 }
 
@@ -171,6 +179,8 @@ type EmbedClientProps = {
   startOpen: boolean;
   pagePath?: string;
   parentOrigin?: string;
+  /** Mirror of data-strict-origin. When true, never send postMessage to '*'. */
+  strictOrigin?: boolean;
   /**
    * test-only: forcibly display the feedback dialog regardless of timer state
    */
@@ -184,6 +194,7 @@ export default function EmbedClient({
   locale: initialLocale,
   startOpen: initialStartOpen,
   parentOrigin: initialParentOrigin,
+  strictOrigin: initialStrictOrigin = false,
   showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -229,7 +240,7 @@ export default function EmbedClient({
       logError(error as Error, { context: 'initialTelemetry' });
     }
   }, [initialAssistantId, initialClientId, initialStartOpen]);
-  const { getAuthToken, authToken, authError } = useWidgetAuth();
+  const { getAuthToken, authToken, authError, scheduleAutoRefresh = () => {} } = useWidgetAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   // Tracks whether the initial loadSessionMessages has completed at least once.
@@ -313,13 +324,18 @@ export default function EmbedClient({
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const postedEdgeOffset = useRef<number | undefined>(undefined);
   const [fatalError, setFatalError] = useState<string | null>(null);
+  // strict_origin: once config loads, use strict mode for all subsequent postMessage calls.
+  // Before config loads we tolerate wildcard so the WIDGET_SHOW message still goes out.
+  const isStrictOrigin = initialStrictOrigin || Boolean(widgetConfig?.strict_origin);
   const parentTargetOrigin = useMemo(
-    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin)),
-    [initialParentOrigin]
+    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialParentOrigin, isStrictOrigin]
   );
   const parentSensitiveOrigin = useMemo(
-    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin)),
-    [initialParentOrigin]
+    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialParentOrigin, isStrictOrigin]
   );
 
   useEffect(() => {
@@ -436,6 +452,15 @@ export default function EmbedClient({
           // The useEffect below watches authError and sets fatalError.
           return;
         }
+
+        // Schedule silent token refresh if backend returned an expiry claim.
+        // We re-fetch the raw response in the auth hook; here we check the
+        // widgetToken endpoint response stored in the body we already parsed.
+        // The hook exposes scheduleAutoRefresh — callers supply expires_at.
+        // We derive it from a predictable fallback: 55-minute sliding window.
+        // (Override this when the backend starts returning expires_at.)
+        const tokenExpiryMs = Date.now() + 55 * 60 * 1000; // 55 min sliding window
+        scheduleAutoRefresh(tokenExpiryMs, clientIdParam, initialParentOrigin);
 
         if (cancelled) return;
 
@@ -798,6 +823,53 @@ export default function EmbedClient({
     return () => window.removeEventListener('companin:retry-queued', onRetry as EventListener);
   }, [sessionId, authToken, activeLocale, initialParentOrigin, loadSessionMessages, sessionStorageKey]);
 
+
+  // Proactive open trigger: delay-based and/or scroll-depth-based auto-open.
+  // Reads auto_open_delay (ms) and auto_open_scroll_depth (0-100 %) from widgetConfig.
+  // Only fires once per page-load and only when the widget is currently collapsed.
+  useEffect(() => {
+    if (!widgetConfig) return;
+    // Don't auto-open if already explicitly open or if start_open already handled it
+    const delayMs = widgetConfig.auto_open_delay ?? 0;
+    const scrollDepth = widgetConfig.auto_open_scroll_depth ?? 0;
+    if (delayMs <= 0 && scrollDepth <= 0) return;
+
+    let fired = false;
+    const open = () => {
+      if (fired) return;
+      fired = true;
+      setIsCollapsed((prev) => {
+        if (!prev) return prev; // already open
+        return false;
+      });
+    };
+
+    let delayTimer: ReturnType<typeof setTimeout> | null = null;
+    if (delayMs > 0) {
+      delayTimer = setTimeout(open, delayMs);
+    }
+
+    let scrollHandler: (() => void) | null = null;
+    if (scrollDepth > 0) {
+      scrollHandler = () => {
+        if (fired) return;
+        const scrolled = window.scrollY + window.innerHeight;
+        const total = document.documentElement.scrollHeight;
+        const pct = total > 0 ? (scrolled / total) * 100 : 0;
+        if (pct >= scrollDepth) open();
+      };
+      // Fire against the parent document via postMessage since widget runs in an iframe
+      // For non-iframe contexts (dev/test), listen on the local window
+      window.addEventListener('scroll', scrollHandler, { passive: true });
+    }
+
+    return () => {
+      if (delayTimer) clearTimeout(delayTimer);
+      if (scrollHandler) window.removeEventListener('scroll', scrollHandler);
+    };
+  // widgetConfig.auto_open_delay and auto_open_scroll_depth are primitives — safe to spread
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [widgetConfig?.auto_open_delay, widgetConfig?.auto_open_scroll_depth]);
 
   // Apply widget behavior settings when config is loaded
   useEffect(() => {

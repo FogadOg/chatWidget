@@ -35,10 +35,11 @@ describe('MessageBubble', () => {
     expect(screen.getByRole('img', { name: 'Bot avatar' })).toBeInTheDocument();
     expect(screen.getByText('Title')).toBeInTheDocument();
 
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[0]);
+    const up = screen.getByLabelText('feedbackPositive');
+    const down = screen.getByLabelText('feedbackNegative');
+    fireEvent.click(up);
     expect(onFeedback).toHaveBeenCalledWith('a1', 'thumbs_up');
-    fireEvent.click(buttons[1]);
+    fireEvent.click(down);
     expect(onFeedback).toHaveBeenCalledWith('a1', 'thumbs_down');
   });
 
@@ -53,7 +54,10 @@ describe('MessageBubble', () => {
 
     expect(screen.getByText('assistant plain text')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // only copy button should be present
+    const allButtons = screen.queryAllByRole('button');
+    expect(allButtons.length).toBe(1);
+    expect(screen.getByLabelText('copyMessage')).toBeInTheDocument();
   });
 
   test('renders assistant source fallback without url and shows submitted feedback label', () => {
@@ -76,7 +80,10 @@ describe('MessageBubble', () => {
     expect(screen.getByText('assistant no-link source')).toBeInTheDocument();
     expect(screen.getByText('Local Source')).toBeInTheDocument();
     expect(screen.getByText(/feedbackSubmitted/i)).toBeInTheDocument();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // only copy button should remain
+    const allButtons2 = screen.queryAllByRole('button');
+    expect(allButtons2.length).toBe(1);
+    expect(screen.getByLabelText('copyMessage')).toBeInTheDocument();
   });
 
   test('renders assistant sources with mixed url/snippet combinations', () => {

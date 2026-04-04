@@ -89,6 +89,14 @@ export type WidgetConfig = {
   show_typing_indicator?: boolean;
   show_message_avatars?: boolean;
   show_unread_badge?: boolean;
+  // Proactive open triggers
+  /** Delay in milliseconds before automatically opening the widget (0 = disabled) */
+  auto_open_delay?: number;
+  /** Scroll depth percentage (0–100) that triggers auto-open (0 = disabled) */
+  auto_open_scroll_depth?: number;
+  // Security
+  /** When true, postMessage is only sent to the exact parentOrigin — never '*' */
+  strict_origin?: boolean;
 };
 
 export type ApiResponse<T> = {
@@ -101,6 +109,12 @@ export type ApiResponse<T> = {
 export type SessionData = {
   session_id: string;
   expires_at: string;
+};
+
+export type TokenData = {
+  token: string;
+  /** ISO-8601 expiry timestamp returned by the auth endpoint */
+  expires_at?: string;
 };
 
 export type MessageData = {

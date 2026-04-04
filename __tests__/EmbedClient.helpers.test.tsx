@@ -61,6 +61,14 @@ describe('EmbedClient helpers', () => {
       kind: 'message',
       text: 'hello from host',
     });
+    expect(EmbedClient.parseHostMessageCommand(' SHOW ')).toEqual({
+      kind: 'action',
+      action: 'open',
+    });
+    expect(EmbedClient.parseHostMessageCommand('hide')).toEqual({
+      kind: 'action',
+      action: 'close',
+    });
   });
 
   test('parseHostMessageCommand parses action payloads', () => {
@@ -75,6 +83,14 @@ describe('EmbedClient helpers', () => {
     expect(EmbedClient.parseHostMessageCommand({ command: 'toggle' })).toEqual({
       kind: 'action',
       action: 'toggle',
+    });
+    expect(EmbedClient.parseHostMessageCommand({ event: 'restore' })).toEqual({
+      kind: 'action',
+      action: 'open',
+    });
+    expect(EmbedClient.parseHostMessageCommand({ type: 'hide' })).toEqual({
+      kind: 'action',
+      action: 'close',
     });
   });
 
@@ -112,5 +128,15 @@ describe('EmbedClient helpers', () => {
   test('resolveParentTargetOrigin falls back to wildcard when explicit and referrer are missing/invalid', () => {
     expect(EmbedClient.resolveParentTargetOrigin(undefined, '')).toBe('*');
     expect(EmbedClient.resolveParentTargetOrigin(undefined, 'not-a-valid-url')).toBe('*');
+  });
+
+  test('resolveParentTargetOrigin returns null in strict mode when no safe origin is available', () => {
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, '', true)).toBe('null');
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, 'not-a-valid-url', true)).toBe('null');
+  });
+
+  test('applyCustomAssetsFromQuery ignores missing customCss parameter', () => {
+    EmbedClient.applyCustomAssetsFromQuery('?foo=bar');
+    expect(document.head.querySelectorAll('style')).toHaveLength(0);
   });
 });
