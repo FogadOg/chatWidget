@@ -1747,6 +1747,7 @@ export default function EmbedClient({
 
     const maybeText = getLocalizedText(b.response?.text);
     const maybeButtons = b.response?.buttons || [];
+    const hasLocalResponse = Boolean(maybeText) || maybeButtons.length > 0;
     const labelText = getLocalizedText(b.label) || (typeof b.label === 'string' ? b.label : (b.label?.en || ''));
 
     trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
@@ -1791,6 +1792,14 @@ export default function EmbedClient({
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, userMsg]);
+
+      // A follow-up button that already defines a local response should remain
+      // local-only: render the user's button click plus the local assistant
+      // response and skip the backend submit.
+      if (hasLocalResponse) {
+        return;
+      }
+
       handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
     }
   };
@@ -1818,8 +1827,10 @@ export default function EmbedClient({
     trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
 
     if (!maybeText && !flowHandled) {
-      // No local response — let handleSubmit manage typing state
-      handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
+      // Interaction buttons are local-only entry points. When there is no
+      // configured local response, keep only the user bubble and do not send a
+      // backend message. Follow-up buttons retain the submit-to-agent path.
+      return;
     } else {
       // Local response available — show typing then reveal it
       setIsTyping(true);
@@ -1830,7 +1841,7 @@ export default function EmbedClient({
           timestamp: Date.now()
         }]);
         setIsTyping(false);
-      }, 300);
+      }, 1000);
       // notify parent about the user message
       try {
         if (window.parent !== window) {
