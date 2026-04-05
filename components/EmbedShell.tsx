@@ -374,16 +374,16 @@ export default function EmbedShell({
                     return (
                       <div key={`flow-${index}`} className="space-y-2">
                         {flowResponse.text && (
-                          <div className="flex flex-col items-start w-full">
-                            <div className="flex items-start gap-2">
-                              {showMessageAvatars && widgetConfig?.bot_avatar && (
-                                <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                              )}
-                              <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                                {flowResponse.text}
-                              </div>
-                            </div>
-                          </div>
+                          <MessageBubble
+                            message={{ id: `flow-text-${index}`, text: flowResponse.text, from: 'assistant' }}
+                            widgetConfig={widgetConfig}
+                            assistantName={assistantName}
+                            showMessageAvatars={showMessageAvatars}
+                            textColor={textColor}
+                            fontStyles={fontStyles}
+                            messageBubbleRadius={messageBubbleRadius}
+                            showTimestamps={false}
+                          />
                         )}
                         {flowResponse.buttons.length > 0 && (
                           <div className="flex flex-col gap-2" style={{ marginInlineStart: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
@@ -635,16 +635,16 @@ export default function EmbedShell({
                       return (
                         <div key={`flow-${index}`} className="space-y-2">
                           {flowResponse.text && (
-                            <div className="flex flex-col items-start w-full">
-                              <div className="flex items-start gap-2">
-                                {widgetConfig?.bot_avatar && (
-                                  <img src={widgetConfig.bot_avatar} alt={(assistantName || getText(widgetConfig?.title) || 'assistant') + ' avatar'} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                                )}
-                                <div className="max-w-[80%] p-2" style={{ backgroundColor: '#e5e7eb', color: textColor, borderRadius: `${messageBubbleRadius}px`, ...fontStyles }}>
-                                  {flowResponse.text}
-                                </div>
-                              </div>
-                            </div>
+                            <MessageBubble
+                              message={{ id: `flow-text-${index}`, text: flowResponse.text, from: 'assistant' }}
+                              widgetConfig={widgetConfig}
+                              assistantName={assistantName}
+                              showMessageAvatars={showMessageAvatars}
+                              textColor={textColor}
+                              fontStyles={fontStyles}
+                              messageBubbleRadius={messageBubbleRadius}
+                              showTimestamps={false}
+                            />
                           )}
                           {flowResponse.buttons.length > 0 && (
                             <div className="flex flex-col gap-2" style={{ marginInlineStart: widgetConfig?.bot_avatar ? '40px' : '0' }}>

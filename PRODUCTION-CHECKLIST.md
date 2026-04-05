@@ -38,7 +38,7 @@ Complete this checklist before deploying the widget to production.
 
 - [ ] **Set up environment variables**
   ```env
-  NEXT_PUBLIC_API_BASE_URL=https://api.companin.tech
+  NEXT_PUBLIC_API_BASE_URL=https://app.companin.tech
   NEXT_PUBLIC_WIDGET_URL=https://widget.companin.tech
   NODE_ENV=production
   ```

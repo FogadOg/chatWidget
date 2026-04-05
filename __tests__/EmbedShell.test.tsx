@@ -1,7 +1,47 @@
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import EmbedShell from '../components/EmbedShell';
+
+const minimalProps = {
+  isEmbedded: true,
+  isCollapsed: false,
+  toggleCollapsed: () => {},
+  messages: [],
+  isTyping: false,
+  input: '',
+  setInput: () => {},
+  handleSubmit: (e: any) => e.preventDefault(),
+  flowResponses: [],
+  widgetConfig: {},
+  getLocalizedText: (t: any) => (typeof t === 'string' ? t : (t?.en || '')),
+};
+
+describe('EmbedShell', () => {
+  test('renders greeting and buttons when provided', () => {
+    const widgetConfig = {
+      greeting_message: { text: { en: 'Hi there' }, buttons: [{ id: 'b1', label: { en: 'Test' } }] }
+    } as any;
+    render(<EmbedShell {...minimalProps} widgetConfig={widgetConfig} />);
+    expect(screen.getByText('Hi there')).toBeInTheDocument();
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+
+  test('renders flow response using MessageBubble', () => {
+    const flowResponses = [{ text: 'Flow reply', buttons: [] }];
+    render(<EmbedShell {...minimalProps} flowResponses={flowResponses as any} />);
+    expect(screen.getByText('Flow reply')).toBeInTheDocument();
+  });
+
+  test('input and submit buttons exist', () => {
+    render(<EmbedShell {...minimalProps} />);
+    expect(screen.getByPlaceholderText('Type...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+  });
+});
+import React from 'react';
 import '@testing-library/jest-dom';
 
- 
+
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import EmbedShell from '../components/EmbedShell';
 import { useWidgetStyles } from '../hooks/useWidgetStyles';
@@ -508,9 +548,12 @@ describe('EmbedShell - logo and avatar', () => {
       // locate the button inside the flow container
       const flowSection = container.querySelector('div.space-y-2');
       expect(flowSection).not.toBeNull();
-      const btn = flowSection!.querySelector('button') as HTMLButtonElement;
+      const allButtons = Array.from(flowSection!.querySelectorAll('button')) as HTMLButtonElement[];
+      // pick the first button that is not the copy button
+      const btn = allButtons.find(b => b.getAttribute('aria-label') !== 'Copy message') as HTMLButtonElement | undefined;
+      expect(btn).toBeDefined();
       expect(btn).toBeInTheDocument();
-      expect(btn).toContainHTML('🔥');
+      expect(btn!.textContent).toContain('🔥');
       // click disables the button
       act(() => {
         btn.click();
@@ -708,10 +751,12 @@ describe('EmbedShell - logo and avatar', () => {
       );
       const flowSection = container.querySelector('div.space-y-2');
       expect(flowSection).not.toBeNull();
-      const btn = flowSection!.querySelector('button') as HTMLButtonElement;
+      const allButtons = Array.from(flowSection!.querySelectorAll('button')) as HTMLButtonElement[];
+      const btn = allButtons.find(b => b.getAttribute('aria-label') !== 'Copy message') as HTMLButtonElement | undefined;
+      expect(btn).toBeDefined();
       expect(btn).toBeInTheDocument();
-      expect(btn).toContainHTML('⚡');
-      expect(btn.textContent).toContain('Button'); // fallback text
+      expect(btn!.textContent).toContain('⚡');
+      expect(btn!.textContent).toContain('Button'); // fallback text
     });
 
     it('disables embedded flow button after click', () => {

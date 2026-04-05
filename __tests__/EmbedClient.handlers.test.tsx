@@ -225,6 +225,85 @@ describe('EmbedClient handlers', () => {
     expect(screen.getByTestId('collapsed-state').textContent).toBe('expanded');
   });
 
+  test('host message open expands only when currently collapsed', async () => {
+    mockFetch.mockImplementation((url: string, options?: any) => {
+      if (url.includes('/messages') && !options) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { messages: [] } }) });
+      if (url.includes('/sessions')) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { session_id: 'sess-1' } }) });
+      if (url.includes('/assistants/')) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { name: 'Test' } }) });
+      if (url.includes('/widget-config/')) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    const parent = {} as any;
+    Object.defineProperty(window, 'parent', { value: parent, writable: true });
+
+    await act(async () => {
+      render(<EmbedClient {...defaultProps} />);
+    });
+
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('collapsed');
+
+    const openEvent = { source: parent, origin: 'https://example.com', data: { type: 'HOST_MESSAGE', data: 'open' } } as unknown as MessageEvent;
+    await act(async () => { window.dispatchEvent(openEvent); });
+
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('expanded');
+
+    await act(async () => { window.dispatchEvent(openEvent); });
+
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('expanded');
+  });
+
+  test('host message close collapses only when currently expanded', async () => {
+    mockFetch.mockImplementation((url: string, options?: any) => {
+      if (url.includes('/messages') && !options) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { messages: [] } }) });
+      if (url.includes('/sessions')) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { session_id: 'sess-1' } }) });
+      if (url.includes('/assistants/')) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { name: 'Test' } }) });
+      if (url.includes('/widget-config/')) return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    const parent = {} as any;
+    Object.defineProperty(window, 'parent', { value: parent, writable: true });
+
+    await act(async () => {
+      render(<EmbedClient {...defaultProps} />);
+    });
+
+    await act(async () => {
+      window.dispatchEvent({ source: parent, origin: 'https://example.com', data: { type: 'HOST_MESSAGE', data: 'open' } } as unknown as MessageEvent);
+    });
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('expanded');
+
+    await act(async () => {
+      window.dispatchEvent({ source: parent, origin: 'https://example.com', data: { type: 'HOST_MESSAGE', data: 'close' } } as unknown as MessageEvent);
+    });
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('collapsed');
+
+    await act(async () => {
+      window.dispatchEvent({ source: parent, origin: 'https://example.com', data: { type: 'HOST_MESSAGE', data: 'close' } } as unknown as MessageEvent);
+    });
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('collapsed');
+  });
+
+  test('host message with mismatched source and origin is ignored', async () => {
+    const handleSubmitSpy = jest.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(() => undefined);
+    const parent = {} as any;
+    Object.defineProperty(window, 'parent', { value: parent, writable: true });
+
+    await act(async () => {
+      render(<EmbedClient {...defaultProps} />);
+    });
+
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('collapsed');
+
+    await act(async () => {
+      window.dispatchEvent({ source: {}, origin: 'https://wrong.example.com', data: { type: 'HOST_MESSAGE', data: 'toggle' } } as unknown as MessageEvent);
+    });
+
+    expect(screen.getByTestId('collapsed-state').textContent).toBe('collapsed');
+    handleSubmitSpy.mockRestore();
+  });
+
   test('host message wrapper falls back when coerced dispatch throws', async () => {
     const nativeDispatch = window.dispatchEvent;
     const parent = {} as any;

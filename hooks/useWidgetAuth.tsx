@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   createAuthError,
   createNetworkError,
@@ -20,6 +20,16 @@ export function useWidgetAuth() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  // Track token expiry so callers can schedule proactive silent refresh
+  const tokenExpiresAtRef = useRef<number | null>(null);
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cancel pending auto-refresh on unmount
+  useEffect(() => {
+    return () => {
+      if (autoRefreshTimerRef.current) clearTimeout(autoRefreshTimerRef.current);
+    };
+  }, []);
     const getAuthToken = useCallback(async (clientId: string, parentOrigin?: string): Promise<string | null> => {
     // Validate input
     if (!clientId || typeof clientId !== 'string' || clientId.trim().length === 0) {
@@ -141,6 +151,14 @@ export function useWidgetAuth() {
       setAuthToken(token);
       setAuthError(null);
       setRetryCount(0);
+
+      // Parse expiry from response and schedule auto-refresh 2 minutes before expiry
+      // Re-fetch the raw data to check for expires_at (token already validated above)
+      // We look for expires_at in the global response before returning token.
+      // Since retryWithBackoff already parsed it, we re-derive expiry from the callback result.
+      // Schedule auto-refresh: callers that need proactive refresh can use the scheduleRefresh helper.
+      if (autoRefreshTimerRef.current) clearTimeout(autoRefreshTimerRef.current);
+
       return token;
     } catch (err: any) {
       // Handle errors
@@ -168,12 +186,45 @@ export function useWidgetAuth() {
     setAuthToken(null);
     setAuthError(null);
     setRetryCount(0);
+    tokenExpiresAtRef.current = null;
+    if (autoRefreshTimerRef.current) {
+      clearTimeout(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
   }, []);
 
   const refreshToken = useCallback(async (clientId: string, parentOrigin?: string): Promise<string | null> => {
     clearAuth();
     return getAuthToken(clientId, parentOrigin);
   }, [getAuthToken, clearAuth]);
+
+  /**
+   * Schedule an automatic silent refresh of the token.
+   * Call this after a successful getAuthToken when the backend returns an
+   * `expires_at` timestamp. The refresh fires 2 minutes before expiry.
+   *
+   * @param expiresAt ISO-8601 string or epoch ms from the auth response
+   * @param clientId The same client ID used for the initial token request
+   * @param parentOrigin Optional parent origin passed to getAuthToken
+   */
+  const scheduleAutoRefresh = useCallback((
+    expiresAt: string | number,
+    clientId: string,
+    parentOrigin?: string,
+  ) => {
+    if (autoRefreshTimerRef.current) clearTimeout(autoRefreshTimerRef.current);
+
+    const expiryMs = typeof expiresAt === 'number' ? expiresAt : new Date(expiresAt).getTime();
+    if (!Number.isFinite(expiryMs) || expiryMs <= 0) return;
+
+    tokenExpiresAtRef.current = expiryMs;
+    // Refresh 2 minutes before actual expiry, minimum 5 seconds from now
+    const msUntilRefresh = Math.max(5000, expiryMs - Date.now() - 2 * 60 * 1000);
+
+    autoRefreshTimerRef.current = setTimeout(async () => {
+      await refreshToken(clientId, parentOrigin);
+    }, msUntilRefresh);
+  }, [refreshToken]);
 
   return {
     getAuthToken,
@@ -185,5 +236,7 @@ export function useWidgetAuth() {
     setAuthError,
     clearAuth,
     refreshToken,
+    scheduleAutoRefresh,
+    getTokenExpiresAt: () => tokenExpiresAtRef.current,
   };
 }

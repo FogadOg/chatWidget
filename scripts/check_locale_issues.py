@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import re
 from pathlib import Path
 
@@ -90,9 +91,12 @@ def main():
     with open(REPORT_PATH, 'w', encoding='utf-8') as f:
         json.dump(issues, f, ensure_ascii=False, indent=2)
 
-    for name, r in issues.items():
-        print(f"{name}: untranslated={r['untranslated_count']}, empty={r['empty_values_count']}, markers={r['suspicious_markers_count']}, placeholder_mismatch={r['placeholder_mismatches_count']}")
-    print('\nFull JSON report written to:', REPORT_PATH)
+    QUIET = os.getenv('QUIET_LOCALE') in ('1', 'true', 'True')
+
+    if not QUIET:
+        for name, r in issues.items():
+            print(f"{name}: untranslated={r['untranslated_count']}, empty={r['empty_values_count']}, markers={r['suspicious_markers_count']}, placeholder_mismatch={r['placeholder_mismatches_count']}")
+        print('\nFull JSON report written to:', REPORT_PATH)
 
 
 if __name__ == '__main__':

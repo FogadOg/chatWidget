@@ -101,8 +101,14 @@ const nextConfig: NextConfig = {
       },
       // ── Widget bootstrap and static assets: allow cross-origin loading ──
       {
-        // widget.js is often served from a separate dev server (eg. localhost:3001)
+        // widget.js / docs-widget.js are often served from a separate dev server (eg. localhost:3001)
         source: '/widget.js',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
+        source: '/docs-widget.js',
         headers: [
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],

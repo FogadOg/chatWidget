@@ -1,7 +1,4 @@
 'use client';
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 import { getLocaleDirection } from '../../../lib/i18n';
@@ -34,6 +31,15 @@ import { getQueuedMessages, removeQueuedMessage, queueMessage, incrementAttempt 
 import { onInitConfig } from './events';
 import { sanitizeCss } from '../../../lib/cssValidator';
 import { validateConfig } from '../../../lib/validateConfig';
+import {
+  registerInstance,
+  deregisterInstance,
+  makeInstanceId,
+  open as registryOpen,
+  close as registryClose,
+} from '../../../src/lib/widgetRegistry';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import EmbedShell from 'components/EmbedShell';
 
 // helpers exposed so tests can call them directly
 export function injectCustomAssets(css?: string) {
@@ -139,7 +145,12 @@ export function parseHostMessageCommand(raw: unknown): ParsedHostMessageCommand 
   return { kind: 'message', text };
 }
 
-export function resolveParentTargetOrigin(explicit?: string, referrer?: string): string {
+export function resolveParentTargetOrigin(
+  explicit?: string,
+  referrer?: string,
+  /** When true, fall back to the document referrer origin but never '*' */
+  strict?: boolean,
+): string | null {
   const explicitOrigin = (explicit || '').trim();
   if (explicitOrigin) {
     return explicitOrigin;
@@ -160,6 +171,9 @@ export function resolveParentTargetOrigin(explicit?: string, referrer?: string):
     }
   }
 
+  // In strict mode never fall back to wildcard — refuse to post to unknown origins.
+  // The parent window will not receive messages until it re-embeds with a valid origin.
+  if (strict) return null;
   return '*';
 }
 
@@ -171,6 +185,8 @@ type EmbedClientProps = {
   startOpen: boolean;
   pagePath?: string;
   parentOrigin?: string;
+  /** Mirror of data-strict-origin. When true, never send postMessage to '*'. */
+  strictOrigin?: boolean;
   /**
    * test-only: forcibly display the feedback dialog regardless of timer state
    */
@@ -184,6 +200,7 @@ export default function EmbedClient({
   locale: initialLocale,
   startOpen: initialStartOpen,
   parentOrigin: initialParentOrigin,
+  strictOrigin: initialStrictOrigin = false,
   showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -229,7 +246,7 @@ export default function EmbedClient({
       logError(error as Error, { context: 'initialTelemetry' });
     }
   }, [initialAssistantId, initialClientId, initialStartOpen]);
-  const { getAuthToken, authToken, authError } = useWidgetAuth();
+  const { getAuthToken, authToken, authError, scheduleAutoRefresh = () => {} } = useWidgetAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   // Tracks whether the initial loadSessionMessages has completed at least once.
@@ -254,7 +271,6 @@ export default function EmbedClient({
     } catch {
       // ignore – corrupt / unavailable storage
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Persist flow responses to localStorage whenever they change so they survive reloads.
@@ -313,13 +329,16 @@ export default function EmbedClient({
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const postedEdgeOffset = useRef<number | undefined>(undefined);
   const [fatalError, setFatalError] = useState<string | null>(null);
+  // strict_origin: once config loads, use strict mode for all subsequent postMessage calls.
+  // Before config loads we tolerate wildcard so the WIDGET_SHOW message still goes out.
+  const isStrictOrigin = initialStrictOrigin || Boolean(widgetConfig?.strict_origin);
   const parentTargetOrigin = useMemo(
-    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin)),
-    [initialParentOrigin]
+    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin) ?? undefined),
+    [initialParentOrigin, isStrictOrigin]
   );
   const parentSensitiveOrigin = useMemo(
-    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin)),
-    [initialParentOrigin]
+    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin) ?? undefined),
+    [initialParentOrigin, isStrictOrigin]
   );
 
   useEffect(() => {
@@ -373,6 +392,55 @@ export default function EmbedClient({
     });
     return remove;
   }, []);
+
+  // Instance registry: create an instance id and register this widget
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const instanceIdRef = useRef<string>(makeInstanceId(initialClientId, initialAssistantId));
+
+  useEffect(() => {
+    const instanceId = instanceIdRef.current;
+    const ref = {
+      instanceId,
+      clientId: initialClientId,
+      assistantId: initialAssistantId,
+      container: containerRef.current,
+      state: isCollapsed ? 'collapsed' as const : 'expanded' as const,
+    };
+    try {
+      registerInstance(ref);
+      if (containerRef.current) {
+        containerRef.current.dataset.widgetInstance = instanceId;
+        if (initialClientId) containerRef.current.dataset.clientId = initialClientId;
+        if (initialAssistantId) containerRef.current.dataset.assistantId = initialAssistantId;
+      }
+    } catch (err) {
+      // non-fatal: registration failure should not break widget
+      logError(err as Error, { action: 'registerInstance', instanceId, clientId: initialClientId, assistantId: initialAssistantId });
+    }
+
+    return () => {
+      try {
+        deregisterInstance(instanceId);
+      } catch (err) {
+        // ignore
+      }
+    };
+    // We intentionally only run this on mount/unmount
+  }, []);
+
+  // Sync collapsed/expanded state with registry
+  useEffect(() => {
+    const instanceId = instanceIdRef.current;
+    try {
+      if (!isCollapsed) {
+        registryOpen(instanceId, { minimizeOthers: undefined });
+      } else {
+        registryClose(instanceId);
+      }
+    } catch (err) {
+      // ignore
+    }
+  }, [isCollapsed]);
 
   // When auth fails before any config loads, surface it as a fatal error
   // so the widget renders a visible error instead of staying invisible.
@@ -436,6 +504,15 @@ export default function EmbedClient({
           // The useEffect below watches authError and sets fatalError.
           return;
         }
+
+        // Schedule silent token refresh if backend returned an expiry claim.
+        // We re-fetch the raw response in the auth hook; here we check the
+        // widgetToken endpoint response stored in the body we already parsed.
+        // The hook exposes scheduleAutoRefresh — callers supply expires_at.
+        // We derive it from a predictable fallback: 55-minute sliding window.
+        // (Override this when the backend starts returning expires_at.)
+        const tokenExpiryMs = Date.now() + 55 * 60 * 1000; // 55 min sliding window
+        scheduleAutoRefresh(tokenExpiryMs, clientIdParam, initialParentOrigin);
 
         if (cancelled) return;
 
@@ -798,6 +875,52 @@ export default function EmbedClient({
     return () => window.removeEventListener('companin:retry-queued', onRetry as EventListener);
   }, [sessionId, authToken, activeLocale, initialParentOrigin, loadSessionMessages, sessionStorageKey]);
 
+
+  // Proactive open trigger: delay-based and/or scroll-depth-based auto-open.
+  // Reads auto_open_delay (ms) and auto_open_scroll_depth (0-100 %) from widgetConfig.
+  // Only fires once per page-load and only when the widget is currently collapsed.
+  useEffect(() => {
+    if (!widgetConfig) return;
+    // Don't auto-open if already explicitly open or if start_open already handled it
+    const delayMs = widgetConfig.auto_open_delay ?? 0;
+    const scrollDepth = widgetConfig.auto_open_scroll_depth ?? 0;
+    if (delayMs <= 0 && scrollDepth <= 0) return;
+
+    let fired = false;
+    const open = () => {
+      if (fired) return;
+      fired = true;
+      setIsCollapsed((prev) => {
+        if (!prev) return prev; // already open
+        return false;
+      });
+    };
+
+    let delayTimer: ReturnType<typeof setTimeout> | null = null;
+    if (delayMs > 0) {
+      delayTimer = setTimeout(open, delayMs);
+    }
+
+    let scrollHandler: (() => void) | null = null;
+    if (scrollDepth > 0) {
+      scrollHandler = () => {
+        if (fired) return;
+        const scrolled = window.scrollY + window.innerHeight;
+        const total = document.documentElement.scrollHeight;
+        const pct = total > 0 ? (scrolled / total) * 100 : 0;
+        if (pct >= scrollDepth) open();
+      };
+      // Fire against the parent document via postMessage since widget runs in an iframe
+      // For non-iframe contexts (dev/test), listen on the local window
+      window.addEventListener('scroll', scrollHandler, { passive: true });
+    }
+
+    return () => {
+      if (delayTimer) clearTimeout(delayTimer);
+      if (scrollHandler) window.removeEventListener('scroll', scrollHandler);
+    };
+  // widgetConfig.auto_open_delay and auto_open_scroll_depth are primitives — safe to spread
+  }, [widgetConfig?.auto_open_delay, widgetConfig?.auto_open_scroll_depth]);
 
   // Apply widget behavior settings when config is loaded
   useEffect(() => {
@@ -1675,6 +1798,7 @@ export default function EmbedClient({
 
     const maybeText = getLocalizedText(b.response?.text);
     const maybeButtons = b.response?.buttons || [];
+    const hasLocalResponse = Boolean(maybeText) || maybeButtons.length > 0;
     const labelText = getLocalizedText(b.label) || (typeof b.label === 'string' ? b.label : (b.label?.en || ''));
 
     trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
@@ -1719,6 +1843,14 @@ export default function EmbedClient({
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, userMsg]);
+
+      // A follow-up button that already defines a local response should remain
+      // local-only: render the user's button click plus the local assistant
+      // response and skip the backend submit.
+      if (hasLocalResponse) {
+        return;
+      }
+
       handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
     }
   };
@@ -1746,8 +1878,10 @@ export default function EmbedClient({
     trackEvent('button_clicked', initialAssistantId, { label: labelText }, initialClientId).catch(() => {});
 
     if (!maybeText && !flowHandled) {
-      // No local response — let handleSubmit manage typing state
-      handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
+      // Interaction buttons are local-only entry points. When there is no
+      // configured local response, keep only the user bubble and do not send a
+      // backend message. Follow-up buttons retain the submit-to-agent path.
+      return;
     } else {
       // Local response available — show typing then reveal it
       setIsTyping(true);
@@ -1758,7 +1892,7 @@ export default function EmbedClient({
           timestamp: Date.now()
         }]);
         setIsTyping(false);
-      }, 300);
+      }, 1000);
       // notify parent about the user message
       try {
         if (window.parent !== window) {
@@ -1953,55 +2087,57 @@ export default function EmbedClient({
   }
 
   return (
-    <EmbedShell
-      isEmbedded={isEmbedded}
-      isCollapsed={isCollapsed}
-      toggleCollapsed={toggleCollapsed}
-      messages={messages}
-      isTyping={isTyping}
-      input={input}
-      setInput={setInput}
-      handleSubmit={handleSubmit}
-      error={error}
-      assistantName={assistantName}
-      widgetConfig={safeWidgetConfig}
-      onInteractionButtonClick={handleInteractionButtonClick}
-      onFollowUpButtonClick={handleFollowUpButtonClick}
-      flowResponses={flowResponses}
-      getLocalizedText={getLocalizedText}
-      showFeedbackDialog={showFeedbackDialogOverride ?? showFeedbackDialog}
-      messageFeedbackSubmitted={messageFeedbackSubmitted}
-      onSubmitMessageFeedback={handleSubmitMessageFeedback}
-      unreadCount={unreadCount}
-      feedbackDialog={
-        ((showFeedbackDialogOverride !== undefined ? showFeedbackDialogOverride : showFeedbackDialog) && (showFeedbackDialogOverride !== undefined ? true : (sessionId && authToken))) ? (
-          <FeedbackDialog
-            sessionId={sessionId}
-            authToken={authToken}
-            primaryColor={widgetConfig?.primary_color || '#111827'}
-            backgroundColor={widgetConfig?.background_color || '#ffffff'}
-            textColor={widgetConfig?.text_color || '#1f2937'}
-            borderRadius={widgetConfig?.border_radius || 8}
-            onSubmit={handleFeedbackSubmit}
-            onSkip={handleFeedbackSkip}
-          />
-        ) : undefined
-      }
-      unsureModal={
-        showUnsureModal ? (
-          <UnsureMessagesModal
-            messages={unsureMessages}
-            onClose={() => setShowUnsureModal(false)}
-            primaryColor={widgetConfig?.primary_color || '#111827'}
-            backgroundColor={widgetConfig?.background_color || '#ffffff'}
-            textColor={widgetConfig?.text_color || '#1f2937'}
-            borderRadius={widgetConfig?.border_radius || 8}
-          />
-        ) : undefined
-      }
-      unsureMessages={unsureMessages}
-      onShowUnsureModal={() => setShowUnsureModal(true)}
-    />
+    <div ref={containerRef} data-widget-instance={instanceIdRef.current} style={{ position: 'relative' }}>
+      <EmbedShell
+        isEmbedded={isEmbedded}
+        isCollapsed={isCollapsed}
+        toggleCollapsed={toggleCollapsed}
+        messages={messages}
+        isTyping={isTyping}
+        input={input}
+        setInput={setInput}
+        handleSubmit={handleSubmit}
+        error={error}
+        assistantName={assistantName}
+        widgetConfig={safeWidgetConfig}
+        onInteractionButtonClick={handleInteractionButtonClick}
+        onFollowUpButtonClick={handleFollowUpButtonClick}
+        flowResponses={flowResponses}
+        getLocalizedText={getLocalizedText}
+        showFeedbackDialog={showFeedbackDialogOverride ?? showFeedbackDialog}
+        messageFeedbackSubmitted={messageFeedbackSubmitted}
+        onSubmitMessageFeedback={handleSubmitMessageFeedback}
+        unreadCount={unreadCount}
+        feedbackDialog={
+          ((showFeedbackDialogOverride !== undefined ? showFeedbackDialogOverride : showFeedbackDialog) && (showFeedbackDialogOverride !== undefined ? true : (sessionId && authToken))) ? (
+            <FeedbackDialog
+              sessionId={sessionId}
+              authToken={authToken}
+              primaryColor={widgetConfig?.primary_color || '#111827'}
+              backgroundColor={widgetConfig?.background_color || '#ffffff'}
+              textColor={widgetConfig?.text_color || '#1f2937'}
+              borderRadius={widgetConfig?.border_radius || 8}
+              onSubmit={handleFeedbackSubmit}
+              onSkip={handleFeedbackSkip}
+            />
+          ) : undefined
+        }
+        unsureModal={
+          showUnsureModal ? (
+            <UnsureMessagesModal
+              messages={unsureMessages}
+              onClose={() => setShowUnsureModal(false)}
+              primaryColor={widgetConfig?.primary_color || '#111827'}
+              backgroundColor={widgetConfig?.background_color || '#ffffff'}
+              textColor={widgetConfig?.text_color || '#1f2937'}
+              borderRadius={widgetConfig?.border_radius || 8}
+            />
+          ) : undefined
+        }
+        unsureMessages={unsureMessages}
+        onShowUnsureModal={() => setShowUnsureModal(true)}
+      />
+    </div>
   );
 }
 type UnsureMessagesModalProps = {

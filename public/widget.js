@@ -126,8 +126,11 @@
       script.getAttribute("data-instance") ||
       script.getAttribute("data-key");
     const startOpen = script.getAttribute("data-start-open") === "true";
-
-    // Validate required attributes
+    // Proactive open triggers
+    const autoOpenDelay = parseInt(script.getAttribute("data-auto-open-delay") || '0', 10) || 0;
+    const autoOpenScrollDepth = parseFloat(script.getAttribute("data-auto-open-scroll-depth") || '0') || 0;
+    // Strict origin mode: refuse to postMessage to '*' — only send to the known parent origin
+    const strictOrigin = script.getAttribute("data-strict-origin") === "true";
     if (!clientId || !assistantId || !configId) {
       const missing = [];
       if (!clientId) missing.push("data-client-id");
@@ -273,6 +276,10 @@
         if (customCss) {
           params.set('customCss', customCss);
         }
+        // Proactive trigger params
+        if (autoOpenDelay > 0) params.set('autoOpenDelay', String(autoOpenDelay));
+        if (autoOpenScrollDepth > 0) params.set('autoOpenScrollDepth', String(autoOpenScrollDepth));
+        if (strictOrigin) params.set('strictOrigin', 'true');
 
         iframe.src = `${baseUrl}/embed/session?${params.toString()}`;
         iframe.style.cssText = `

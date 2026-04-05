@@ -75,6 +75,7 @@ jest.mock('../components/EmbedShell', () => {
         <div data-testid="messages">{props.messages.length} messages</div>
         <div data-testid="unread-count">{props.unreadCount}</div>
         <div data-testid="collapsed-state">{props.isCollapsed ? 'collapsed' : 'expanded'}</div>
+        <div data-testid="typing-state">{props.isTyping ? 'typing' : 'idle'}</div>
         <div data-testid="message-feedback-submitted">
           {props.messageFeedbackSubmitted?.has('msg-test') ? 'true' : 'false'}
         </div>
@@ -3616,10 +3617,11 @@ describe('EmbedClient Component', () => {
         await new Promise(resolve => setTimeout(resolve, 200));
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(mockFetch).not.toHaveBeenCalledWith(
         expect.stringContaining('/messages'),
         expect.objectContaining({ method: 'POST' })
       );
+      expect(screen.getByTestId('messages')).toHaveTextContent('1 messages');
     });
 
     test('returns false when flow not found', async () => {
@@ -4749,6 +4751,10 @@ describe('EmbedClient Component', () => {
       });
 
       expect(screen.getByText('No Buttons')).toBeInTheDocument();
+      expect(mockFetch).not.toHaveBeenCalledWith(
+        expect.stringContaining('/messages'),
+        expect.objectContaining({ method: 'POST' })
+      );
       expect(trackEvent).toHaveBeenCalledWith('button_clicked', expect.anything(), expect.any(Object), expect.anything());
     });
 
@@ -4801,7 +4807,7 @@ describe('EmbedClient Component', () => {
       expect(postCalls.length).toBe(0);
     });
 
-    test('handleFollowUpButtonClick calls handleSubmit when no flow', async () => {
+    test('handleFollowUpButtonClick calls handleSubmit only when no local response exists', async () => {
       mockFetch.mockImplementation((url: string, options?: any) => {
         if (url.includes('/widget-config/')) {
           return Promise.resolve({
@@ -4859,8 +4865,16 @@ describe('EmbedClient Component', () => {
         expect(screen.getByTestId('embed-shell')).toBeInTheDocument();
       });
 
-      // if (!flowHandled) handleSubmit is called
-      expect(mockFetch).toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId('followup-undefined-btn'));
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/messages'),
+        expect.objectContaining({ method: 'POST' })
+      );
     });
 
     test('handleInteractionButtonClick shows typing indicator', async () => {
@@ -4910,11 +4924,21 @@ describe('EmbedClient Component', () => {
 
       fireEvent.click(screen.getByTestId('interaction-handler-btn'));
 
+      expect(screen.getByTestId('typing-state')).toHaveTextContent('typing');
+
       await act(async () => {
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(999);
         await Promise.resolve();
       });
 
+      expect(screen.getByTestId('typing-state')).toHaveTextContent('typing');
+
+      await act(async () => {
+        jest.advanceTimersByTime(1);
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('typing-state')).toHaveTextContent('idle');
       expect(screen.getByTestId('flow-responses')).toBeInTheDocument();
       expect(trackEvent).toHaveBeenCalledWith('button_clicked', expect.anything(), expect.any(Object), expect.anything());
 
@@ -4967,9 +4991,9 @@ describe('EmbedClient Component', () => {
 
       fireEvent.click(screen.getByTestId('interaction-handler-btn'));
 
-      // setTimeout calls setFlowResponses and setIsTyping(false) after 300ms
+      // setTimeout calls setFlowResponses and setIsTyping(false) after 1000ms
       await act(async () => {
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(1000);
         await Promise.resolve();
       });
 
@@ -5025,7 +5049,7 @@ describe('EmbedClient Component', () => {
       fireEvent.click(screen.getByTestId('interaction-empty-label-btn'));
 
       await act(async () => {
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(1000);
         await Promise.resolve();
       });
 
@@ -5034,7 +5058,7 @@ describe('EmbedClient Component', () => {
       jest.useRealTimers();
     });
 
-    test('handleInteractionButtonClick calls handleSubmit conditionally', async () => {
+    test('handleInteractionButtonClick stays local when no local flow response exists', async () => {
       mockFetch.mockImplementation((url: string, options?: any) => {
         if (url.includes('/widget-config/')) {
           return Promise.resolve({
@@ -5098,10 +5122,11 @@ describe('EmbedClient Component', () => {
         await new Promise(resolve => setTimeout(resolve, 200));
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(mockFetch).not.toHaveBeenCalledWith(
         expect.stringContaining('/messages'),
         expect.objectContaining({ method: 'POST' })
       );
+      expect(screen.getByTestId('messages')).toHaveTextContent('1 messages');
     });
   });
 
