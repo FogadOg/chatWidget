@@ -1,7 +1,4 @@
 'use client';
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import EmbedShell from '../../../components/EmbedShell';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 import { getLocaleDirection } from '../../../lib/i18n';
@@ -41,6 +38,8 @@ import {
   open as registryOpen,
   close as registryClose,
 } from '../../../src/lib/widgetRegistry';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import EmbedShell from 'components/EmbedShell';
 
 // helpers exposed so tests can call them directly
 export function injectCustomAssets(css?: string) {
@@ -272,7 +271,6 @@ export default function EmbedClient({
     } catch {
       // ignore – corrupt / unavailable storage
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Persist flow responses to localStorage whenever they change so they survive reloads.
@@ -336,12 +334,10 @@ export default function EmbedClient({
   const isStrictOrigin = initialStrictOrigin || Boolean(widgetConfig?.strict_origin);
   const parentTargetOrigin = useMemo(
     () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [initialParentOrigin, isStrictOrigin]
   );
   const parentSensitiveOrigin = useMemo(
     () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [initialParentOrigin, isStrictOrigin]
   );
 
@@ -430,7 +426,6 @@ export default function EmbedClient({
       }
     };
     // We intentionally only run this on mount/unmount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync collapsed/expanded state with registry
@@ -925,7 +920,6 @@ export default function EmbedClient({
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler);
     };
   // widgetConfig.auto_open_delay and auto_open_scroll_depth are primitives — safe to spread
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widgetConfig?.auto_open_delay, widgetConfig?.auto_open_scroll_depth]);
 
   // Apply widget behavior settings when config is loaded

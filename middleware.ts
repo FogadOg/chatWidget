@@ -23,7 +23,7 @@ import { nanoid } from 'nanoid';
  * Violation reports are sent to /api/security/csp-report.
  */
 
-function buildCsp(nonce: string, pathname: string, origin: string): string {
+function buildCsp(nonce: string, pathname: string): string {
   // Collect extra API origins to allow in connect-src. Check all relevant
   // env var names so local dev (.env.local) and production deployments both work.
   const apiOriginRaw =
@@ -81,7 +81,7 @@ export function middleware(request: NextRequest): NextResponse {
     },
   });
 
-  const csp = buildCsp(nonce, pathname, request.nextUrl.origin);
+  const csp = buildCsp(nonce, pathname);
   response.headers.set('Content-Security-Policy', csp);
 
   // Report-To header (Reporting API v1)

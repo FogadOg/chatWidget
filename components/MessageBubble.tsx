@@ -115,7 +115,6 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
               <div className="prose prose-sm max-w-none pr-5" style={{ color: textColor }}>
                 {ReactMarkdown ? (
                   <ReactMarkdown
-                    // eslint-disable-next-line react/no-unknown-property
                     remarkPlugins={remarkGfm ? [remarkGfm] : []}
                     components={({
                       // Open links in a new tab safely
