@@ -131,8 +131,8 @@ describe('EmbedClient helpers', () => {
   });
 
   test('resolveParentTargetOrigin returns null in strict mode when no safe origin is available', () => {
-    expect(EmbedClient.resolveParentTargetOrigin(undefined, '', true)).toBe('null');
-    expect(EmbedClient.resolveParentTargetOrigin(undefined, 'not-a-valid-url', true)).toBe('null');
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, '', true)).toBeNull();
+    expect(EmbedClient.resolveParentTargetOrigin(undefined, 'not-a-valid-url', true)).toBeNull();
   });
 
   test('applyCustomAssetsFromQuery ignores missing customCss parameter', () => {

@@ -150,7 +150,7 @@ export function resolveParentTargetOrigin(
   referrer?: string,
   /** When true, fall back to the document referrer origin but never '*' */
   strict?: boolean,
-): string {
+): string | null {
   const explicitOrigin = (explicit || '').trim();
   if (explicitOrigin) {
     return explicitOrigin;
@@ -173,7 +173,7 @@ export function resolveParentTargetOrigin(
 
   // In strict mode never fall back to wildcard — refuse to post to unknown origins.
   // The parent window will not receive messages until it re-embeds with a valid origin.
-  if (strict) return 'null';
+  if (strict) return null;
   return '*';
 }
 
@@ -333,11 +333,11 @@ export default function EmbedClient({
   // Before config loads we tolerate wildcard so the WIDGET_SHOW message still goes out.
   const isStrictOrigin = initialStrictOrigin || Boolean(widgetConfig?.strict_origin);
   const parentTargetOrigin = useMemo(
-    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin)),
+    () => targetOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin) ?? undefined),
     [initialParentOrigin, isStrictOrigin]
   );
   const parentSensitiveOrigin = useMemo(
-    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin)),
+    () => sensitiveOrigin(resolveParentTargetOrigin(initialParentOrigin, undefined, isStrictOrigin) ?? undefined),
     [initialParentOrigin, isStrictOrigin]
   );
 

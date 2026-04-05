@@ -40,7 +40,17 @@ export function emit(eventName: string, detail: unknown) {
 }
 
 export function registerInstance(ref: InstanceRef) {
-  instances.set(ref.instanceId, ref);
+  // If an instance with the same id already exists, replace it and avoid
+  // duplicating entries in the z-order stack.
+  if (instances.has(ref.instanceId)) {
+    // replace stored ref
+    instances.set(ref.instanceId, ref);
+    // remove any previous zStack entry for this id
+    zStack = zStack.filter((id) => id !== ref.instanceId);
+  } else {
+    instances.set(ref.instanceId, ref);
+  }
+
   zStack.push(ref.instanceId);
   emit('widget:register', { instanceId: ref.instanceId, ref });
   computeZIndices();
@@ -72,7 +82,16 @@ function computeZIndices() {
   zStack.forEach((id, idx) => {
     const ref = instances.get(id);
     if (ref && ref.container) {
-      (ref.container.style as any).zIndex = String(globalPolicy.baseZ + idx);
+      try {
+        // Defensive: some containers may come from other documents/iframes
+        // or be detached; guard DOM mutations accordingly.
+        const c = ref.container;
+        if (c && c.ownerDocument === document && c.style) {
+          (c.style as any).zIndex = String(globalPolicy.baseZ + idx);
+        }
+      } catch (err) {
+        // ignore DOM mutation errors
+      }
     }
   });
 }
@@ -92,13 +111,17 @@ export function open(instanceId: string, opts?: { minimizeOthers?: boolean }) {
     for (const [id, other] of instances.entries()) {
       if (id !== instanceId && other.state === 'expanded') {
         other.state = 'collapsed';
-        if (other.container) other.container.dataset.widgetState = 'collapsed';
+        if (other.container) {
+          try { other.container.dataset.widgetState = 'collapsed'; } catch { /* ignore */ }
+        }
         emit('widget:state', { instanceId: id, state: 'collapsed' });
       }
     }
   }
   inst.state = 'expanded';
-  if (inst.container) inst.container.dataset.widgetState = 'expanded';
+  if (inst.container) {
+    try { inst.container.dataset.widgetState = 'expanded'; } catch { /* ignore */ }
+  }
   bringToFront(instanceId);
   emit('widget:state', { instanceId, state: 'expanded' });
 }
@@ -107,7 +130,9 @@ export function close(instanceId: string) {
   const inst = instances.get(instanceId);
   if (!inst) return;
   inst.state = 'collapsed';
-  if (inst.container) inst.container.dataset.widgetState = 'collapsed';
+  if (inst.container) {
+    try { inst.container.dataset.widgetState = 'collapsed'; } catch { /* ignore */ }
+  }
   emit('widget:state', { instanceId, state: 'collapsed' });
 }
 

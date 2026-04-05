@@ -237,6 +237,6 @@ export function useWidgetAuth() {
     clearAuth,
     refreshToken,
     scheduleAutoRefresh,
-    tokenExpiresAt: tokenExpiresAtRef,
+    getTokenExpiresAt: () => tokenExpiresAtRef.current,
   };
 }
