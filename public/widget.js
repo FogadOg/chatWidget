@@ -131,8 +131,6 @@
     const autoOpenScrollDepth = parseFloat(script.getAttribute("data-auto-open-scroll-depth") || '0') || 0;
     // Strict origin mode: refuse to postMessage to '*' — only send to the known parent origin
     const strictOrigin = script.getAttribute("data-strict-origin") === "true";
-
-    // Validate required attributes
     if (!clientId || !assistantId || !configId) {
       const missing = [];
       if (!clientId) missing.push("data-client-id");
