@@ -34,6 +34,13 @@ import { getQueuedMessages, removeQueuedMessage, queueMessage, incrementAttempt 
 import { onInitConfig } from './events';
 import { sanitizeCss } from '../../../lib/cssValidator';
 import { validateConfig } from '../../../lib/validateConfig';
+import {
+  registerInstance,
+  deregisterInstance,
+  makeInstanceId,
+  open as registryOpen,
+  close as registryClose,
+} from '../../../src/lib/widgetRegistry';
 
 // helpers exposed so tests can call them directly
 export function injectCustomAssets(css?: string) {
@@ -389,6 +396,56 @@ export default function EmbedClient({
     });
     return remove;
   }, []);
+
+  // Instance registry: create an instance id and register this widget
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const instanceIdRef = useRef<string>(makeInstanceId(initialClientId, initialAssistantId));
+
+  useEffect(() => {
+    const instanceId = instanceIdRef.current;
+    const ref = {
+      instanceId,
+      clientId: initialClientId,
+      assistantId: initialAssistantId,
+      container: containerRef.current,
+      state: isCollapsed ? 'collapsed' as const : 'expanded' as const,
+    };
+    try {
+      registerInstance(ref);
+      if (containerRef.current) {
+        containerRef.current.dataset.widgetInstance = instanceId;
+        if (initialClientId) containerRef.current.dataset.clientId = initialClientId;
+        if (initialAssistantId) containerRef.current.dataset.assistantId = initialAssistantId;
+      }
+    } catch (err) {
+      // non-fatal: registration failure should not break widget
+      logError(err as Error, { action: 'registerInstance', instanceId, clientId: initialClientId, assistantId: initialAssistantId });
+    }
+
+    return () => {
+      try {
+        deregisterInstance(instanceId);
+      } catch (err) {
+        // ignore
+      }
+    };
+    // We intentionally only run this on mount/unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync collapsed/expanded state with registry
+  useEffect(() => {
+    const instanceId = instanceIdRef.current;
+    try {
+      if (!isCollapsed) {
+        registryOpen(instanceId, { minimizeOthers: undefined });
+      } else {
+        registryClose(instanceId);
+      }
+    } catch (err) {
+      // ignore
+    }
+  }, [isCollapsed]);
 
   // When auth fails before any config loads, surface it as a fatal error
   // so the widget renders a visible error instead of staying invisible.
@@ -2036,55 +2093,57 @@ export default function EmbedClient({
   }
 
   return (
-    <EmbedShell
-      isEmbedded={isEmbedded}
-      isCollapsed={isCollapsed}
-      toggleCollapsed={toggleCollapsed}
-      messages={messages}
-      isTyping={isTyping}
-      input={input}
-      setInput={setInput}
-      handleSubmit={handleSubmit}
-      error={error}
-      assistantName={assistantName}
-      widgetConfig={safeWidgetConfig}
-      onInteractionButtonClick={handleInteractionButtonClick}
-      onFollowUpButtonClick={handleFollowUpButtonClick}
-      flowResponses={flowResponses}
-      getLocalizedText={getLocalizedText}
-      showFeedbackDialog={showFeedbackDialogOverride ?? showFeedbackDialog}
-      messageFeedbackSubmitted={messageFeedbackSubmitted}
-      onSubmitMessageFeedback={handleSubmitMessageFeedback}
-      unreadCount={unreadCount}
-      feedbackDialog={
-        ((showFeedbackDialogOverride !== undefined ? showFeedbackDialogOverride : showFeedbackDialog) && (showFeedbackDialogOverride !== undefined ? true : (sessionId && authToken))) ? (
-          <FeedbackDialog
-            sessionId={sessionId}
-            authToken={authToken}
-            primaryColor={widgetConfig?.primary_color || '#111827'}
-            backgroundColor={widgetConfig?.background_color || '#ffffff'}
-            textColor={widgetConfig?.text_color || '#1f2937'}
-            borderRadius={widgetConfig?.border_radius || 8}
-            onSubmit={handleFeedbackSubmit}
-            onSkip={handleFeedbackSkip}
-          />
-        ) : undefined
-      }
-      unsureModal={
-        showUnsureModal ? (
-          <UnsureMessagesModal
-            messages={unsureMessages}
-            onClose={() => setShowUnsureModal(false)}
-            primaryColor={widgetConfig?.primary_color || '#111827'}
-            backgroundColor={widgetConfig?.background_color || '#ffffff'}
-            textColor={widgetConfig?.text_color || '#1f2937'}
-            borderRadius={widgetConfig?.border_radius || 8}
-          />
-        ) : undefined
-      }
-      unsureMessages={unsureMessages}
-      onShowUnsureModal={() => setShowUnsureModal(true)}
-    />
+    <div ref={containerRef} data-widget-instance={instanceIdRef.current} style={{ position: 'relative' }}>
+      <EmbedShell
+        isEmbedded={isEmbedded}
+        isCollapsed={isCollapsed}
+        toggleCollapsed={toggleCollapsed}
+        messages={messages}
+        isTyping={isTyping}
+        input={input}
+        setInput={setInput}
+        handleSubmit={handleSubmit}
+        error={error}
+        assistantName={assistantName}
+        widgetConfig={safeWidgetConfig}
+        onInteractionButtonClick={handleInteractionButtonClick}
+        onFollowUpButtonClick={handleFollowUpButtonClick}
+        flowResponses={flowResponses}
+        getLocalizedText={getLocalizedText}
+        showFeedbackDialog={showFeedbackDialogOverride ?? showFeedbackDialog}
+        messageFeedbackSubmitted={messageFeedbackSubmitted}
+        onSubmitMessageFeedback={handleSubmitMessageFeedback}
+        unreadCount={unreadCount}
+        feedbackDialog={
+          ((showFeedbackDialogOverride !== undefined ? showFeedbackDialogOverride : showFeedbackDialog) && (showFeedbackDialogOverride !== undefined ? true : (sessionId && authToken))) ? (
+            <FeedbackDialog
+              sessionId={sessionId}
+              authToken={authToken}
+              primaryColor={widgetConfig?.primary_color || '#111827'}
+              backgroundColor={widgetConfig?.background_color || '#ffffff'}
+              textColor={widgetConfig?.text_color || '#1f2937'}
+              borderRadius={widgetConfig?.border_radius || 8}
+              onSubmit={handleFeedbackSubmit}
+              onSkip={handleFeedbackSkip}
+            />
+          ) : undefined
+        }
+        unsureModal={
+          showUnsureModal ? (
+            <UnsureMessagesModal
+              messages={unsureMessages}
+              onClose={() => setShowUnsureModal(false)}
+              primaryColor={widgetConfig?.primary_color || '#111827'}
+              backgroundColor={widgetConfig?.background_color || '#ffffff'}
+              textColor={widgetConfig?.text_color || '#1f2937'}
+              borderRadius={widgetConfig?.border_radius || 8}
+            />
+          ) : undefined
+        }
+        unsureMessages={unsureMessages}
+        onShowUnsureModal={() => setShowUnsureModal(true)}
+      />
+    </div>
   );
 }
 type UnsureMessagesModalProps = {
