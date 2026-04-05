@@ -57,7 +57,7 @@ const clientId = script.getAttribute("data-client-id");
 console.log('Using client ID:', clientId);
 
 // Check API endpoint is accessible
-fetch('https://api.companin.tech/api/v1/auth/widget-token', {
+fetch('https://app.companin.tech/api/v1/auth/widget-token', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ client_id: 'your-client-id' })
@@ -114,7 +114,7 @@ The widget automatically retries:
 **Check Network:**
 ```javascript
 // Test connectivity
-fetch('https://api.companin.tech/api/v1/health')
+fetch('https://app.companin.tech/api/v1/health')
   .then(response => console.log('API is reachable:', response.ok))
   .catch(error => console.error('API unreachable:', error));
 
