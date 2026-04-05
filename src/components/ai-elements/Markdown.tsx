@@ -47,13 +47,18 @@ export default function Markdown({ content, sources }: Props) {
 
         for (const phrase of candidates) {
           const phraseRegex = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const re = new RegExp(`(${phraseRegex})\\[${n}\\]`, 'g');
+          const re = new RegExp(`(${phraseRegex})\\s*\\[${n}\\]`, 'g');
+          // Also match reference-style markdown: [phrase][n] (LLM sometimes wraps in brackets)
+          const reRef = new RegExp(`\\[${phraseRegex}\\]\\s*\\[${n}\\]`, 'g');
+          const link = src.url
+            ? `[${phrase}](${src.url} "${safeTitle}")`
+            : `[${phrase}](#fn-${n} "${safeTitle}")`;
           if (re.test(result)) {
-            const link = src.url
-              ? `[${phrase}](${src.url} "${safeTitle}")`
-              : `[${phrase}](#fn-${n} "${safeTitle}")`;
-            result = result.replace(new RegExp(`(${phraseRegex})\\[${n}\\]`, 'g'), link);
+            result = result.replace(new RegExp(`(${phraseRegex})\\s*\\[${n}\\]`, 'g'), link);
             break; // stop at the first (longest) match
+          } else if (reRef.test(result)) {
+            result = result.replace(new RegExp(`\\[${phraseRegex}\\]\\s*\\[${n}\\]`, 'g'), link);
+            break;
           }
         }
       });
@@ -122,6 +127,24 @@ export default function Markdown({ content, sources }: Props) {
             ? children[0]
             : null;
       const isCitation = linkText !== null && /^\d+$/.test(linkText);
+
+      // #fn-* anchors are non-URL citation badges — never navigate.
+      if (href && href.startsWith('#fn-')) {
+        const isNumericBadge = linkText !== null && /^\d+$/.test(linkText);
+        if (isNumericBadge) {
+          return (
+            <sup title={title || undefined} style={{ marginLeft: '1px', cursor: 'help', fontWeight: 600, fontSize: '0.72em', opacity: 0.75 }}>
+              [{linkText}]
+            </sup>
+          );
+        }
+        // Full-phrase citation (file/Q&A source with no URL) — render as dotted-underline reference
+        return (
+          <span title={title || undefined} style={{ borderBottom: '1px dotted currentColor', cursor: 'help', opacity: 0.85 }}>
+            {children}
+          </span>
+        );
+      }
 
       if (isCitation) {
         if (href && !href.startsWith('#fn-')) {
