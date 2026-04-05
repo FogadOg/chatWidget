@@ -46,15 +46,37 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([import('react-markdown').then(m => m.default || m).catch(() => null), import('remark-gfm').then(m => m.default || m).catch(() => null)])
-      .then(([RM, gfm]) => {
-        if (mounted) {
-          // React state setters treat functions as updaters, so wrap imported
-          // function values to store them as state instead of invoking them.
-          setReactMarkdown(() => RM as any);
-          setRemarkGfm(() => gfm);
-        }
-      });
+    // First try a synchronous require path — this helps Jest's module mocking
+    // (which wires up CommonJS `require`) so tests don't have to wait for
+    // the async import. If require isn't available or the module isn't
+    // present, fall back to dynamic import.
+    try {
+      // @ts-ignore - require is available in Node/Jest environments
+      const rmMod = require('react-markdown');
+      // @ts-ignore
+      const gfmMod = (() => { try { return require('remark-gfm'); } catch { return null; } })();
+      const RM = rmMod && (rmMod.default || rmMod);
+      const gfm = gfmMod && (gfmMod.default || gfmMod);
+      if (mounted && RM) {
+        setReactMarkdown(() => RM as any);
+        setRemarkGfm(() => gfm);
+        return () => { mounted = false; };
+      }
+    } catch {
+      // ignore and fall through to dynamic import
+    }
+
+    Promise.all([
+      import('react-markdown').then(m => m.default || m).catch(() => null),
+      import('remark-gfm').then(m => m.default || m).catch(() => null),
+    ]).then(([RM, gfm]) => {
+      if (mounted) {
+        // React state setters treat functions as updaters, so wrap imported
+        // function values to store them as state instead of invoking them.
+        setReactMarkdown(() => RM as any);
+        setRemarkGfm(() => gfm);
+      }
+    });
     return () => { mounted = false; };
   }, []);
   const handleCopy = useCallback(() => {
