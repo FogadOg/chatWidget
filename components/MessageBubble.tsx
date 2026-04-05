@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 // Dynamically import react-markdown and remark-gfm at runtime so Jest
 // doesn't try to parse ESM exports from node_modules during tests.
@@ -37,8 +37,6 @@ type Props = {
 export default function MessageBubble({ message, widgetConfig, assistantName, showMessageAvatars = true, textColor = '#111', fontStyles = {}, messageBubbleRadius = 8, onSubmitMessageFeedback, messageFeedbackSubmitted = new Set(), showTimestamps = true }: Props) {
   const { locale } = useWidgetTranslation();
   const hasFeedback = messageFeedbackSubmitted.has(message.id);
-  const hasSources = message.from === 'assistant' && Array.isArray(message.sources) && message.sources.length > 0;
-  const sourceCount = message.sources?.length || 0;
 
   const [copied, setCopied] = useState(false);
   const [ReactMarkdown, setReactMarkdown] = useState<React.ComponentType<any> | null>(null);
@@ -79,6 +77,63 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
     });
     return () => { mounted = false; };
   }, []);
+  // Two-pass citation processing:
+  // Pass 1: "Source Title[n]" → "[Source Title](url)" — phrase becomes the link.
+  // Pass 2: bare [n] → "[n](url)" numeric superscript fallback.
+  const processedText = useMemo(() => {
+    const srcs = message.sources;
+    if (!srcs || srcs.length === 0) return message.text;
+    try {
+      let result = message.text;
+
+      // Pass 1: make the cited phrase itself a link when the LLM writes it inline.
+      // Try the full title first, then each segment split on common separators (-, :, |, /)
+      // so partial references like "Getting Started Guide[1]" match a title like
+      // "Product Documentation - Getting Started Guide".
+      srcs.forEach((src, i) => {
+        if (!src?.title) return;
+        const n = i + 1;
+        const rawTitle = src.title.replace(/[\r\n\t]+/g, ' ').trim();
+        const safeTitle = rawTitle.substring(0, 120).replace(/"/g, '\\"');
+
+        // Candidates: full title + each segment after splitting on separator chars.
+        const candidates: string[] = [rawTitle];
+        rawTitle.split(/\s*[-\u2013\u2014:|/]\s*/).forEach(part => {
+          const clean = part.trim();
+          if (clean.length >= 4) candidates.push(clean);
+        });
+
+        for (const phrase of candidates) {
+          const phraseRegex = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const re = new RegExp(`(${phraseRegex})\\[${n}\\]`, 'g');
+          if (re.test(result)) {
+            const link = src.url
+              ? `[${phrase}](${src.url} "${safeTitle}")`
+              : `[${phrase}](#fn-${n} "${safeTitle}")`;
+            result = result.replace(new RegExp(`(${phraseRegex})\\[${n}\\]`, 'g'), link);
+            break;
+          }
+        }
+      });
+
+      // Pass 2: remaining bare [n] → numeric superscript link.
+      result = result.replace(/\[(\d+)\]/g, (match, p1) => {
+        const idx = Number(p1) - 1;
+        if (!Number.isFinite(idx) || idx < 0) return match;
+        const src = srcs[idx];
+        if (!src) return match;
+        const rawTitle = (src.title || '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().substring(0, 120);
+        const esc = rawTitle.replace(/"/g, '\\"');
+        if (src.url) return `[${p1}](${src.url} "${esc}")`;
+        return `[${p1}](#fn-${p1} "${esc}")`;
+      });
+
+      return result;
+    } catch {
+      return message.text;
+    }
+  }, [message.text, message.sources]);
+
   const handleCopy = useCallback(() => {
     if (!message.text) return;
     try {
@@ -139,10 +194,27 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                   <ReactMarkdown
                     remarkPlugins={remarkGfm ? [remarkGfm] : []}
                     components={({
-                      // Open links in a new tab safely
-                      a: (({ href, children }: { href?: string; children?: React.ReactNode }) => (
-                        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline' }}>{children}</a>
-                      )),
+                      // Citation-aware link renderer: numeric link text = citation token
+                      a: (({ href, title, children }: { href?: string; title?: string; children?: React.ReactNode }) => {
+                        const linkText =
+                          typeof children === 'string'
+                            ? children
+                            : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string'
+                              ? children[0]
+                              : null;
+                        const isCitation = linkText !== null && /^\d+$/.test(linkText);
+                        if (isCitation) {
+                          if (href && !href.startsWith('#fn-')) {
+                            return (
+                              <sup style={{ marginLeft: '1px' }}>
+                                <a href={href} title={title} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline', fontWeight: 600, fontSize: '0.72em' }}>[{linkText}]</a>
+                              </sup>
+                            );
+                          }
+                          return <sup title={title || undefined} style={{ marginLeft: '1px', cursor: 'help', fontWeight: 600, fontSize: '0.72em', color: textColor, opacity: 0.75 }}>[{linkText}]</sup>;
+                        }
+                        return <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline' }}>{children}</a>;
+                      }),
                       // Code: inline vs block
                       code: (({ className, children }: { className?: string; children?: React.ReactNode }) => {
                         const isBlock = /language-/.test(className || '');
@@ -159,42 +231,12 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                       p: (({ children }: { children?: React.ReactNode }) => <p style={{ margin: '2px 0' }}>{children}</p>),
                     } as MDComponents)}
                   >
-                    {message.text}
+                    {processedText}
                   </ReactMarkdown>
                 ) : (
-                  <div>{message.text}</div>
+                  <div>{processedText}</div>
                 )}
               </div>
-              {hasSources && (
-                <div className="mt-2 pt-2 border-t border-gray-300">
-                  <div className="text-xs font-semibold mb-1 opacity-70">
-                    <span aria-hidden="true">📚</span> {translate(locale, 'sourcesCount', { count: sourceCount, vars: { count: sourceCount } })}:
-                  </div>
-                  <ul className="space-y-1" role="list">
-                    {message.sources!.map((source, idx) => (
-                      <li key={idx} className="text-xs">
-                        {source.url ? (
-                          <a href={source.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-start gap-1" style={{ color: textColor }}>
-                            <span className="opacity-70">•</span>
-                            <span className="flex-1">
-                              <span className="font-medium">{source.title}</span>
-                              {source.snippet && (<span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>)}
-                            </span>
-                          </a>
-                        ) : (
-                          <div className="flex items-start gap-1">
-                            <span className="opacity-70">•</span>
-                            <span className="flex-1">
-                              <span className="font-medium">{source.title}</span>
-                              {source.snippet && (<span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>)}
-                            </span>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
           {!hasFeedback && onSubmitMessageFeedback && (

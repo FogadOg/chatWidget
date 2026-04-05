@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,14 +24,27 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "lib/*": ["./lib/*"],
-      "types/*": ["./types/*"],
-      "components/*": ["./components/*"],
-
-      "hooks/*": ["./hooks/*"],
-      "react-markdown": ["types/react-markdown"],
-      "react-markdown/*": ["types/react-markdown"]
+      "@/*": [
+        "./src/*"
+      ],
+      "lib/*": [
+        "./lib/*"
+      ],
+      "types/*": [
+        "./types/*"
+      ],
+      "components/*": [
+        "./components/*"
+      ],
+      "hooks/*": [
+        "./hooks/*"
+      ],
+      "react-markdown": [
+        "types/react-markdown"
+      ],
+      "react-markdown/*": [
+        "types/react-markdown"
+      ]
     }
   },
   "include": [
@@ -38,7 +55,15 @@
     "lib/**/*",
     "src/**/*",
     "types/**/*",
-    "pages/**/*"
+    "pages/**/*",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "**/__tests__/**", "__tests__/**", "**/__mocks__/**", "node_modules/react-markdown/**"]
+  "exclude": [
+    "node_modules",
+    "**/__tests__/**",
+    "__tests__/**",
+    "**/__mocks__/**",
+    "node_modules/react-markdown/**"
+  ]
 }

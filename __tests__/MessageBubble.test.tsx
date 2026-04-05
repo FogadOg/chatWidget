@@ -11,7 +11,7 @@ jest.mock('../lib/i18n', () => ({
 }));
 
 describe('MessageBubble', () => {
-  test('renders assistant message with avatar, source link, feedback buttons, and timestamp', () => {
+  test('renders assistant message with avatar, feedback buttons, and timestamp', () => {
     const message = {
       id: 'a1',
       text: 'hello',
@@ -33,7 +33,8 @@ describe('MessageBubble', () => {
 
     expect(screen.getByText('hello')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Bot avatar' })).toBeInTheDocument();
-    expect(screen.getByText('Title')).toBeInTheDocument();
+    // Source title is no longer in a separate panel — citations are inline in text
+    expect(screen.queryByRole('list', { hidden: true })).not.toBeInTheDocument();
 
     const up = screen.getByLabelText('feedbackPositive');
     const down = screen.getByLabelText('feedbackNegative');
@@ -60,7 +61,7 @@ describe('MessageBubble', () => {
     expect(screen.getByLabelText('copyMessage')).toBeInTheDocument();
   });
 
-  test('renders assistant source fallback without url and shows submitted feedback label', () => {
+  test('renders assistant message with non-URL source and shows submitted feedback label', () => {
     const message = {
       id: 'a2',
       text: 'assistant no-link source',
@@ -78,15 +79,15 @@ describe('MessageBubble', () => {
     );
 
     expect(screen.getByText('assistant no-link source')).toBeInTheDocument();
-    expect(screen.getByText('Local Source')).toBeInTheDocument();
+    // Source title no longer rendered in a separate panel
+    expect(screen.queryByText('Local Source')).not.toBeInTheDocument();
     expect(screen.getByText(/feedbackSubmitted/i)).toBeInTheDocument();
-    // only copy button should remain
     const allButtons2 = screen.queryAllByRole('button');
     expect(allButtons2.length).toBe(1);
     expect(screen.getByLabelText('copyMessage')).toBeInTheDocument();
   });
 
-  test('renders assistant sources with mixed url/snippet combinations', () => {
+  test('renders assistant message with mixed url/non-url sources (no bottom panel)', () => {
     const message = {
       id: 'a3',
       text: 'mixed sources',
@@ -97,10 +98,13 @@ describe('MessageBubble', () => {
       ],
     };
 
-    render(<MessageBubble message={message} onSubmitMessageFeedback={jest.fn()} />);
+    const { container } = render(<MessageBubble message={message} onSubmitMessageFeedback={jest.fn()} />);
 
-    expect(screen.getByText('No Snippet Source')).toBeInTheDocument();
-    expect(screen.getByText('Short Snippet Source')).toBeInTheDocument();
+    // Source titles are not rendered in a visible panel at the bottom
+    expect(screen.queryByText('No Snippet Source')).not.toBeInTheDocument();
+    expect(screen.queryByText('Short Snippet Source')).not.toBeInTheDocument();
+    // No sources list
+    expect(container.querySelector('ul.space-y-1')).not.toBeInTheDocument();
   });
 
   test('renders pending user message with offline status when attempts is 0', () => {

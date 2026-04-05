@@ -115,7 +115,7 @@ type Props = {
 type MessageType = {
   key: string;
   from: "user" | "assistant";
-  sources?: { href: string; title: string }[];
+  sources?: { url?: string; href?: string; title?: string; snippet?: string; type?: string; reference_id?: string }[];
   versions: {
     id: string;
     content: string;
@@ -299,6 +299,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
             .map((msg: any) => ({
               key: msg.id,
               from: msg.sender as 'user' | 'assistant',
+              sources: msg.sources || [],
               versions: [{
                 id: msg.id,
                 content: msg.content
@@ -345,6 +346,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
             .map((msg: any) => ({
               key: msg.id,
               from: msg.sender as 'user' | 'assistant',
+              sources: msg.sources || [],
               versions: [{
                 id: msg.id,
                 content: msg.content
@@ -667,20 +669,6 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                     key={`${message.key}-${version.id}`}
                                   >
                                     <div>
-                                      {message.sources?.length && (
-                                        <Sources>
-                                          <SourcesTrigger count={message.sources.length} />
-                                          <SourcesContent>
-                                            {message.sources.map((source) => (
-                                              <Source
-                                                href={source.href}
-                                                key={source.href}
-                                                title={source.title}
-                                              />
-                                            ))}
-                                          </SourcesContent>
-                                        </Sources>
-                                      )}
                                       {message.reasoning && (
                                         <Reasoning duration={message.reasoning.duration}>
                                           <ReasoningTrigger />
@@ -690,7 +678,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                         </Reasoning>
                                       )}
                                       <MessageContent>
-                                        <MessageResponse>{version.content}</MessageResponse>
+                                        <MessageResponse sources={message.sources}>{version.content}</MessageResponse>
                                       </MessageContent>
                                       {message.from === 'assistant' && !messageFeedbackSubmitted.has(message.key) && (
                                         <div className="mt-2 flex gap-2">
