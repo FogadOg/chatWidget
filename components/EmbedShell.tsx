@@ -44,6 +44,8 @@ type Props = {
   unsureMessages?: UnsureMessage[];
   onShowUnsureModal?: () => void;
   unreadCount?: number;
+  /** Locale passed directly from the parent (server-provided). Takes priority over hook detection. */
+  locale?: string;
 };
 
 
@@ -72,8 +74,10 @@ export default function EmbedShell({
   unsureMessages = [],
   onShowUnsureModal,
   unreadCount = 0,
+  locale: localeProp,
 }: Props) {
-  const { translations: t, locale } = useWidgetTranslation();
+  const { translations: t, locale: hookLocale } = useWidgetTranslation();
+  const locale = localeProp || hookLocale;
   const [liveMessage, setLiveMessage] = useState('');
   const lastAnnouncedId = useRef<string | null>(null);
   const messageFeedbackSet = useMemo(

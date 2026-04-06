@@ -213,7 +213,8 @@ export default function EmbedClient({
 
 
   // precompute storage keys for this widget instance
-  const sessionStorageKey = helpers.sessionStorageKey(initialClientId, initialAssistantId);
+  // activeLocale is computed before this point so we use initialLocale directly here
+  const sessionStorageKey = helpers.sessionStorageKey(initialClientId, initialAssistantId, initialLocale);
   const unreadStorageKey = helpers.unreadStorageKey(initialClientId, initialAssistantId);
   const lastReadStorageKey = helpers.lastReadStorageKey(initialClientId, initialAssistantId);
   const [input, setInput] = useState('');
@@ -2098,6 +2099,7 @@ export default function EmbedClient({
         setInput={setInput}
         handleSubmit={handleSubmit}
         error={error}
+        locale={activeLocale}
         assistantName={assistantName}
         widgetConfig={safeWidgetConfig}
         onInteractionButtonClick={handleInteractionButtonClick}

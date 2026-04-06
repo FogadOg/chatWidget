@@ -7,6 +7,7 @@ import sv from "../locales/sv.json";
 import nl from "../locales/nl.json";
 import nb from "../locales/nb.json";
 import it from "../locales/it.json";
+import pl from "../locales/pl.json";
 
 const LOCALES = {
   en,
@@ -18,6 +19,7 @@ const LOCALES = {
   nl,
   nb,
   it,
+  pl,
 } as const;
 
 export type SupportedLocale = keyof typeof LOCALES;

@@ -237,7 +237,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       const requestBody = {
         assistant_id: assistantId,
         visitor_id: visitorId,
-        locale: locale,
+        locale: activeLocale,
       };
 
       const response = await fetch(API.sessions(), {
@@ -270,7 +270,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       console.error('Session creation error:', err);
       setError(errorMsg);
     }
-  }, [assistantId, locale]);
+  }, [assistantId, activeLocale]);
 
   // Validate and restore existing session
   const validateAndRestoreSession = useCallback(async (sessionId: string, token: string) => {
@@ -409,7 +409,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         },
         body: JSON.stringify({
           content: content,
-          locale: locale,
+          locale: activeLocale,
           page_context: helpersGetPageContext(),
         }),
       });
@@ -432,7 +432,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     } finally {
       setStatus("ready");
     }
-  }, [sessionId, authToken, locale, loadSessionMessages]);
+  }, [sessionId, authToken, activeLocale, loadSessionMessages]);
 
   // Handle message feedback submission
   const handleSubmitMessageFeedback = useCallback(async (messageId: string, feedbackType: string = 'thumbs_up') => {
