@@ -42,7 +42,16 @@ export const API = {
   assistant: (assistantId: string) => `${getApiV1BaseUrl()}/assistants/${assistantId}`,
 
   // Config endpoints
-  widgetConfig: (configId: string) => `${getApiBaseUrl()}/widget-config/${configId}`,
+  widgetConfig: (configId: string, visitorId?: string, forceVariantId?: string) => {
+    const base = `${getApiBaseUrl()}/widget-config/${configId}`;
+    const params = new URLSearchParams();
+    if (visitorId) params.set('visitor_id', visitorId);
+    if (forceVariantId) params.set('force_variant_id', forceVariantId);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  },
+  widgetConfigVariants: (configId: string) => `${getApiBaseUrl()}/widget-config/${configId}/variants/`,
+  widgetConfigVariant: (configId: string, variantId: string) => `${getApiBaseUrl()}/widget-config/${configId}/variants/${variantId}/`,
 } as const;
 
 /**
@@ -104,7 +113,7 @@ export async function trackEvent(
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
-       
+
       console.warn('telemetry post failed', err);
     }
   }

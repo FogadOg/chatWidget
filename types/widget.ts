@@ -97,6 +97,26 @@ export type WidgetConfig = {
   // Security
   /** When true, postMessage is only sent to the exact parentOrigin — never '*' */
   strict_origin?: boolean;
+  // A/B testing — populated by the backend when ab_test_enabled=true and visitor_id is provided
+  ab_test_enabled?: boolean;
+  /** UUID of the assigned variant (present only when A/B is active) */
+  variant_id?: string;
+  /** Human-readable name of the assigned variant */
+  variant_name?: string;
+};
+
+/**
+ * A single A/B testing variant as returned by the admin API.
+ * config_overrides is a partial WidgetConfig that is merged on top of the base.
+ */
+export type WidgetConfigVariant = {
+  id: string;
+  name: string;
+  traffic_weight: number;
+  is_active: boolean;
+  config_overrides: Partial<Omit<WidgetConfig, 'id' | 'variant_id' | 'variant_name' | 'ab_test_enabled' | 'variants'>>;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ApiResponse<T> = {

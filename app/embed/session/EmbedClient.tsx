@@ -187,6 +187,8 @@ type EmbedClientProps = {
   parentOrigin?: string;
   /** Mirror of data-strict-origin. When true, never send postMessage to '*'. */
   strictOrigin?: boolean;
+  /** Admin-only: force a specific variant ID to bypass hash assignment (for preview/testing). */
+  forceVariantId?: string;
   /**
    * test-only: forcibly display the feedback dialog regardless of timer state
    */
@@ -201,6 +203,7 @@ export default function EmbedClient({
   startOpen: initialStartOpen,
   parentOrigin: initialParentOrigin,
   strictOrigin: initialStrictOrigin = false,
+  forceVariantId: initialForceVariantId,
   showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1070,6 +1073,11 @@ export default function EmbedClient({
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           try {
+            // Include variant_id in session metadata when an A/B variant is active
+            const abMeta = widgetConfig?.variant_id
+              ? { variant_id: widgetConfig.variant_id, variant_name: widgetConfig.variant_name }
+              : {};
+
             const response = await fetch(API.sessions(), {
               method: 'POST',
               headers: {
@@ -1081,6 +1089,7 @@ export default function EmbedClient({
                   assistant_id: assistant,
                   visitor_id: visitorId,
                   locale: activeLocale,
+                  metadata: Object.keys(abMeta).length > 0 ? abMeta : undefined,
                 }),
               signal: controller.signal,
             });
@@ -1391,7 +1400,10 @@ export default function EmbedClient({
   const fetchWidgetConfig = async (configId: string, token: string) => {
     const start = Date.now();
     try {
-      const response = await fetch(API.widgetConfig(configId), {
+      // Pass visitor_id so the backend can deterministically assign an A/B variant.
+      // forceVariantId (admin-only) bypasses hash assignment for preview/testing.
+      const visitorId = helpers.getVisitorId(initialClientId);
+      const response = await fetch(API.widgetConfig(configId, visitorId, initialForceVariantId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -2088,6 +2100,23 @@ export default function EmbedClient({
 
   return (
     <div ref={containerRef} data-widget-instance={instanceIdRef.current} style={{ position: 'relative' }}>
+      {process.env.NODE_ENV === 'development' && widgetConfig?.variant_id && (
+        <div style={{
+          position: 'fixed',
+          bottom: '4px',
+          left: '4px',
+          background: initialForceVariantId ? 'rgba(120,0,200,0.8)' : 'rgba(0,0,0,0.75)',
+          color: '#fff',
+          fontSize: '10px',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          zIndex: 999998,
+          pointerEvents: 'none',
+          fontFamily: 'monospace',
+        }}>
+          {initialForceVariantId ? '⚡ preview: ' : 'A/B: '}{widgetConfig.variant_name || widgetConfig.variant_id}
+        </div>
+      )}
       <EmbedShell
         isEmbedded={isEmbedded}
         isCollapsed={isCollapsed}
