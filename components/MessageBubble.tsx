@@ -37,8 +37,23 @@ type Props = {
 export default function MessageBubble({ message, widgetConfig, assistantName, showMessageAvatars = true, textColor = '#111', fontStyles = {}, messageBubbleRadius = 8, onSubmitMessageFeedback, messageFeedbackSubmitted = new Set(), showTimestamps = true }: Props) {
   const { locale } = useWidgetTranslation();
   const hasFeedback = messageFeedbackSubmitted.has(message.id);
-  const hasSources = message.from === 'assistant' && Array.isArray(message.sources) && message.sources.length > 0;
-  const sourceCount = message.sources?.length || 0;
+
+  // Replace `phrase[N]` citation markers so the preceding phrase becomes the inline link.
+  // Captures up to 4 non-punctuation words before [N] as the link text, then removes [N].
+  const processedText = React.useMemo(() => {
+    if (!message.text || !message.sources?.length) return message.text;
+    return message.text.replace(
+      /((?:[^\s,.!?;:()\[\]"\n]+\s+){0,3}[^\s,.!?;:()\[\]"\n]+)\[(\d+)\]/g,
+      (match, phrase, num) => {
+        const idx = parseInt(num, 10) - 1;
+        const source = message.sources?.[idx];
+        if (!source) return match;
+        if (source.url) return `[${phrase.trim()}](${source.url})`;
+        // No URL: keep phrase as plain text, strip the [N] marker
+        return phrase.trim();
+      }
+    );
+  }, [message.text, message.sources]);
 
   const [copied, setCopied] = useState(false);
   const [ReactMarkdown, setReactMarkdown] = useState<React.ComponentType<any> | null>(null);
@@ -159,42 +174,13 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                       p: (({ children }: { children?: React.ReactNode }) => <p style={{ margin: '2px 0' }}>{children}</p>),
                     } as MDComponents)}
                   >
-                    {message.text}
+                    {processedText}
                   </ReactMarkdown>
                 ) : (
                   <div>{message.text}</div>
                 )}
               </div>
-              {hasSources && (
-                <div className="mt-2 pt-2 border-t border-gray-300">
-                  <div className="text-xs font-semibold mb-1 opacity-70">
-                    <span aria-hidden="true">📚</span> {translate(locale, 'sourcesCount', { count: sourceCount, vars: { count: sourceCount } })}:
-                  </div>
-                  <ul className="space-y-1" role="list">
-                    {message.sources!.map((source, idx) => (
-                      <li key={idx} className="text-xs">
-                        {source.url ? (
-                          <a href={source.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-start gap-1" style={{ color: textColor }}>
-                            <span className="opacity-70">•</span>
-                            <span className="flex-1">
-                              <span className="font-medium">{source.title}</span>
-                              {source.snippet && (<span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>)}
-                            </span>
-                          </a>
-                        ) : (
-                          <div className="flex items-start gap-1">
-                            <span className="opacity-70">•</span>
-                            <span className="flex-1">
-                              <span className="font-medium">{source.title}</span>
-                              {source.snippet && (<span className="opacity-70"> — {source.snippet.substring(0, 80)}{source.snippet.length > 80 ? '...' : ''}</span>)}
-                            </span>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+
             </div>
           </div>
           {!hasFeedback && onSubmitMessageFeedback && (
