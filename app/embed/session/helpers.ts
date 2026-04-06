@@ -6,10 +6,15 @@ import type { Message, SourceData } from '../../../types/widget';
 
 /**
  * Storage keys for widget instances.
- * locale is included to prevent session bleed between locale variants
- * (e.g. a Norwegian session must not be restored for a Spanish-locale user).
+ * The base `sessionStorageKey` keeps the legacy two-argument signature used
+ * by most callers and unit tests. Use `sessionStorageKeyForLocale` when a
+ * locale-specific key is required to avoid cross-locale session bleed.
  */
-export function sessionStorageKey(clientId: string, assistantId: string, locale?: string) {
+export function sessionStorageKey(clientId: string, assistantId: string) {
+  return `${STORAGE_PREFIX}session-${clientId}-${assistantId}`;
+}
+
+export function sessionStorageKeyForLocale(clientId: string, assistantId: string, locale?: string) {
   const localeSuffix = locale ? `-${locale}` : '';
   return `${STORAGE_PREFIX}session-${clientId}-${assistantId}${localeSuffix}`;
 }
