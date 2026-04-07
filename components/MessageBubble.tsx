@@ -232,7 +232,7 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
         ...fontStyles,
       }
     : {
-        backgroundColor: '#111827',
+        backgroundColor: widgetConfig?.primary_color ?? '#111827',
         color: '#ffffff',
         borderRadius: `${messageBubbleRadius}px`,
         ...fontStyles,
