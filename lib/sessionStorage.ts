@@ -3,13 +3,14 @@ import { logError } from './logger';
 const SESSION_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
 const createRandomId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+  const c = (globalThis as any).crypto;
+  if (typeof c !== 'undefined' && typeof c.randomUUID === 'function') {
+    return c.randomUUID();
   }
 
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+  if (typeof c !== 'undefined' && typeof c.getRandomValues === 'function') {
     const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
+    c.getRandomValues(bytes);
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
