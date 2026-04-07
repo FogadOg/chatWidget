@@ -23,7 +23,7 @@ describe('sessionStorage utilities', () => {
 
   test('getOrCreateVisitorId falls back when localStorage throws and uses crypto.randomUUID', () => {
     jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('fail'); });
-    jest.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('rand-uuid-123' as any);
+    jest.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('rand-uuid-123');
 
     const id = getOrCreateVisitorId('visitor-key', 'pref');
     expect(id).toBe('pref-fallback-rand-uuid-123');
