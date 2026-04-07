@@ -31,7 +31,16 @@ export const getOrCreateVisitorId = (storageKey: string, prefix: string = 'widge
       context: 'getOrCreateVisitorId',
       storageKey,
     });
-    return `${prefix}-fallback`;
+    try {
+      // Generate a non-colliding fallback id when localStorage is unavailable.
+      // Use secure random where available; fall back to timestamp/random.
+      const randomPart = typeof createRandomId === 'function'
+        ? createRandomId()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
+      return `${prefix}-fallback-${randomPart}`;
+    } catch {
+      return `${prefix}-fallback-${Date.now().toString(36)}`;
+    }
   }
 };
 

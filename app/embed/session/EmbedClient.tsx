@@ -523,8 +523,9 @@ export default function EmbedClient({
         await fetchAssistantDetails(assistantIdParam, token);
 
         // Validate config exists if provided
+        let fetchedConfig: ReturnType<typeof validateConfig>['config'] | null = null;
         if (configIdParam) {
-          await fetchWidgetConfig(configIdParam, token);
+          fetchedConfig = await fetchWidgetConfig(configIdParam, token) ?? null;
         }
 
         if (cancelled) return;
@@ -532,9 +533,9 @@ export default function EmbedClient({
         // Try to restore existing session first
         const storedSession = helpers.getStoredSession(sessionStorageKey);
         if (storedSession) {
-          await validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
+          await validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token, fetchedConfig);
         } else {
-          await createSession(assistantIdParam, token);
+          await createSession(assistantIdParam, token, fetchedConfig);
         }
       } catch (err: unknown) {
         if (cancelled) return;
@@ -1063,7 +1064,7 @@ export default function EmbedClient({
   }, [widgetConfig, isCollapsed, initialParentOrigin, parentTargetOrigin]);
   // `loadSessionMessages` helper is defined earlier in the file.
 
-  const createSession = async (assistant: string, token: string) => {
+  const createSession = async (assistant: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null) => {
     try {
       const visitorId = helpers.getVisitorId(initialClientId);
 
@@ -1073,9 +1074,11 @@ export default function EmbedClient({
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           try {
-            // Include variant_id in session metadata when an A/B variant is active
-            const abMeta = widgetConfig?.variant_id
-              ? { variant_id: widgetConfig.variant_id, variant_name: widgetConfig.variant_name }
+            // Use the config snapshot passed directly (avoids React state timing issue)
+            // where widgetConfig state hasn't updated yet when createSession is called.
+            const activeConfig = configSnapshot ?? widgetConfig;
+            const abMeta = activeConfig?.variant_id
+              ? { variant_id: activeConfig.variant_id, variant_name: activeConfig.variant_name }
               : {};
 
             const response = await fetch(API.sessions(), {
@@ -1190,7 +1193,7 @@ export default function EmbedClient({
     }
   };
 
-  const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string) => {
+  const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null) => {
     try {
       let response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
@@ -1224,6 +1227,31 @@ export default function EmbedClient({
           sessionIdRef.current = sessionId;
           authTokenRef.current = token ?? null;
           setError(null);
+
+          // Patch variant metadata on restored sessions so A/B analytics include
+          // returning visitors. The PATCH merges into existing metadata, so it is
+          // safe to call on every restore – the backend is idempotent.
+          if (configSnapshot?.variant_id) {
+            try {
+              await fetch(API.session(sessionId), {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                  ...embedOriginHeader(initialParentOrigin),
+                },
+                body: JSON.stringify({
+                  metadata: {
+                    variant_id: configSnapshot.variant_id,
+                    variant_name: configSnapshot.variant_name ?? '',
+                  },
+                }),
+              });
+            } catch {
+              // Non-fatal: analytics may miss this session restore but the
+              // widget experience is unaffected.
+            }
+          }
 
           // Load messages
           type ApiMessage = {
@@ -1354,12 +1382,12 @@ export default function EmbedClient({
         status: response.status
       });
       localStorage.removeItem(sessionStorageKey);
-      await createSession(assistantId, token);
+      await createSession(assistantId, token, configSnapshot);
     } catch (err) {
       logError(err, { sessionId, assistantId, action: 'validateAndRestoreSession' });
       // On error, create new session
       localStorage.removeItem(sessionStorageKey);
-      await createSession(assistantId, token);
+      await createSession(assistantId, token, configSnapshot);
     }
   };
 
@@ -1433,6 +1461,7 @@ export default function EmbedClient({
         if (typeMismatch) {
           setError('Configuration warning: this config is set to "docs" type but is running in the chat widget. Check your widget_type setting in the admin.');
         }
+        return validatedConfig;
       } else {
         throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
       }
