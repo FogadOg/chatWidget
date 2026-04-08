@@ -212,7 +212,7 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                 )}
               </button>
               {/* Markdown-rendered message body */}
-              <div className="prose prose-sm max-w-none pr-5 overflow-visible whitespace-pre-wrap" style={{ color: textColor }}>
+              <div className="prose prose-sm max-w-none pr-5 overflow-visible" style={{ color: textColor }}>
                 {ReactMarkdown ? (
                   <ReactMarkdown
                     remarkPlugins={remarkGfm ? [remarkGfm] : []}
@@ -261,15 +261,26 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                           <code style={{ backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: '3px', padding: '1px 4px', fontSize: '0.85em' }}>{children}</code>
                         );
                       }),
-                      ul: (({ children }: { children?: React.ReactNode }) => <ul style={{ paddingInlineStart: '1.2em', margin: '4px 0' }}>{children}</ul>),
-                      ol: (({ children }: { children?: React.ReactNode }) => <ol style={{ paddingInlineStart: '1.2em', margin: '4px 0' }}>{children}</ol>),
+                      ul: (({ children }: { children?: React.ReactNode }) => <ul style={{ paddingInlineStart: '1.2em', margin: '4px 0', listStyleType: 'disc' }}>{children}</ul>),
+                      ol: (({ children }: { children?: React.ReactNode }) => <ol style={{ paddingInlineStart: '1.2em', margin: '4px 0', listStyleType: 'decimal' }}>{children}</ol>),
+                      li: (({ children }: { children?: React.ReactNode }) => <li style={{ margin: '2px 0' }}>{children}</li>),
                       p: (({ children }: { children?: React.ReactNode }) => <p style={{ margin: '2px 0' }}>{children}</p>),
+                      h1: (({ children }: { children?: React.ReactNode }) => <h1 style={{ fontSize: '1.1em', fontWeight: 700, margin: '6px 0 2px' }}>{children}</h1>),
+                      h2: (({ children }: { children?: React.ReactNode }) => <h2 style={{ fontSize: '1.05em', fontWeight: 700, margin: '6px 0 2px' }}>{children}</h2>),
+                      h3: (({ children }: { children?: React.ReactNode }) => <h3 style={{ fontSize: '1em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h3>),
+                      h4: (({ children }: { children?: React.ReactNode }) => <h4 style={{ fontSize: '0.95em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h4>),
+                      h5: (({ children }: { children?: React.ReactNode }) => <h5 style={{ fontSize: '0.9em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h5>),
+                      h6: (({ children }: { children?: React.ReactNode }) => <h6 style={{ fontSize: '0.85em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h6>),
+                      hr: (() => <hr style={{ border: 'none', borderTop: '1px solid rgba(0,0,0,0.12)', margin: '6px 0' }} />),
+                      blockquote: (({ children }: { children?: React.ReactNode }) => <blockquote style={{ borderInlineStart: '3px solid rgba(0,0,0,0.2)', paddingInlineStart: '8px', margin: '4px 0', opacity: 0.85 }}>{children}</blockquote>),
+                      strong: (({ children }: { children?: React.ReactNode }) => <strong style={{ fontWeight: 700 }}>{children}</strong>),
+                      em: (({ children }: { children?: React.ReactNode }) => <em style={{ fontStyle: 'italic' }}>{children}</em>),
                     } as MDComponents)}
                   >
                     {processedText}
                   </ReactMarkdown>
                 ) : (
-                  <div>{processedText}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{processedText}</div>
                 )}
               </div>
 
