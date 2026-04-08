@@ -74,12 +74,20 @@ export const DEFAULTS = {
   SHADOW_INTENSITY: 'md',
   WIDGET_WIDTH: 400,
   WIDGET_HEIGHT: 600,
+  WIDGET_SIZE: 'md',
   BUTTON_SIZE: 'md',
   OPACITY: 1.0,
   LOCALE: 'en',
   POSITION: 'bottom-right',
   EDGE_OFFSET: 20,
 } as const;
+
+// Size presets map to concrete pixel dimensions used by the embed runtime.
+export const SIZE_PRESETS: Record<string, { w: number; h: number }> = {
+  sm: { w: 300, h: 500 },
+  md: { w: 350, h: 600 },
+  lg: { w: 420, h: 700 },
+};
 
 // Supported locales
 export const SUPPORTED_LOCALES = [

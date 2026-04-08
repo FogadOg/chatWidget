@@ -25,7 +25,7 @@ import {
 } from '../../../lib/errorHandling';
 import { API } from '../../../lib/api';
 import { EMBED_EVENTS, STORAGE_KEYS, targetOrigin, sensitiveOrigin } from '../../../lib/embedConstants';
-import { BUTTON_SIZES } from '../../../lib/constants';
+import { BUTTON_SIZES, DEFAULTS, SIZE_PRESETS } from '../../../lib/constants';
 import * as helpers from './helpers';
 import { getQueuedMessages, removeQueuedMessage, queueMessage, incrementAttempt } from '../../../src/lib/offline';
 import { onInitConfig } from './events';
@@ -187,6 +187,10 @@ type EmbedClientProps = {
   parentOrigin?: string;
   /** Mirror of data-strict-origin. When true, never send postMessage to '*'. */
   strictOrigin?: boolean;
+  /** Admin-only: force a specific variant ID to bypass hash assignment (for preview/testing). */
+  forceVariantId?: string;
+  /** When true, the widget is embedded inline (persistent mode) — hides the close/collapse button. */
+  persistent?: boolean;
   /**
    * test-only: forcibly display the feedback dialog regardless of timer state
    */
@@ -201,6 +205,8 @@ export default function EmbedClient({
   startOpen: initialStartOpen,
   parentOrigin: initialParentOrigin,
   strictOrigin: initialStrictOrigin = false,
+  forceVariantId: initialForceVariantId,
+  persistent: isPersistent = false,
   showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -520,8 +526,9 @@ export default function EmbedClient({
         await fetchAssistantDetails(assistantIdParam, token);
 
         // Validate config exists if provided
+        let fetchedConfig: ReturnType<typeof validateConfig>['config'] | null = null;
         if (configIdParam) {
-          await fetchWidgetConfig(configIdParam, token);
+          fetchedConfig = await fetchWidgetConfig(configIdParam, token) ?? null;
         }
 
         if (cancelled) return;
@@ -529,9 +536,9 @@ export default function EmbedClient({
         // Try to restore existing session first
         const storedSession = helpers.getStoredSession(sessionStorageKey);
         if (storedSession) {
-          await validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token);
+          await validateAndRestoreSession(storedSession.sessionId, assistantIdParam, token, fetchedConfig);
         } else {
-          await createSession(assistantIdParam, token);
+          await createSession(assistantIdParam, token, fetchedConfig);
         }
       } catch (err: unknown) {
         if (cancelled) return;
@@ -1041,9 +1048,11 @@ export default function EmbedClient({
           parentTargetOrigin
         );
       } else {
-        // Send widget size when expanded
-        const width = widgetConfig.widget_width || 400;
-        const height = widgetConfig.widget_height || 600;
+        // Send widget size when expanded — prefer `size` preset if provided.
+        const sizePreset = (widgetConfig as any)?.size;
+        const preset = sizePreset && (SIZE_PRESETS as any)[sizePreset] ? (SIZE_PRESETS as any)[sizePreset] : null;
+        const width = preset ? preset.w : DEFAULTS.WIDGET_WIDTH;
+        const height = preset ? preset.h : DEFAULTS.WIDGET_HEIGHT;
         window.parent.postMessage(
           {
             type: EMBED_EVENTS.RESIZE,
@@ -1060,7 +1069,7 @@ export default function EmbedClient({
   }, [widgetConfig, isCollapsed, initialParentOrigin, parentTargetOrigin]);
   // `loadSessionMessages` helper is defined earlier in the file.
 
-  const createSession = async (assistant: string, token: string) => {
+  const createSession = async (assistant: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null) => {
     try {
       const visitorId = helpers.getVisitorId(initialClientId);
 
@@ -1070,6 +1079,21 @@ export default function EmbedClient({
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           try {
+            // Use the config snapshot passed directly (avoids React state timing issue)
+            // where widgetConfig state hasn't updated yet when createSession is called.
+            const activeConfig = configSnapshot ?? widgetConfig;
+            let abMeta: Record<string, string | boolean>;
+            if (activeConfig?.variant_id) {
+              // Visitor was assigned to a specific A/B variant.
+              abMeta = { variant_id: activeConfig.variant_id, variant_name: activeConfig.variant_name ?? '' };
+            } else if (activeConfig?.id && initialConfigId) {
+              // Visitor is in the control group (base config, no variant).
+              // Tag the session so analytics can count the control group.
+              abMeta = { is_ab_control: true, widget_config_id: activeConfig.id };
+            } else {
+              abMeta = {};
+            }
+
             const response = await fetch(API.sessions(), {
               method: 'POST',
               headers: {
@@ -1081,6 +1105,7 @@ export default function EmbedClient({
                   assistant_id: assistant,
                   visitor_id: visitorId,
                   locale: activeLocale,
+                  metadata: Object.keys(abMeta).length > 0 ? abMeta : undefined,
                 }),
               signal: controller.signal,
             });
@@ -1181,7 +1206,7 @@ export default function EmbedClient({
     }
   };
 
-  const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string) => {
+  const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null) => {
     try {
       let response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
@@ -1215,6 +1240,29 @@ export default function EmbedClient({
           sessionIdRef.current = sessionId;
           authTokenRef.current = token ?? null;
           setError(null);
+
+          // Patch variant metadata on restored sessions so A/B analytics include
+          // returning visitors. The PATCH merges into existing metadata, so it is
+          // safe to call on every restore – the backend is idempotent.
+          if (configSnapshot?.variant_id || (configSnapshot?.id && initialConfigId)) {
+            try {
+              const patchMeta = configSnapshot.variant_id
+                ? { variant_id: configSnapshot.variant_id, variant_name: configSnapshot.variant_name ?? '' }
+                : { is_ab_control: true, widget_config_id: configSnapshot.id };
+              await fetch(API.session(sessionId), {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                  ...embedOriginHeader(initialParentOrigin),
+                },
+                body: JSON.stringify({ metadata: patchMeta }),
+              });
+            } catch {
+              // Non-fatal: analytics may miss this session restore but the
+              // widget experience is unaffected.
+            }
+          }
 
           // Load messages
           type ApiMessage = {
@@ -1345,12 +1393,12 @@ export default function EmbedClient({
         status: response.status
       });
       localStorage.removeItem(sessionStorageKey);
-      await createSession(assistantId, token);
+      await createSession(assistantId, token, configSnapshot);
     } catch (err) {
       logError(err, { sessionId, assistantId, action: 'validateAndRestoreSession' });
       // On error, create new session
       localStorage.removeItem(sessionStorageKey);
-      await createSession(assistantId, token);
+      await createSession(assistantId, token, configSnapshot);
     }
   };
 
@@ -1391,7 +1439,10 @@ export default function EmbedClient({
   const fetchWidgetConfig = async (configId: string, token: string) => {
     const start = Date.now();
     try {
-      const response = await fetch(API.widgetConfig(configId), {
+      // Pass visitor_id so the backend can deterministically assign an A/B variant.
+      // forceVariantId (admin-only) bypasses hash assignment for preview/testing.
+      const visitorId = helpers.getVisitorId(initialClientId);
+      const response = await fetch(API.widgetConfig(configId, visitorId, initialForceVariantId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1421,6 +1472,7 @@ export default function EmbedClient({
         if (typeMismatch) {
           setError('Configuration warning: this config is set to "docs" type but is running in the chat widget. Check your widget_type setting in the admin.');
         }
+        return validatedConfig;
       } else {
         throw createAuthError('Invalid config response format', WidgetErrorCode.INVALID_CONFIG);
       }
@@ -2088,6 +2140,7 @@ export default function EmbedClient({
 
   return (
     <div ref={containerRef} data-widget-instance={instanceIdRef.current} style={{ position: 'relative' }}>
+      {/* A/B variant debug badge removed to avoid rendering variant text in the host page */}
       <EmbedShell
         isEmbedded={isEmbedded}
         isCollapsed={isCollapsed}
@@ -2136,6 +2189,8 @@ export default function EmbedClient({
         }
         unsureMessages={unsureMessages}
         onShowUnsureModal={() => setShowUnsureModal(true)}
+        hideCloseButton={isPersistent}
+        isPersistent={isPersistent}
       />
     </div>
   );

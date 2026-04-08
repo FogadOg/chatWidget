@@ -230,14 +230,15 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
 
   // Create session
-  const createSession = useCallback(async (token: string) => {
+  const createSession = useCallback(async (token: string, variantInfo?: { variant_id?: string; variant_name?: string }) => {
     try {
       const visitorId = helpersGetVisitorId(clientId);
 
-      const requestBody = {
+      const requestBody: Record<string, unknown> = {
         assistant_id: assistantId,
         visitor_id: visitorId,
         locale: locale,
+        ...(variantInfo?.variant_id ? { metadata: { variant_id: variantInfo.variant_id, variant_name: variantInfo.variant_name } } : {}),
       };
 
       const response = await fetch(API.sessions(), {
@@ -360,9 +361,10 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
   }, []);
 
   // Fetch widget config
-  const fetchWidgetConfig = useCallback(async (configId: string, token: string) => {
+  const fetchWidgetConfig = useCallback(async (configId: string, token: string): Promise<{ variant_id?: string; variant_name?: string } | undefined> => {
     try {
-      const response = await fetch(API.widgetConfig(configId), {
+      const visitorId = helpersGetVisitorId(clientId);
+      const response = await fetch(API.widgetConfig(configId, visitorId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -380,13 +382,18 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
           }
         }
         setWidgetConfig(data);
+        return {
+          variant_id: data?.data?.variant_id,
+          variant_name: data?.data?.variant_name,
+        };
       } else {
         console.error('Failed to fetch widget config:', data);
       }
     } catch (err) {
       console.error('Error fetching widget config:', err);
     }
-  }, []);
+    return undefined;
+  }, [clientId]);
 
 
 
@@ -525,16 +532,16 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         setParentOrigin(detectedParentOrigin);
       }
 
-      getAuthToken(clientId, detectedParentOrigin).then((token) => {
+      getAuthToken(clientId, detectedParentOrigin).then(async (token) => {
         if (token) {
-          // Fetch widget config
-          fetchWidgetConfig(configId, token);
+          // Fetch widget config first so variant info is available for session creation
+          const variantInfo = await fetchWidgetConfig(configId, token);
 
           const storedSession = helpersGetStoredSession(clientId, assistantId);
           if (storedSession) {
             validateAndRestoreSession(storedSession.sessionId, token);
           } else {
-            createSession(token);
+            createSession(token, variantInfo);
           }
         } else if (authError) {
           console.error('Auth error:', authError);

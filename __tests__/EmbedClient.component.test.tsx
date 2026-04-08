@@ -313,7 +313,7 @@ describe('EmbedClient Component', () => {
           status: 200,
           json: async () => ({
             status: 'success',
-            data: {
+              data: {
               primary_color: '#000000',
               secondary_color: '#ffffff',
               show_unread_badge: true,
@@ -322,8 +322,7 @@ describe('EmbedClient Component', () => {
               position: 'bottom-right',
               edge_offset: 20,
               button_size: 'md',
-              widget_width: 400,
-              widget_height: 600,
+              size: 'md',
             },
           }),
         });
@@ -5628,6 +5627,83 @@ describe('EmbedClient Component', () => {
 
       clearTimeoutSpy.mockRestore();
       jest.useRealTimers();
+    });
+  });
+
+  describe('String edge_offset branch coverage', () => {
+    test('renders correctly when widget config returns edge_offset as a string', async () => {
+      // Override mockFetch to return a string edge_offset, covering the
+      // `if (typeof raw === 'string')` branch in getNormalizedEdgeOffset
+      mockFetch = jest.fn((url: string) => {
+        if (url.includes('/assistants/')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'success', data: { name: 'Test' } }),
+          });
+        }
+        if (url.includes('/widget-config/')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              status: 'success',
+              data: {
+                primary_color: '#000000',
+                edge_offset: '24',  // string → covers the string branch
+                button_size: 'md',
+              },
+            }),
+          });
+        }
+        if (url.includes('/sessions')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'success', data: { session_id: 'sess-str', expires_at: '2099-01-01T00:00:00Z' } }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: {} }) });
+      });
+
+      render(<EmbedClient {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('embed-shell')).toBeInTheDocument();
+      }, { timeout: 3000 });
+    });
+
+    test('renders correctly when widget config returns a non-numeric string edge_offset', async () => {
+      // Covers the `if (Number.isFinite(parsed))` false branch → falls through to return 20
+      mockFetch = jest.fn((url: string) => {
+        if (url.includes('/assistants/')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'success', data: { name: 'Test' } }),
+          });
+        }
+        if (url.includes('/widget-config/')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              status: 'success',
+              data: {
+                primary_color: '#000000',
+                edge_offset: 'auto',  // non-numeric string → parseFloat returns NaN, not finite → return 20
+                button_size: 'md',
+              },
+            }),
+          });
+        }
+        if (url.includes('/sessions')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'success', data: { session_id: 'sess-str2', expires_at: '2099-01-01T00:00:00Z' } }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: {} }) });
+      });
+
+      render(<EmbedClient {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('embed-shell')).toBeInTheDocument();
+      }, { timeout: 3000 });
     });
   });
 });
