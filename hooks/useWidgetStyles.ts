@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { DEFAULTS, DEFAULT_COLORS, SHADOW_INTENSITY } from '../lib/constants';
+import { DEFAULTS, DEFAULT_COLORS, SHADOW_INTENSITY, SIZE_PRESETS } from '../lib/constants';
 import type { WidgetConfig } from '../types/widget';
 import { normalizeHexColor } from '../lib/colors';
 
@@ -14,8 +14,11 @@ export function useWidgetStyles(widgetConfig?: WidgetConfig) {
   const fontWeight = widgetConfig?.font_weight || DEFAULTS.FONT_WEIGHT;
   const shadowIntensity = widgetConfig?.shadow_intensity || DEFAULTS.SHADOW_INTENSITY;
   const shadowColor = normalizeHexColor(widgetConfig?.shadow_color, DEFAULT_COLORS.SHADOW);
-  const widgetWidth = widgetConfig?.widget_width || DEFAULTS.WIDGET_WIDTH;
-  const widgetHeight = widgetConfig?.widget_height || DEFAULTS.WIDGET_HEIGHT;
+  // Prefer `size` preset if provided; fall back to defaults.
+  const sizePreset = (widgetConfig?.size ?? DEFAULTS.WIDGET_SIZE) as keyof typeof SIZE_PRESETS;
+  const preset = SIZE_PRESETS[sizePreset] ?? null;
+  const widgetWidth = preset ? preset.w : DEFAULTS.WIDGET_WIDTH;
+  const widgetHeight = preset ? preset.h : DEFAULTS.WIDGET_HEIGHT;
   const buttonSize = widgetConfig?.button_size || DEFAULTS.BUTTON_SIZE;
   const messageBubbleRadius = widgetConfig?.message_bubble_radius || borderRadius;
   const buttonBorderRadius = widgetConfig?.button_border_radius || borderRadius;

@@ -93,8 +93,7 @@ describe('EmbedShell - logo and avatar', () => {
       font_weight: 'normal',
       shadow_intensity: 'md',
       shadow_color: '#000000',
-      widget_width: 350,
-      widget_height: 600,
+      size: 'md',
       button_size: 'md',
       message_bubble_radius: 8,
       button_border_radius: 6,
@@ -145,8 +144,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -192,8 +190,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -242,8 +239,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -280,8 +276,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -349,8 +344,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -391,8 +385,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -439,8 +432,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -489,7 +481,7 @@ describe('EmbedShell - logo and avatar', () => {
           input=""
           setInput={() => {}}
           handleSubmit={() => {}}
-          widgetConfig={{ primary_color: '#000', background_color: '#fff', text_color: '#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 }}
+          widgetConfig={{ primary_color: '#000', background_color: '#fff', text_color: '#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', size:'sm', button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 }}
           flowResponses={flowResponses}
           onFollowUpButtonClick={onFollow}
         />
@@ -523,8 +515,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -574,8 +565,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -622,7 +612,7 @@ describe('EmbedShell - logo and avatar', () => {
           input=""
           setInput={setInput}
           handleSubmit={() => {}}
-          widgetConfig={{ primary_color: '#000', background_color: '#fff', text_color: '#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 }}
+          widgetConfig={{ primary_color: '#000', background_color: '#fff', text_color: '#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', size:'sm', button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 }}
           flowResponses={flowResponses}
           onFollowUpButtonClick={onFollow}
         />
@@ -635,7 +625,7 @@ describe('EmbedShell - logo and avatar', () => {
     });
 
     it('handles non-embedded collapsed toggle', () => {
-      const widgetConfig: any = { primary_color:'#000', background_color:'#fff', text_color:'#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', widget_width:300, widget_height:500, button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 };
+      const widgetConfig: any = { primary_color:'#000', background_color:'#fff', text_color:'#000', border_radius:0, font_family:'Inter', font_size:14, font_weight:'normal', shadow_intensity:'md', shadow_color:'#000', size:'sm', button_size:'md', message_bubble_radius:0, button_border_radius:0, opacity:1 };
       const { getByRole } = render(
         <EmbedShell
           isEmbedded={false}
@@ -672,8 +662,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -727,8 +716,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -777,8 +765,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,
@@ -828,8 +815,7 @@ describe('EmbedShell - logo and avatar', () => {
         font_weight: 'normal',
         shadow_intensity: 'md',
         shadow_color: '#000',
-        widget_width: 300,
-        widget_height: 500,
+        size: 'sm',
         button_size: 'md',
         message_bubble_radius: 0,
         button_border_radius: 0,

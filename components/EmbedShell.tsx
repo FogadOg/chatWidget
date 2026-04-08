@@ -46,6 +46,8 @@ type Props = {
   unreadCount?: number;
   /** Locale passed directly from the parent (server-provided). Takes priority over hook detection. */
   locale?: string;
+  hideCloseButton?: boolean;
+  isPersistent?: boolean;
 };
 
 
@@ -74,6 +76,8 @@ export default function EmbedShell({
   unsureMessages = [],
   onShowUnsureModal,
   unreadCount = 0,
+  hideCloseButton = false,
+  isPersistent = false,
   locale: localeProp,
 }: Props) {
   const { translations: t, locale: hookLocale } = useWidgetTranslation();

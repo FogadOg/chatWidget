@@ -35,6 +35,11 @@ export function localMessagesStorageKey(sessionId: string) {
   return `${STORAGE_PREFIX}local-msgs-${sessionId}`;
 }
 
+/** Stores the assigned A/B variant ID so it persists across page reloads. */
+export function variantStorageKey(clientId: string, configId: string) {
+  return `${STORAGE_PREFIX}variant-${clientId}-${configId}`;
+}
+
 export function getVisitorId(clientId: string) {
   const visitorKey = `${STORAGE_PREFIX}visitor-${clientId}`;
   return getOrCreateVisitorId(visitorKey, 'widget');

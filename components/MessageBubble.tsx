@@ -251,6 +251,20 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                   <div>{processedText}</div>
                 )}
               </div>
+
+              {/* Sources */}
+              {message.sources && message.sources.length > 0 && (
+                <div className="mt-2 flex flex-col gap-1">
+                  {message.sources.map((source, idx) => {
+                    const label = source.title || source.url || '';
+                    return source.url ? (
+                      <a key={idx} href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100" style={{ color: textColor }}>{label}</a>
+                    ) : (
+                      <span key={idx} className="text-xs opacity-70" style={{ color: textColor }}>{label}</span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
           {!hasFeedback && onSubmitMessageFeedback && (
@@ -288,7 +302,7 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
         ...fontStyles,
       }
     : {
-        backgroundColor: '#111827',
+        backgroundColor: widgetConfig?.primary_color ?? '#111827',
         color: '#ffffff',
         borderRadius: `${messageBubbleRadius}px`,
         ...fontStyles,
