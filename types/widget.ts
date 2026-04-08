@@ -71,8 +71,7 @@ export type WidgetConfig = {
   font_weight: string;
   shadow_intensity: string;
   shadow_color: string;
-  widget_width: number;
-  widget_height: number;
+  size?: 'sm' | 'md' | 'lg';
   button_size: string;
   message_bubble_radius: number;
   button_border_radius: number;

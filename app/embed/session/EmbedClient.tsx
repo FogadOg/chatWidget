@@ -25,7 +25,7 @@ import {
 } from '../../../lib/errorHandling';
 import { API } from '../../../lib/api';
 import { EMBED_EVENTS, STORAGE_KEYS, targetOrigin, sensitiveOrigin } from '../../../lib/embedConstants';
-import { BUTTON_SIZES } from '../../../lib/constants';
+import { BUTTON_SIZES, DEFAULTS, SIZE_PRESETS } from '../../../lib/constants';
 import * as helpers from './helpers';
 import { getQueuedMessages, removeQueuedMessage, queueMessage, incrementAttempt } from '../../../src/lib/offline';
 import { onInitConfig } from './events';
@@ -189,6 +189,8 @@ type EmbedClientProps = {
   strictOrigin?: boolean;
   /** Admin-only: force a specific variant ID to bypass hash assignment (for preview/testing). */
   forceVariantId?: string;
+  /** When true, the widget is embedded inline (persistent mode) — hides the close/collapse button. */
+  persistent?: boolean;
   /**
    * test-only: forcibly display the feedback dialog regardless of timer state
    */
@@ -204,6 +206,7 @@ export default function EmbedClient({
   parentOrigin: initialParentOrigin,
   strictOrigin: initialStrictOrigin = false,
   forceVariantId: initialForceVariantId,
+  persistent: isPersistent = false,
   showFeedbackDialogOverride,
 }: EmbedClientProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1045,9 +1048,11 @@ export default function EmbedClient({
           parentTargetOrigin
         );
       } else {
-        // Send widget size when expanded
-        const width = widgetConfig.widget_width || 400;
-        const height = widgetConfig.widget_height || 600;
+        // Send widget size when expanded — prefer `size` preset if provided.
+        const sizePreset = (widgetConfig as any)?.size;
+        const preset = sizePreset && (SIZE_PRESETS as any)[sizePreset] ? (SIZE_PRESETS as any)[sizePreset] : null;
+        const width = preset ? preset.w : DEFAULTS.WIDGET_WIDTH;
+        const height = preset ? preset.h : DEFAULTS.WIDGET_HEIGHT;
         window.parent.postMessage(
           {
             type: EMBED_EVENTS.RESIZE,
@@ -1077,9 +1082,17 @@ export default function EmbedClient({
             // Use the config snapshot passed directly (avoids React state timing issue)
             // where widgetConfig state hasn't updated yet when createSession is called.
             const activeConfig = configSnapshot ?? widgetConfig;
-            const abMeta = activeConfig?.variant_id
-              ? { variant_id: activeConfig.variant_id, variant_name: activeConfig.variant_name }
-              : {};
+            let abMeta: Record<string, string | boolean>;
+            if (activeConfig?.variant_id) {
+              // Visitor was assigned to a specific A/B variant.
+              abMeta = { variant_id: activeConfig.variant_id, variant_name: activeConfig.variant_name ?? '' };
+            } else if (activeConfig?.id && initialConfigId) {
+              // Visitor is in the control group (base config, no variant).
+              // Tag the session so analytics can count the control group.
+              abMeta = { is_ab_control: true, widget_config_id: activeConfig.id };
+            } else {
+              abMeta = {};
+            }
 
             const response = await fetch(API.sessions(), {
               method: 'POST',
@@ -1231,8 +1244,11 @@ export default function EmbedClient({
           // Patch variant metadata on restored sessions so A/B analytics include
           // returning visitors. The PATCH merges into existing metadata, so it is
           // safe to call on every restore – the backend is idempotent.
-          if (configSnapshot?.variant_id) {
+          if (configSnapshot?.variant_id || (configSnapshot?.id && initialConfigId)) {
             try {
+              const patchMeta = configSnapshot.variant_id
+                ? { variant_id: configSnapshot.variant_id, variant_name: configSnapshot.variant_name ?? '' }
+                : { is_ab_control: true, widget_config_id: configSnapshot.id };
               await fetch(API.session(sessionId), {
                 method: 'PATCH',
                 headers: {
@@ -1240,12 +1256,7 @@ export default function EmbedClient({
                   'Content-Type': 'application/json',
                   ...embedOriginHeader(initialParentOrigin),
                 },
-                body: JSON.stringify({
-                  metadata: {
-                    variant_id: configSnapshot.variant_id,
-                    variant_name: configSnapshot.variant_name ?? '',
-                  },
-                }),
+                body: JSON.stringify({ metadata: patchMeta }),
               });
             } catch {
               // Non-fatal: analytics may miss this session restore but the
@@ -2129,23 +2140,7 @@ export default function EmbedClient({
 
   return (
     <div ref={containerRef} data-widget-instance={instanceIdRef.current} style={{ position: 'relative' }}>
-      {process.env.NODE_ENV === 'development' && widgetConfig?.variant_id && (
-        <div style={{
-          position: 'fixed',
-          bottom: '4px',
-          left: '4px',
-          background: initialForceVariantId ? 'rgba(120,0,200,0.8)' : 'rgba(0,0,0,0.75)',
-          color: '#fff',
-          fontSize: '10px',
-          padding: '2px 6px',
-          borderRadius: '4px',
-          zIndex: 999998,
-          pointerEvents: 'none',
-          fontFamily: 'monospace',
-        }}>
-          {initialForceVariantId ? '⚡ preview: ' : 'A/B: '}{widgetConfig.variant_name || widgetConfig.variant_id}
-        </div>
-      )}
+      {/* A/B variant debug badge removed to avoid rendering variant text in the host page */}
       <EmbedShell
         isEmbedded={isEmbedded}
         isCollapsed={isCollapsed}
@@ -2194,6 +2189,8 @@ export default function EmbedClient({
         }
         unsureMessages={unsureMessages}
         onShowUnsureModal={() => setShowUnsureModal(true)}
+        hideCloseButton={isPersistent}
+        isPersistent={isPersistent}
       />
     </div>
   );

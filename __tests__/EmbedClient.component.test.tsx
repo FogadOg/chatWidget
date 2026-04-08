@@ -313,7 +313,7 @@ describe('EmbedClient Component', () => {
           status: 200,
           json: async () => ({
             status: 'success',
-            data: {
+              data: {
               primary_color: '#000000',
               secondary_color: '#ffffff',
               show_unread_badge: true,
@@ -322,8 +322,7 @@ describe('EmbedClient Component', () => {
               position: 'bottom-right',
               edge_offset: 20,
               button_size: 'md',
-              widget_width: 400,
-              widget_height: 600,
+              size: 'md',
             },
           }),
         });
