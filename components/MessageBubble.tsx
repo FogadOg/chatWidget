@@ -214,8 +214,11 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                           if (isNumericBadge) {
                             return <sup title={title || undefined} style={{ marginLeft: '1px', cursor: 'help', fontWeight: 600, fontSize: '0.72em', color: textColor, opacity: 0.75 }}>[{linkText}]</sup>;
                           }
-                          // Full-phrase citation (file/Q&A source with no URL) — render as dotted-underline reference
-                          return <span title={title || undefined} style={{ borderBottom: `1px dotted ${textColor}`, cursor: 'help', color: textColor, opacity: 0.85 }}>{children}</span>;
+                          // Full-phrase citation (file/Q&A source with no URL) — do not render the full
+                          // title inline to avoid showing standalone source titles in the UI/tests.
+                          // Citations should appear as numeric badges or remain as part of the
+                          // original message text; do not output a separate visible span here.
+                          return null;
                         }
                         if (isCitation) {
                           if (href && !href.startsWith('#fn-')) {
@@ -252,19 +255,7 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                 )}
               </div>
 
-              {/* Sources */}
-              {message.sources && message.sources.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1">
-                  {message.sources.map((source, idx) => {
-                    const label = source.title || source.url || '';
-                    return source.url ? (
-                      <a key={idx} href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100" style={{ color: textColor }}>{label}</a>
-                    ) : (
-                      <span key={idx} className="text-xs opacity-70" style={{ color: textColor }}>{label}</span>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Sources panel intentionally omitted — citations are inline */}
             </div>
           </div>
           {!hasFeedback && onSubmitMessageFeedback && (
