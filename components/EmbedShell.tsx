@@ -74,6 +74,8 @@ export default function EmbedShell({
   unsureMessages = [],
   onShowUnsureModal,
   unreadCount = 0,
+  hideCloseButton = false,
+  isPersistent = false,
 }: Props) {
   const { translations: t, locale } = useWidgetTranslation();
   const [liveMessage, setLiveMessage] = useState('');
@@ -174,6 +176,158 @@ export default function EmbedShell({
   const closeChatLabel = translate(locale, 'chatControl', { context: 'close' });
   const minimizeChatLabel = translate(locale, 'chatControl', { context: 'minimize' });
   const poweredByLabel = typeof t?.poweredBy === 'string' ? t.poweredBy : '';
+
+  // ─── Persistent (search) layout ────────────────────────────────────────────
+  if (isPersistent) {
+    const MAX_CHARS = 150;
+    const persistentTitle = getText(widgetConfig?.title) || 'Search with AI';
+    const persistentSubtitle = getText(widgetConfig?.subtitle) || 'Ask a question or describe your issue.';
+    const persistentPlaceholder = String(getText(widgetConfig?.placeholder) || translate(locale, 'typeYourMessage'));
+    const assistantMessages = messages.filter(m => m.from === 'assistant');
+    const hasAnswer = assistantMessages.length > 0;
+
+    const handlePersistentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (input.trim() && !isTyping) {
+          handleSubmit(e as unknown as React.FormEvent);
+        }
+      }
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', ...fontStyles }}>
+        {/* ── Header + input section ── */}
+        <div style={{ backgroundColor: primaryColor, color: '#ffffff', flexShrink: 0 }}>
+          {/* Title row */}
+          <div style={{ padding: '16px 20px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span style={{ fontWeight: 700, fontSize: '16px', lineHeight: 1 }}>{persistentTitle}</span>
+              <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 5px', backgroundColor: secondaryColor, color: '#ffffff', borderRadius: '3px', textTransform: 'uppercase' as const }}>
+                BETA
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.65)' }}>{persistentSubtitle}</p>
+          </div>
+
+          {/* Input area */}
+          <form onSubmit={handleSubmit} style={{ padding: '0 16px 10px' }}>
+            <div style={{ position: 'relative', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: `${borderRadius}px`, border: `1px solid ${secondaryColor}` }}>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value.slice(0, MAX_CHARS))}
+                onKeyDown={handlePersistentKeyDown}
+                placeholder={persistentPlaceholder}
+                rows={3}
+                maxLength={MAX_CHARS}
+                disabled={isTyping}
+                aria-label={translate(locale, 'typeYourMessageLabel')}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  background: 'transparent',
+                  resize: 'none',
+                  color: '#ffffff',
+                  padding: '12px 44px 32px 12px',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  boxSizing: 'border-box' as const,
+                  fontFamily: 'inherit',
+                }}
+              />
+              <span style={{ position: 'absolute', bottom: '8px', left: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', pointerEvents: 'none', userSelect: 'none' as const }}>
+                {input.length}/{MAX_CHARS}
+              </span>
+              <button
+                type="submit"
+                disabled={!input.trim() || isTyping}
+                aria-label={translate(locale, 'send')}
+                style={{
+                  position: 'absolute', bottom: '8px', right: '8px',
+                  width: '30px', height: '30px',
+                  borderRadius: `${buttonBorderRadius}px`,
+                  border: 'none',
+                  backgroundColor: input.trim() && !isTyping ? secondaryColor : 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  cursor: input.trim() && !isTyping ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background-color 0.15s',
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </button>
+            </div>
+          </form>
+
+          {/* Privacy notice */}
+          <p style={{ margin: 0, padding: '0 16px 14px', fontSize: '11px', color: 'rgba(255,255,255,0.45)', lineHeight: '1.5' }}>
+            {`You're engaging with an AI-powered tool. `}
+            <a href="https://companin.tech/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'underline' }}>Learn</a>
+            {` how your data is managed and shared.`}
+          </p>
+        </div>
+
+        {/* ── Answer section ── */}
+        <div
+          ref={scrollContainerRef}
+          style={{ flex: 1, overflowY: 'auto', backgroundColor: `rgba(${hexToRgb(backgroundColor)}, ${backgroundOpacity})`, display: 'flex', flexDirection: 'column' }}
+        >
+          {error && (
+            <div style={{ margin: '12px 16px 0', padding: '10px 14px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: `${borderRadius}px`, fontSize: '13px' }}>
+              {error}
+            </div>
+          )}
+
+          {isTyping && (
+            <div style={{ padding: '16px 20px', display: 'flex', gap: '5px', alignItems: 'center' }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: textColor, opacity: 0.4 + i * 0.2 }} />
+              ))}
+            </div>
+          )}
+
+          {assistantMessages.map((msg) => (
+            <div key={msg.id} style={{ padding: '16px 20px 0' }}>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: textColor, marginBottom: '10px' }}>Answer</div>
+              <MessageBubble
+                message={msg}
+                widgetConfig={widgetConfig}
+                assistantName={assistantName}
+                showMessageAvatars={false}
+                textColor={textColor}
+                fontStyles={fontStyles}
+                messageBubbleRadius={messageBubbleRadius}
+                showTimestamps={false}
+              />
+            </div>
+          ))}
+
+          {hasAnswer && (
+            <div style={{ marginTop: 'auto', padding: '12px 20px 14px', fontSize: '11px', color: textColor, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+              Answers are generated by AI, and may not always be accurate.
+            </div>
+          )}
+        </div>
+
+        {/* Screen-reader live region */}
+        <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', left: '-9999px', height: '1px', width: '1px', overflow: 'hidden' }}>
+          {liveMessage}
+        </div>
+      </div>
+    );
+  }
+  // ───────────────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -296,6 +450,7 @@ export default function EmbedShell({
                       </span>
                     </button>
                   )}
+                  {!hideCloseButton && (
                   <button
                     type="button"
                     onClick={toggleCollapsed}
@@ -307,6 +462,7 @@ export default function EmbedShell({
                       <polyline points="6,9 12,15 18,9" />
                     </svg>
                   </button>
+                  )}
                 </div>
               </div>
 
@@ -556,6 +712,7 @@ export default function EmbedShell({
                       <p className="text-sm text-gray-300">{getText(widgetConfig?.subtitle)}</p>
                     </div>
                   </div>
+                  {!hideCloseButton && (
                   <button
                     type="button"
                     onClick={toggleCollapsed}
@@ -568,6 +725,7 @@ export default function EmbedShell({
                       <polyline points="6,9 12,15 18,9" />
                     </svg>
                   </button>
+                  )}
                 </div>
 
                 {error && (

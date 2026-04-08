@@ -114,6 +114,12 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/persistent-widget.js',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
         // Next.js static assets under _next may be requested cross-origin
         source: '/_next/static/:path*',
         headers: [

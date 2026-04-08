@@ -1,6 +1,6 @@
 'use client';
 
- 
+
 
 import { useState } from 'react';
 // Small id generator to avoid depending on ESM-only `nanoid` in tests

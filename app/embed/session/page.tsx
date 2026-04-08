@@ -13,12 +13,13 @@ type Props = {
     parentOrigin?: string;
     strictOrigin?: string;
     forceVariantId?: string;
+    persistent?: string;
   }>;
 };
 
 export default async function EmbedPage({ searchParams }: Props) {
   const params = await searchParams;
-  const { clientId, assistantId, configId, locale = "en", startOpen = "false", pagePath, parentOrigin, strictOrigin, forceVariantId } = params;
+  const { clientId, assistantId, configId, locale = "en", startOpen = "false", pagePath, parentOrigin, strictOrigin, forceVariantId, persistent } = params;
 
   // Validate required parameters
   if (!clientId || !assistantId || !configId) {
@@ -105,6 +106,7 @@ export default async function EmbedPage({ searchParams }: Props) {
         parentOrigin={parentOrigin}
         strictOrigin={strictOrigin === "true"}
         forceVariantId={forceVariantId}
+        persistent={persistent === "true"}
       />
     </ErrorBoundary>
   );

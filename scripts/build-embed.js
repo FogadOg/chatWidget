@@ -20,8 +20,9 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 
 const FILES = [
-  { src: 'src/embed/docs-widget.js', dst: 'public/docs-widget.js' },
-  { src: 'src/embed/widget.js',      dst: 'public/widget.js' },
+  { src: 'src/embed/docs-widget.js',        dst: 'public/docs-widget.js' },
+  { src: 'src/embed/widget.js',             dst: 'public/widget.js' },
+  { src: 'src/embed/persistent-widget.js',  dst: 'public/persistent-widget.js' },
 ];
 
 function buildEmbedFile(src, dst) {
