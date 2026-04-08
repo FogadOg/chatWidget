@@ -44,6 +44,8 @@ type Props = {
   unsureMessages?: UnsureMessage[];
   onShowUnsureModal?: () => void;
   unreadCount?: number;
+  hideCloseButton?: boolean;
+  isPersistent?: boolean;
 };
 
 
