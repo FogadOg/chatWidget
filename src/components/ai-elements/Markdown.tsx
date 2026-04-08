@@ -179,7 +179,7 @@ export default function Markdown({ content, sources }: Props) {
   }), []);
 
   return (
-    <div className="prose max-w-full">
+    <div className="prose max-w-full overflow-visible whitespace-pre-wrap">
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins} components={components}>
         {processed}
       </ReactMarkdown>

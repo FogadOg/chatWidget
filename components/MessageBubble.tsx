@@ -34,6 +34,24 @@ type Props = {
   showTimestamps?: boolean;
 };
 
+// Converts bare URLs and email addresses in plain-text content to markdown links
+// so react-markdown renders them as clickable anchors.
+function linkifyText(text: string): string {
+  // 1. Email addresses → mailto links (skip if already inside a markdown link)
+  text = text.replace(
+    /(?<![@\w])([\w._%+\-]+@[\w.\-]+\.[a-zA-Z]{2,})(?![\w@])/g,
+    (_m, addr) => `[${addr}](mailto:${addr})`
+  );
+  // 2. Bare domain.tld[/path] patterns (no http:// prefix) → https:// links.
+  //    Negative lookbehind skips email domains (@), URL path segments (/), and
+  //    word-character prefixes to avoid false positives.
+  text = text.replace(
+    /(?<![@\/\w])((?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+(?:tech|com|org|net|io|dev|app|ai|co|uk|de|fr|es|nl|se|no|pl|pt|it|be|au|ca)(?:\/[^\s<>"')\]\[`]*)?)(?![.\w])/g,
+    (match) => `[${match}](https://${match})`
+  );
+  return text;
+}
+
 export default function MessageBubble({ message, widgetConfig, assistantName, showMessageAvatars = true, textColor = '#111', fontStyles = {}, messageBubbleRadius = 8, onSubmitMessageFeedback, messageFeedbackSubmitted = new Set(), showTimestamps = true }: Props) {
   const { locale } = useWidgetTranslation();
   const hasFeedback = messageFeedbackSubmitted.has(message.id);
@@ -82,7 +100,7 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
   // Pass 2: bare [n] → "[n](url)" numeric superscript fallback.
   const processedText = useMemo(() => {
     const srcs = message.sources;
-    if (!srcs || srcs.length === 0) return message.text;
+    if (!srcs || srcs.length === 0) return linkifyText(message.text);
     try {
       let result = message.text;
 
@@ -133,9 +151,9 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
         return `[${p1}](#fn-${p1} "${esc}")`;
       });
 
-      return result;
+      return linkifyText(result);
     } catch {
-      return message.text;
+      return linkifyText(message.text);
     }
   }, [message.text, message.sources]);
 
@@ -194,7 +212,7 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                 )}
               </button>
               {/* Markdown-rendered message body */}
-              <div className="prose prose-sm max-w-none pr-5" style={{ color: textColor }}>
+              <div className="prose prose-sm max-w-none pr-5 overflow-visible whitespace-pre-wrap" style={{ color: textColor }}>
                 {ReactMarkdown ? (
                   <ReactMarkdown
                     remarkPlugins={remarkGfm ? [remarkGfm] : []}
