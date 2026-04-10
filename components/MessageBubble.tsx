@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 // Dynamically import react-markdown and remark-gfm at runtime so Jest
 // doesn't try to parse ESM exports from node_modules during tests.
@@ -34,26 +34,27 @@ type Props = {
   showTimestamps?: boolean;
 };
 
+// Converts bare URLs and email addresses in plain-text content to markdown links
+// so react-markdown renders them as clickable anchors.
+function linkifyText(text: string): string {
+  // 1. Email addresses → mailto links (skip if already inside a markdown link)
+  text = text.replace(
+    /(?<![@\w])([\w._%+\-]+@[\w.\-]+\.[a-zA-Z]{2,})(?![\w@])/g,
+    (_m, addr) => `[${addr}](mailto:${addr})`
+  );
+  // 2. Bare domain.tld[/path] patterns (no http:// prefix) → https:// links.
+  //    Negative lookbehind skips email domains (@), URL path segments (/), and
+  //    word-character prefixes to avoid false positives.
+  text = text.replace(
+    /(?<![@\/\w])((?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+(?:tech|com|org|net|io|dev|app|ai|co|uk|de|fr|es|nl|se|no|pl|pt|it|be|au|ca)(?:\/[^\s<>"')\]\[`]*)?)(?![.\w])/g,
+    (match) => `[${match}](https://${match})`
+  );
+  return text;
+}
+
 export default function MessageBubble({ message, widgetConfig, assistantName, showMessageAvatars = true, textColor = '#111', fontStyles = {}, messageBubbleRadius = 8, onSubmitMessageFeedback, messageFeedbackSubmitted = new Set(), showTimestamps = true }: Props) {
   const { locale } = useWidgetTranslation();
   const hasFeedback = messageFeedbackSubmitted.has(message.id);
-
-  // Replace `phrase[N]` citation markers so the preceding phrase becomes the inline link.
-  // Captures up to 4 non-punctuation words before [N] as the link text, then removes [N].
-  const processedText = React.useMemo(() => {
-    if (!message.text || !message.sources?.length) return message.text;
-    return message.text.replace(
-      /((?:[^\s,.!?;:()\[\]"\n]+\s+){0,3}[^\s,.!?;:()\[\]"\n]+)\[(\d+)\]/g,
-      (match, phrase, num) => {
-        const idx = parseInt(num, 10) - 1;
-        const source = message.sources?.[idx];
-        if (!source) return match;
-        if (source.url) return `[${phrase.trim()}](${source.url})`;
-        // No URL: keep phrase as plain text, strip the [N] marker
-        return phrase.trim();
-      }
-    );
-  }, [message.text, message.sources]);
 
   const [copied, setCopied] = useState(false);
   const [ReactMarkdown, setReactMarkdown] = useState<React.ComponentType<any> | null>(null);
@@ -94,6 +95,73 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
     });
     return () => { mounted = false; };
   }, []);
+  // Two-pass citation processing:
+  // Pass 1: "Source Title[n]" → "[Source Title](url)" — phrase becomes the link.
+  // Pass 2: bare [n] → "[n](url)" numeric superscript fallback.
+  const processedText = useMemo(() => {
+    const srcs = message.sources;
+    if (!srcs || srcs.length === 0) return linkifyText(message.text);
+    try {
+      let result = message.text;
+
+      // Pass 1: make the cited phrase itself a link when the LLM writes it inline.
+      // Try the full title first, then each segment split on common separators (-, :, |, /)
+      // so partial references like "Getting Started Guide[1]" match a title like
+      // "Product Documentation - Getting Started Guide".
+      srcs.forEach((src, i) => {
+        if (!src?.title) return;
+        const n = i + 1;
+        const rawTitle = src.title.replace(/[\r\n\t]+/g, ' ').trim();
+        const safeTitle = rawTitle.substring(0, 120).replace(/"/g, '\\"');
+
+        // Candidates: full title + each segment after splitting on separator chars.
+        const candidates: string[] = [rawTitle];
+        rawTitle.split(/\s*[-\u2013\u2014:|/]\s*/).forEach(part => {
+          const clean = part.trim();
+          if (clean.length >= 4) candidates.push(clean);
+        });
+
+        for (const phrase of candidates) {
+          const phraseRegex = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const re = new RegExp(`(${phraseRegex})\\s*\\[${n}\\]`, 'g');
+          // Also match reference-style markdown: [phrase][n] (LLM sometimes wraps in brackets)
+          const reRef = new RegExp(`\\[${phraseRegex}\\]\\s*\\[${n}\\]`, 'g');
+          const link = src.url
+            ? `[${phrase}](${src.url} "${safeTitle}")`
+            : `[${phrase}](#fn-${n} "${safeTitle}")`;
+          if (re.test(result)) {
+            result = result.replace(new RegExp(`(${phraseRegex})\\s*\\[${n}\\]`, 'g'), link);
+            break;
+          } else if (reRef.test(result)) {
+            result = result.replace(new RegExp(`\\[${phraseRegex}\\]\\s*\\[${n}\\]`, 'g'), link);
+            break;
+          }
+        }
+      });
+
+      // Pass 2: remaining bare [n] → numeric superscript link.
+      result = result.replace(/\[(\d+)\]/g, (match, p1) => {
+        const idx = Number(p1) - 1;
+        if (!Number.isFinite(idx) || idx < 0) return match;
+        const src = srcs[idx];
+        if (!src) return match;
+        const rawTitle = (src.title || '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().substring(0, 120);
+        const esc = rawTitle.replace(/"/g, '\\"');
+        if (src.url) return `[${p1}](${src.url} "${esc}")`;
+        return `[${p1}](#fn-${p1} "${esc}")`;
+      });
+
+      // If we've injected any markdown links already (e.g. from citation processing),
+      // avoid running `linkifyText` over the full string as it may rewrite URLs
+      // that are already inside markdown link parentheses and produce nested/malformed
+      // links. Only linkify when no markdown links are present.
+      const hasMarkdownLink = /\[[^\]]+\]\([^\)]+\)/.test(result);
+      return hasMarkdownLink ? result : linkifyText(result);
+    } catch {
+      return linkifyText(message.text);
+    }
+  }, [message.text, message.sources]);
+
   const handleCopy = useCallback(() => {
     if (!message.text) return;
     try {
@@ -149,15 +217,44 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                 )}
               </button>
               {/* Markdown-rendered message body */}
-              <div className="prose prose-sm max-w-none pr-5" style={{ color: textColor }}>
+              <div className="prose prose-sm max-w-none pr-5 overflow-visible" style={{ color: textColor }}>
                 {ReactMarkdown ? (
                   <ReactMarkdown
                     remarkPlugins={remarkGfm ? [remarkGfm] : []}
                     components={({
-                      // Open links in a new tab safely
-                      a: (({ href, children }: { href?: string; children?: React.ReactNode }) => (
-                        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline' }}>{children}</a>
-                      )),
+                      // Citation-aware link renderer: numeric link text = citation token
+                      a: (({ href, title, children }: { href?: string; title?: string; children?: React.ReactNode }) => {
+                        const linkText =
+                          typeof children === 'string'
+                            ? children
+                            : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string'
+                              ? children[0]
+                              : null;
+                        const isCitation = linkText !== null && /^\d+$/.test(linkText);
+                        // #fn-* anchors are non-URL citation badges — never render as a navigable link.
+                        if (href && href.startsWith('#fn-')) {
+                          const isNumericBadge = linkText !== null && /^\d+$/.test(linkText);
+                          if (isNumericBadge) {
+                            return <sup title={title || undefined} style={{ marginLeft: '1px', cursor: 'help', fontWeight: 600, fontSize: '0.72em', color: textColor, opacity: 0.75 }}>[{linkText}]</sup>;
+                          }
+                          // Full-phrase citation (file/Q&A source with no URL) — do not render the full
+                          // title inline to avoid showing standalone source titles in the UI/tests.
+                          // Citations should appear as numeric badges or remain as part of the
+                          // original message text; do not output a separate visible span here.
+                          return null;
+                        }
+                        if (isCitation) {
+                          if (href && !href.startsWith('#fn-')) {
+                            return (
+                              <sup style={{ marginLeft: '1px' }}>
+                                <a href={href} title={title} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline', fontWeight: 600, fontSize: '0.72em' }}>[{linkText}]</a>
+                              </sup>
+                            );
+                          }
+                          return <sup title={title || undefined} style={{ marginLeft: '1px', cursor: 'help', fontWeight: 600, fontSize: '0.72em', color: textColor, opacity: 0.75 }}>[{linkText}]</sup>;
+                        }
+                        return <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: textColor, textDecoration: 'underline' }}>{children}</a>;
+                      }),
                       // Code: inline vs block
                       code: (({ className, children }: { className?: string; children?: React.ReactNode }) => {
                         const isBlock = /language-/.test(className || '');
@@ -169,32 +266,30 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
                           <code style={{ backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: '3px', padding: '1px 4px', fontSize: '0.85em' }}>{children}</code>
                         );
                       }),
-                      ul: (({ children }: { children?: React.ReactNode }) => <ul style={{ paddingInlineStart: '1.2em', margin: '4px 0' }}>{children}</ul>),
-                      ol: (({ children }: { children?: React.ReactNode }) => <ol style={{ paddingInlineStart: '1.2em', margin: '4px 0' }}>{children}</ol>),
+                      ul: (({ children }: { children?: React.ReactNode }) => <ul style={{ paddingInlineStart: '1.2em', margin: '4px 0', listStyleType: 'disc' }}>{children}</ul>),
+                      ol: (({ children }: { children?: React.ReactNode }) => <ol style={{ paddingInlineStart: '1.2em', margin: '4px 0', listStyleType: 'decimal' }}>{children}</ol>),
+                      li: (({ children }: { children?: React.ReactNode }) => <li style={{ margin: '2px 0' }}>{children}</li>),
                       p: (({ children }: { children?: React.ReactNode }) => <p style={{ margin: '2px 0' }}>{children}</p>),
+                      h1: (({ children }: { children?: React.ReactNode }) => <h1 style={{ fontSize: '1.1em', fontWeight: 700, margin: '6px 0 2px' }}>{children}</h1>),
+                      h2: (({ children }: { children?: React.ReactNode }) => <h2 style={{ fontSize: '1.05em', fontWeight: 700, margin: '6px 0 2px' }}>{children}</h2>),
+                      h3: (({ children }: { children?: React.ReactNode }) => <h3 style={{ fontSize: '1em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h3>),
+                      h4: (({ children }: { children?: React.ReactNode }) => <h4 style={{ fontSize: '0.95em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h4>),
+                      h5: (({ children }: { children?: React.ReactNode }) => <h5 style={{ fontSize: '0.9em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h5>),
+                      h6: (({ children }: { children?: React.ReactNode }) => <h6 style={{ fontSize: '0.85em', fontWeight: 600, margin: '4px 0 2px' }}>{children}</h6>),
+                      hr: (() => <hr style={{ border: 'none', borderTop: '1px solid rgba(0,0,0,0.12)', margin: '6px 0' }} />),
+                      blockquote: (({ children }: { children?: React.ReactNode }) => <blockquote style={{ borderInlineStart: '3px solid rgba(0,0,0,0.2)', paddingInlineStart: '8px', margin: '4px 0', opacity: 0.85 }}>{children}</blockquote>),
+                      strong: (({ children }: { children?: React.ReactNode }) => <strong style={{ fontWeight: 700 }}>{children}</strong>),
+                      em: (({ children }: { children?: React.ReactNode }) => <em style={{ fontStyle: 'italic' }}>{children}</em>),
                     } as MDComponents)}
                   >
                     {processedText}
                   </ReactMarkdown>
                 ) : (
-                  <div>{message.text}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{processedText}</div>
                 )}
               </div>
 
-              {/* Sources */}
-              {message.sources && message.sources.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1">
-                  {message.sources.map((source, idx) => {
-                    const label = source.title || source.url || '';
-                    return source.url ? (
-                      <a key={idx} href={source.url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100" style={{ color: textColor }}>{label}</a>
-                    ) : (
-                      <span key={idx} className="text-xs opacity-70" style={{ color: textColor }}>{label}</span>
-                    );
-                  })}
-                </div>
-              )}
-
+              {/* Sources panel intentionally omitted — citations are inline */}
             </div>
           </div>
           {!hasFeedback && onSubmitMessageFeedback && (

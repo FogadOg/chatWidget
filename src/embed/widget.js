@@ -35,8 +35,11 @@
     // such as `data-locale` can still be read from the host page.
     if (!script) {
       try {
-        // Prefer an explicit id on the host script if present
-        script = document.getElementById('companin-widget-script') || script;
+        // Prefer an explicit id on the host script if present.
+        // Support both the bare id and locale-suffixed variants (e.g. companin-widget-script-es).
+        script = document.getElementById('companin-widget-script') ||
+          Array.from(document.querySelectorAll('[id^="companin-widget-script"]'))[0] ||
+          script;
       } catch (e) {}
     }
 

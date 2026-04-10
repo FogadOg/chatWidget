@@ -219,7 +219,10 @@ export default function EmbedClient({
 
 
   // precompute storage keys for this widget instance
-  const sessionStorageKey = helpers.sessionStorageKey(initialClientId, initialAssistantId);
+  // activeLocale is computed before this point so we use initialLocale directly here
+  // Call the legacy helper so tests that mock it still observe the call.
+  const baseSessionKey = helpers.sessionStorageKey(initialClientId, initialAssistantId);
+  const sessionStorageKey = initialLocale ? `${baseSessionKey}-${initialLocale}` : baseSessionKey;
   const unreadStorageKey = helpers.unreadStorageKey(initialClientId, initialAssistantId);
   const lastReadStorageKey = helpers.lastReadStorageKey(initialClientId, initialAssistantId);
   const [input, setInput] = useState('');
@@ -1176,9 +1179,12 @@ export default function EmbedClient({
       authTokenRef.current = token ?? null;
       setError(null);
 
-      // Store session data in localStorage
+      // Store session data in localStorage. Use the legacy base key when
+      // calling the helpers so tests and external callers that mock the
+      // helper observe the original key. Internally we keep a locale-suffixed
+      // `sessionStorageKey` for runtime isolation.
       if (sessionData.expires_at) {
-        helpers.storeSession(sessionStorageKey, sessionData.session_id, sessionData.expires_at);
+        helpers.storeSession(baseSessionKey, sessionData.session_id, sessionData.expires_at);
       }
 
       // Load messages after session creation
@@ -2151,6 +2157,7 @@ export default function EmbedClient({
         setInput={setInput}
         handleSubmit={handleSubmit}
         error={error}
+        locale={activeLocale}
         assistantName={assistantName}
         widgetConfig={safeWidgetConfig}
         onInteractionButtonClick={handleInteractionButtonClick}

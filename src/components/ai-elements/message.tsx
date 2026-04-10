@@ -327,16 +327,18 @@ export const MessageBranchPage = ({
 };
 
 // `Streamdown` is dynamically imported so its props are typed loosely here
-export type MessageResponseProps = any;
+export type MessageResponseProps = {
+  sources?: Array<{ url?: string; title?: string; snippet?: string }>;
+} & any;
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => {
+  ({ className, sources, ...props }: MessageResponseProps) => {
     const content = (props.children ?? (props.text as any) ?? "") as string;
     return (
       <div className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}>
         {(() => {
           const Stream = Streamdown as any;
-          return <Stream content={content} />;
+          return <Stream content={content} sources={sources} />;
         })()}
       </div>
     );

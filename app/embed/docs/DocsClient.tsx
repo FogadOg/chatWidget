@@ -115,7 +115,7 @@ type Props = {
 type MessageType = {
   key: string;
   from: "user" | "assistant";
-  sources?: { href: string; title: string }[];
+  sources?: { url?: string; href?: string; title?: string; snippet?: string; type?: string; reference_id?: string }[];
   versions: {
     id: string;
     content: string;
@@ -234,12 +234,12 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     try {
       const visitorId = helpersGetVisitorId(clientId);
 
-      const requestBody: Record<string, unknown> = {
+            const requestBody: Record<string, unknown> = {
         assistant_id: assistantId,
         visitor_id: visitorId,
-        locale: locale,
+        locale: activeLocale,
         ...(variantInfo?.variant_id ? { metadata: { variant_id: variantInfo.variant_id, variant_name: variantInfo.variant_name } } : {}),
-      };
+            };
 
       const response = await fetch(API.sessions(), {
         method: 'POST',
@@ -271,7 +271,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
       console.error('Session creation error:', err);
       setError(errorMsg);
     }
-  }, [assistantId, locale]);
+  }, [assistantId, activeLocale]);
 
   // Validate and restore existing session
   const validateAndRestoreSession = useCallback(async (sessionId: string, token: string) => {
@@ -300,6 +300,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
             .map((msg: any) => ({
               key: msg.id,
               from: msg.sender as 'user' | 'assistant',
+              sources: msg.sources || [],
               versions: [{
                 id: msg.id,
                 content: msg.content
@@ -346,6 +347,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
             .map((msg: any) => ({
               key: msg.id,
               from: msg.sender as 'user' | 'assistant',
+              sources: msg.sources || [],
               versions: [{
                 id: msg.id,
                 content: msg.content
@@ -414,7 +416,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
         },
         body: JSON.stringify({
           content: content,
-          locale: locale,
+          locale: activeLocale,
           page_context: helpersGetPageContext(),
         }),
       });
@@ -437,7 +439,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
     } finally {
       setStatus("ready");
     }
-  }, [sessionId, authToken, locale, loadSessionMessages]);
+  }, [sessionId, authToken, activeLocale, loadSessionMessages]);
 
   // Handle message feedback submission
   const handleSubmitMessageFeedback = useCallback(async (messageId: string, feedbackType: string = 'thumbs_up') => {
@@ -674,20 +676,6 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                     key={`${message.key}-${version.id}`}
                                   >
                                     <div>
-                                      {message.sources?.length && (
-                                        <Sources>
-                                          <SourcesTrigger count={message.sources.length} />
-                                          <SourcesContent>
-                                            {message.sources.map((source) => (
-                                              <Source
-                                                href={source.href}
-                                                key={source.href}
-                                                title={source.title}
-                                              />
-                                            ))}
-                                          </SourcesContent>
-                                        </Sources>
-                                      )}
                                       {message.reasoning && (
                                         <Reasoning duration={message.reasoning.duration}>
                                           <ReasoningTrigger />
@@ -697,7 +685,7 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
                                         </Reasoning>
                                       )}
                                       <MessageContent>
-                                        <MessageResponse>{version.content}</MessageResponse>
+                                        <MessageResponse sources={message.sources}>{version.content}</MessageResponse>
                                       </MessageContent>
                                       {message.from === 'assistant' && !messageFeedbackSubmitted.has(message.key) && (
                                         <div className="mt-2 flex gap-2">
