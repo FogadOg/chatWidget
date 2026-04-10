@@ -151,7 +151,12 @@ export default function MessageBubble({ message, widgetConfig, assistantName, sh
         return `[${p1}](#fn-${p1} "${esc}")`;
       });
 
-      return linkifyText(result);
+      // If we've injected any markdown links already (e.g. from citation processing),
+      // avoid running `linkifyText` over the full string as it may rewrite URLs
+      // that are already inside markdown link parentheses and produce nested/malformed
+      // links. Only linkify when no markdown links are present.
+      const hasMarkdownLink = /\[[^\]]+\]\([^\)]+\)/.test(result);
+      return hasMarkdownLink ? result : linkifyText(result);
     } catch {
       return linkifyText(message.text);
     }
