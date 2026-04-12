@@ -79,7 +79,7 @@ export const createAuthError = (message: string, code: WidgetErrorCode = WidgetE
     message,
     code,
     WidgetErrorType.AUTH_ERROR,
-    false,
+    true,
     'Failed to authenticate. Please check your credentials.'
   );
 };

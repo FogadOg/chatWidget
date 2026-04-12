@@ -76,7 +76,7 @@ export const getButtonPixelSize = (buttonSize: string) => {
   return BUTTON_SIZES[buttonSize as keyof typeof BUTTON_SIZES] || BUTTON_SIZES.md;
 };
 
-const getNormalizedEdgeOffset = (config?: WidgetConfig | null): number => {
+export const getNormalizedEdgeOffset = (config?: WidgetConfig | null): number => {
   if (!config) return 20;
 
   const raw = (config as WidgetConfig & { edgeOffset?: unknown }).edgeOffset ?? config.edge_offset;
@@ -645,7 +645,7 @@ export default function EmbedClient({
     try {
       // Runtime requests should include auth + embed origin headers.
       // Some older tests only mock bare GET URLs, so we keep a fallback.
-      let response = await fetch(API.sessionMessages(sessionId), {
+      let response = await fetch(API.sessionMessages(sessionId ?? undefined), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -687,7 +687,7 @@ export default function EmbedClient({
         }
 
         // Fallback unauthenticated attempt
-        response = await fetch(API.sessionMessages(sessionId));
+        response = await fetch(API.sessionMessages(sessionId ?? undefined));
       }
 
       if (!response.ok) {
@@ -750,7 +750,7 @@ export default function EmbedClient({
                 storedLocal = parsed.filter((m) => {
                   if (serverIds.has(m.id) || inMemoryIds.has(m.id)) return false;
                   try {
-                    const isDup = loadedMessages.some(lm => (lm.text || lm.content || '') === (m.text || m.content || '') && Math.abs((lm.timestamp || 0) - (m.timestamp || 0)) < 30000);
+                    const isDup = loadedMessages.some(lm => ((lm.text || (lm as any).content || '') === (m.text || (m as any).content || '')) && Math.abs((lm.timestamp || 0) - (m.timestamp || 0)) < 30000);
                     return !isDup;
                   } catch {
                     return true;
@@ -830,7 +830,7 @@ export default function EmbedClient({
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 30000);
 
-          const resp = await fetch(API.sessionMessages(sid), {
+          const resp = await fetch(API.sessionMessages(sid ?? undefined), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -909,7 +909,7 @@ export default function EmbedClient({
         try {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 30000);
-          const resp = await fetch(API.sessionMessages(sid), {
+          const resp = await fetch(API.sessionMessages(sid ?? undefined), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1265,7 +1265,7 @@ export default function EmbedClient({
 
   const validateAndRestoreSession = async (sessionId: string, assistantId: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null) => {
     try {
-      let response = await fetch(API.sessionMessages(sessionId), {
+      let response = await fetch(API.sessionMessages(sessionId ?? undefined), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1284,7 +1284,7 @@ export default function EmbedClient({
 
       // Fallback for test harnesses/mocks that only handle bare GET calls.
       if (!Array.isArray(data?.data?.messages)) {
-        response = await fetch(API.sessionMessages(sessionId));
+        response = await fetch(API.sessionMessages(sessionId ?? undefined));
         if (response.ok) {
           data = await response.json();
         }
@@ -1344,7 +1344,7 @@ export default function EmbedClient({
                   storedLocalPre = parsedPre.filter((m) => {
                     if (preloadedIds.has(m.id)) return false;
                     try {
-                      const isDup = preloadedMessages.some(pm => (pm.text || pm.content || '') === (m.text || m.content || '') && Math.abs((pm.timestamp || 0) - (m.timestamp || 0)) < 30000);
+                      const isDup = preloadedMessages.some(pm => ((pm.text || (pm as any).content || '') === (m.text || (m as any).content || '')) && Math.abs((pm.timestamp || 0) - (m.timestamp || 0)) < 30000);
                       return !isDup;
                     } catch {
                       return true;
@@ -1415,7 +1415,7 @@ export default function EmbedClient({
                 storedLocal = parsed.filter((m) => {
                   if (serverIds.has(m.id)) return false;
                   try {
-                    const isDup = loadedMessages.some(lm => (lm.text || lm.content || '') === (m.text || m.content || '') && Math.abs((lm.timestamp || 0) - (m.timestamp || 0)) < 30000);
+                    const isDup = loadedMessages.some(lm => ((lm.text || (lm as any).content || '') === (m.text || (m as any).content || '')) && Math.abs((lm.timestamp || 0) - (m.timestamp || 0)) < 30000);
                     return !isDup;
                   } catch {
                     return true;
@@ -1797,7 +1797,7 @@ export default function EmbedClient({
             // Prefer latest refs (in case we recovered above)
             const useSession = sessionIdRef.current || sessionId;
             const useToken = authTokenRef.current || authToken;
-            const response = await fetch(API.sessionMessages(useSession), {
+            const response = await fetch(API.sessionMessages(useSession ?? undefined), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1894,8 +1894,8 @@ export default function EmbedClient({
         setMessages(prev => prev.filter(m => m.id !== userMessage.id));
       }
 
-      // Reload all messages from server
-      await loadSessionMessages(sessionId, authToken);
+      // Reload all messages from server (only if we have a session and auth)
+      if (sessionId && authToken) await loadSessionMessages(sessionId, authToken);
     } catch (err: unknown) {
       const e = err as unknown as { userMessage?: string; message?: string; code?: string | WidgetErrorCode; name?: string };
       const errMsg = (e.message || '').toLowerCase();

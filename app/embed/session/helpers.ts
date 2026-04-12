@@ -103,7 +103,7 @@ export function storeSession(sessionStorageKey: string, sessionId: string, expir
 
 export async function loadSessionMessages(
   sessionId: string,
-  token: string,
+  token?: string | null,
   setMessages?: ((msgs: Message[]) => void) | boolean
 ) {
   // Defensive guard: avoid making requests when sessionId is missing/null.
@@ -114,11 +114,12 @@ export async function loadSessionMessages(
   const setMessagesFn = typeof setMessages === 'function' ? setMessages : undefined;
   const hasCallback = !!setMessagesFn;
   try {
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     const response = await fetch(API.sessionMessages(sessionId), {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
     });
 
     if (!response.ok) {
