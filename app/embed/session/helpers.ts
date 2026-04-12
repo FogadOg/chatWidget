@@ -106,6 +106,11 @@ export async function loadSessionMessages(
   token: string,
   setMessages?: ((msgs: Message[]) => void) | boolean
 ) {
+  // Defensive guard: avoid making requests when sessionId is missing/null.
+  if (!sessionId) {
+    logError(new Error('loadSessionMessages called with empty sessionId'), { action: 'loadSessionMessages', sessionId });
+    return;
+  }
   const setMessagesFn = typeof setMessages === 'function' ? setMessages : undefined;
   const hasCallback = !!setMessagesFn;
   try {

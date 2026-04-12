@@ -275,6 +275,10 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
   // Validate and restore existing session
   const validateAndRestoreSession = useCallback(async (sessionId: string, token: string) => {
+    if (!sessionId) {
+      console.error('validateAndRestoreSession called with empty sessionId');
+      return;
+    }
     try {
       const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
@@ -325,6 +329,10 @@ export default function DocsClient({ clientId, assistantId, configId, locale: in
 
   // Load session messages
   const loadSessionMessages = useCallback(async (sessionId: string, token: string, isNewSession = false) => {
+    if (!sessionId) {
+      console.error('Skipping loadSessionMessages: missing sessionId');
+      return;
+    }
     try {
       const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',

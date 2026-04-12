@@ -32,7 +32,12 @@ export const API = {
   // Session endpoints
   sessions: () => `${getApiV1BaseUrl()}/sessions/`,
   session: (sessionId: string) => `${getApiV1BaseUrl()}/sessions/${sessionId}`,
-  sessionMessages: (sessionId: string) => `${getApiV1BaseUrl()}/sessions/${sessionId}/messages`,
+  sessionMessages: (sessionId?: string) => {
+    if (!sessionId) {
+      throw new Error('API.sessionMessages called with empty sessionId');
+    }
+    return `${getApiV1BaseUrl()}/sessions/${sessionId}/messages`;
+  },
   sessionFeedback: (sessionId: string) => `${getApiV1BaseUrl()}/sessions/${sessionId}/feedback`,
 
   // Message endpoints

@@ -637,7 +637,11 @@ export default function EmbedClient({
   }, []);
 
   // Load session messages helper (moved above effects that reference it)
-  const loadSessionMessages = useCallback(async (sessionId: string, token: string, isInitial: boolean = false) => {
+  const loadSessionMessages = useCallback(async (sessionId: string, token: string, isInitial: boolean = false, _retry: boolean = false) => {
+    if (!sessionId) {
+      logError('Skipping loadSessionMessages: missing sessionId', { action: 'loadSessionMessages', isInitial });
+      return;
+    }
     try {
       // Runtime requests should include auth + embed origin headers.
       // Some older tests only mock bare GET URLs, so we keep a fallback.
@@ -650,6 +654,39 @@ export default function EmbedClient({
       });
 
       if (!response.ok) {
+        // If auth failed (expired token / session) try an unauthenticated fetch as a fallback
+        // but if the server explicitly returned 401/404, attempt silent recovery once.
+        const status = response.status;
+        if ((status === 401 || status === 404) && !_retry) {
+          // Clear any stored session reference to force recreation
+          try { localStorage.removeItem(sessionStorageKey); } catch {}
+          // Try to refresh auth token silently
+          let newToken = authTokenRef.current || token;
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const maybe = await (getAuthToken as any)(initialClientId, initialParentOrigin);
+            if (maybe) newToken = maybe;
+          } catch {
+            // ignore
+          }
+
+          // Attempt to create a fresh session if we have a token
+          if (newToken) {
+            try {
+              await createSession(initialAssistantId, newToken);
+              const newSid = sessionIdRef.current;
+              if (newSid) {
+                // Retry loading messages with new session/token (only once)
+                return await loadSessionMessages(newSid, newToken, isInitial, true);
+              }
+            } catch {
+              // fall through to unauthenticated attempt below
+            }
+          }
+
+        }
+
+        // Fallback unauthenticated attempt
         response = await fetch(API.sessionMessages(sessionId));
       }
 
@@ -755,14 +792,19 @@ export default function EmbedClient({
       } else {
         throw new Error('Invalid messages response format');
       }
-    } catch (err) {
+    } catch (err: any) {
       // If this is a programmatic reload (no isInitial flag), rethrow so
       // callers can handle and log with their own context (e.g. handleSubmit).
       if (!isInitial) {
         throw err;
       }
 
-      logError(err, { sessionId, isInitial, action: 'loadSessionMessages' });
+      try {
+        // eslint-disable-next-line no-console
+        console.error('EmbedClient.loadSessionMessages error', err, { sessionId, isInitial });
+      } catch {}
+
+      logError(err instanceof Error ? (err.message || 'Unknown error') : String(err), { sessionId, isInitial, action: 'loadSessionMessages' });
       // Non-critical error for initial loads
       if (isInitial) {
         setError('Failed to load conversation history');
@@ -1668,41 +1710,55 @@ export default function EmbedClient({
     const message = messageText || input;
     if (!message.trim()) return;
 
-    // Check if we have a session and auth token
+    // Check if we have a session and auth token. If missing, attempt silent recovery
+    // and continue sending if recovery succeeds.
     if (!sessionId || !authToken) {
       const errorMsg = String(t.sessionOrAuthError) || 'Session or authentication error';
       setError(errorMsg);
 
-      // Try to recover automatically:
-      // - If auth token missing, attempt to fetch one
-      // - If session missing but we have a token, try to create a session
       try {
-        let token = authToken;
+        let token = authTokenRef.current || authToken;
         if (!token) {
-          // Attempt to get a fresh auth token silently
           try {
-            // `getAuthToken` may update auth state in the hook; use returned token if provided
+            // Attempt to get a fresh auth token silently; hook may update state
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const maybe = await (getAuthToken as any)(initialClientId, initialParentOrigin);
             if (maybe) token = maybe;
           } catch {
-            // ignore token refresh failures — we'll surface the user-friendly error above
+            // ignore token refresh failures
           }
         }
 
-        if (token && !sessionId) {
-          // Attempt to create a new session silently
+        // If we now have a token but no session, try to create one
+        const sidBefore = sessionIdRef.current || sessionId;
+        if (token && !sidBefore) {
           try {
             await createSession(initialAssistantId, token);
           } catch {
-            // If creation fails, don't throw further — user already sees the error
+            // creation failed — continue to check below
           }
         }
-      } catch {
-        // swallow any unexpected recovery errors
-      }
 
-      return;
+        // Re-evaluate session/token after recovery attempts
+        const sid = sessionIdRef.current || sessionId;
+        const tokenNow = authTokenRef.current || token || authToken;
+        if (!sid || !tokenNow) {
+          // Still missing credentials — give up and return
+          return;
+        }
+
+        // Update local references so subsequent logic uses recovered values
+        // (we'll use `sid` and `tokenNow` when sending below)
+        // Replace captured sessionId/authToken variables by shadowing
+        // (they are const in closure; instead pass `sid`/`tokenNow` to fetch calls)
+
+        // Proceed — fall through to sending using recovered `sid`/`tokenNow`
+        // We'll ensure the fetch below uses these variables.
+
+      } catch {
+        // swallow unexpected recovery errors and return
+        return;
+      }
     }
 
     // Immediately add the user message to the UI
@@ -1738,11 +1794,14 @@ export default function EmbedClient({
           const timeoutId = setTimeout(() => controller.abort(), 30000);
 
           try {
-            const response = await fetch(API.sessionMessages(sessionId), {
+            // Prefer latest refs (in case we recovered above)
+            const useSession = sessionIdRef.current || sessionId;
+            const useToken = authTokenRef.current || authToken;
+            const response = await fetch(API.sessionMessages(useSession), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
+                'Authorization': `Bearer ${useToken}`,
                 ...embedOriginHeader(initialParentOrigin),
               },
               body: JSON.stringify({

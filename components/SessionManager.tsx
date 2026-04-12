@@ -1,6 +1,6 @@
 'use client';
 
- 
+
 
 import { useEffect, useCallback } from 'react';
 import { createSessionError, retryWithBackoff, parseApiError, WidgetErrorCode, createNetworkError } from 'lib/errorHandling';
@@ -143,7 +143,7 @@ export default function SessionManager({
       onSessionError(errorMessage);
       logError(err instanceof Error ? err.message : String(err), { assistantId, action: 'createSession' });
     }
-   
+
   }, [assistantId, authToken, locale, getVisitorId, storeSession, onSessionCreated, onSessionError]);
 
   const validateAndRestoreSession = useCallback(async (storedSessionId: string) => {
@@ -201,6 +201,10 @@ export default function SessionManager({
   }, [assistantId, authToken, createSession, onSessionCreated, onMessagesLoaded, storageKey]);
 
   const loadSessionMessages = useCallback(async (sessionId: string) => {
+    if (!sessionId) {
+      logError('Skipping loadSessionMessages: missing sessionId', { action: 'loadSessionMessages' });
+      return;
+    }
     try {
       const response = await fetch(API.sessionMessages(sessionId), {
         method: 'GET',
@@ -239,8 +243,15 @@ export default function SessionManager({
       } else {
         throw new Error('Invalid messages response format');
       }
-    } catch (err) {
-      logError(err instanceof Error ? err.message : String(err), { sessionId, action: 'loadSessionMessages' });
+    } catch (err: any) {
+      try {
+        // Surface full error object in dev console for easier debugging
+        // without changing external logging behavior.
+        // eslint-disable-next-line no-console
+        console.error('loadSessionMessages error', err, { sessionId, action: 'loadSessionMessages' });
+      } catch {}
+
+      logError(err instanceof Error ? (err.message || 'Unknown error') : String(err), { sessionId, action: 'loadSessionMessages' });
       // Non-critical error for non-initial loads
     }
   }, [authToken, onMessagesLoaded]);
