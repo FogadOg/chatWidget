@@ -707,9 +707,18 @@ export default function EmbedClient({
               const parsed = JSON.parse(raw) as Message[];
               if (Array.isArray(parsed)) {
                 const inMemoryIds = new Set(inMemoryLocal.map((m) => m.id));
-                storedLocal = parsed.filter(
-                  (m) => !serverIds.has(m.id) && !inMemoryIds.has(m.id)
-                );
+                // Filter out any local messages that are already present on server
+                // or that appear to be duplicates of server messages (same text
+                // and within 30s of a server timestamp).
+                storedLocal = parsed.filter((m) => {
+                  if (serverIds.has(m.id) || inMemoryIds.has(m.id)) return false;
+                  try {
+                    const isDup = loadedMessages.some(lm => (lm.text || lm.content || '') === (m.text || m.content || '') && Math.abs((lm.timestamp || 0) - (m.timestamp || 0)) < 30000);
+                    return !isDup;
+                  } catch {
+                    return true;
+                  }
+                });
               }
             }
           } catch {
@@ -1290,7 +1299,15 @@ export default function EmbedClient({
               if (rawPre) {
                 const parsedPre = JSON.parse(rawPre) as Message[];
                 if (Array.isArray(parsedPre)) {
-                  storedLocalPre = parsedPre.filter((m) => !preloadedIds.has(m.id));
+                  storedLocalPre = parsedPre.filter((m) => {
+                    if (preloadedIds.has(m.id)) return false;
+                    try {
+                      const isDup = preloadedMessages.some(pm => (pm.text || pm.content || '') === (m.text || m.content || '') && Math.abs((pm.timestamp || 0) - (m.timestamp || 0)) < 30000);
+                      return !isDup;
+                    } catch {
+                      return true;
+                    }
+                  });
                 }
               }
             } catch { /* ignore */ }
@@ -1353,7 +1370,15 @@ export default function EmbedClient({
             if (raw) {
               const parsed = JSON.parse(raw) as Message[];
               if (Array.isArray(parsed)) {
-                storedLocal = parsed.filter((m) => !serverIds.has(m.id));
+                storedLocal = parsed.filter((m) => {
+                  if (serverIds.has(m.id)) return false;
+                  try {
+                    const isDup = loadedMessages.some(lm => (lm.text || lm.content || '') === (m.text || m.content || '') && Math.abs((lm.timestamp || 0) - (m.timestamp || 0)) < 30000);
+                    return !isDup;
+                  } catch {
+                    return true;
+                  }
+                });
               }
             }
           } catch {
@@ -1647,10 +1672,36 @@ export default function EmbedClient({
     if (!sessionId || !authToken) {
       const errorMsg = String(t.sessionOrAuthError) || 'Session or authentication error';
       setError(errorMsg);
-      logError(new Error('Missing session or auth token'), {
-        hasSession: !!sessionId,
-        hasAuth: !!authToken
-      });
+
+      // Try to recover automatically:
+      // - If auth token missing, attempt to fetch one
+      // - If session missing but we have a token, try to create a session
+      try {
+        let token = authToken;
+        if (!token) {
+          // Attempt to get a fresh auth token silently
+          try {
+            // `getAuthToken` may update auth state in the hook; use returned token if provided
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const maybe = await (getAuthToken as any)(initialClientId, initialParentOrigin);
+            if (maybe) token = maybe;
+          } catch {
+            // ignore token refresh failures — we'll surface the user-friendly error above
+          }
+        }
+
+        if (token && !sessionId) {
+          // Attempt to create a new session silently
+          try {
+            await createSession(initialAssistantId, token);
+          } catch {
+            // If creation fails, don't throw further — user already sees the error
+          }
+        }
+      } catch {
+        // swallow any unexpected recovery errors
+      }
+
       return;
     }
 
