@@ -6,7 +6,6 @@ export default function GettingStartedPage() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
       <main className="flex min-h-screen w-full max-w-3xl flex-col gap-10 py-16 px-8 bg-white dark:bg-zinc-900 sm:px-16">
 
-        {/* Back link */}
         <Link
           href="/"
           className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
@@ -87,6 +86,127 @@ export default function GettingStartedPage() {
             The widget will appear on your page. It respects the position, colors, and behavior you configured in the dashboard.
           </p>
         </section>
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-sm font-bold text-white dark:bg-zinc-100 dark:text-zinc-900">
+                  4
+                </span>
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Try the docs widget</h2>
+              </div>
+              <p className="text-zinc-600 dark:text-zinc-400 pl-10">
+                The docs widget works the same way — load the script and call{' '}
+                <code className="font-mono text-sm bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+                  window.CompaninDocsWidget.open()
+                </code>{' '}
+                to open it programmatically. Try it live:
+              </p>
+
+              {/* Code snippets — same tabs as the main widget example */}
+              <FrameworkTabs snippets={{
+                'HTML / JS':
+`<script
+  src="https://widget.companin.tech/docs-widget.js"
+  data-client-id="YOUR_CLIENT_ID"
+  data-assistant-id="YOUR_ASSISTANT_ID"
+  data-config-id="YOUR_CONFIG_ID"
+  data-instance-id="docs-help"
+  data-locale="en">
+</script>
+
+<button onclick="window.CompaninDocsWidget.open()">
+  Ask the assistant
+</button>`,
+                'Next.js':
+`// app/layout.tsx
+'use client';
+
+import { useEffect } from 'react';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://widget.companin.tech/docs-widget.js';
+    script.dataset.clientId = 'YOUR_CLIENT_ID';
+    script.dataset.assistantId = 'YOUR_ASSISTANT_ID';
+    script.dataset.configId = 'YOUR_CONFIG_ID';
+    script.dataset.instanceId = 'docs-help';
+    script.dataset.locale = 'en';
+    document.head.appendChild(script);
+    return () => { script.remove(); };
+  }, []);
+
+  return <html><body>{children}</body></html>;
+}`,
+                'React':
+`// src/App.tsx
+import { useEffect } from 'react';
+
+export default function App() {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://widget.companin.tech/docs-widget.js';
+    script.dataset.clientId = 'YOUR_CLIENT_ID';
+    script.dataset.assistantId = 'YOUR_ASSISTANT_ID';
+    script.dataset.configId = 'YOUR_CONFIG_ID';
+    script.dataset.instanceId = 'docs-help';
+    script.dataset.locale = 'en';
+    document.head.appendChild(script);
+    return () => { script.remove(); };
+  }, []);
+
+  return (
+    <div>
+      <button onClick={() => window.CompaninDocsWidget?.open()}>
+        Ask the assistant
+      </button>
+    </div>
+  );
+}`,
+                'Angular':
+`// src/app/app.component.ts
+import { Component, OnInit } from '@angular/core';
+
+@Component({ selector: 'app-root', templateUrl: './app.component.html' })
+export class AppComponent implements OnInit {
+  ngOnInit(): void {
+    const script = document.createElement('script');
+    script.src = 'https://widget.companin.tech/docs-widget.js';
+    script.dataset['clientId'] = 'YOUR_CLIENT_ID';
+    script.dataset['assistantId'] = 'YOUR_ASSISTANT_ID';
+    script.dataset['configId'] = 'YOUR_CONFIG_ID';
+    script.dataset['instanceId'] = 'docs-help';
+    script.dataset['locale'] = 'en';
+    document.head.appendChild(script);
+  }
+
+  openAssistant(): void {
+    (window as any).CompaninDocsWidget?.open();
+  }
+}`,
+                'Vue':
+`<!-- src/App.vue -->
+<script setup lang="ts">
+import { onMounted } from 'vue';
+
+onMounted(() => {
+  const script = document.createElement('script');
+  script.src = 'https://widget.companin.tech/docs-widget.js';
+  script.dataset.clientId = 'YOUR_CLIENT_ID';
+  script.dataset.assistantId = 'YOUR_ASSISTANT_ID';
+  script.dataset.configId = 'YOUR_CONFIG_ID';
+  script.dataset.instanceId = 'docs-help';
+  script.dataset.locale = 'en';
+  document.head.appendChild(script);
+});
+
+const open = () => (window as any).CompaninDocsWidget?.open();
+</script>
+
+<template>
+  <button @click="open">Ask the assistant</button>
+</template>`,
+              }} />
+            </section>
 
 
       </main>

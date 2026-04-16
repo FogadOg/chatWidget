@@ -213,9 +213,14 @@ function HighlightedCode({ code, language }: { code: string; language: string })
   );
 }
 
-export default function FrameworkTabs() {
+interface FrameworkTabsProps {
+  snippets?: Partial<Record<TabKey, string>>;
+}
+
+export default function FrameworkTabs({ snippets }: FrameworkTabsProps = {}) {
+  const merged = { ...SNIPPETS, ...snippets };
   const [active, setActive] = useState<TabKey>(TABS[0]);
-  const snippet = SNIPPETS[active];
+  const snippet = merged[active];
   const language = LANGUAGES[active];
 
   return (
