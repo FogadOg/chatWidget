@@ -3,42 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useWidgetTranslation } from '../../../hooks/useWidgetTranslation';
 
-const BASE_CONFIG = `  window.ChatWidgetConfig = {
-    configId: 'YOUR_CONFIG_ID',
-    primaryColor: '#111827',
-    secondaryColor: '#374151',
-    backgroundColor: '#ffffff',
-    textColor: '#1f2937',
-    borderRadius: 8,
-    hideOnMobile: false,
-    title: { "en": "Chat Assistant" },
-    subtitle: { "en": "How can we help you today?" },
-    placeholder: { "en": "Type your message..." },
-    greetingMessage: {
-      "text": { "en": "Hello! How can I assist you today?" },
-      "buttons": []
-    },
-    defaultLanguage: 'en',
-    customCSS: '',
-    showTimestamps: true,
-    showTypingIndicator: true,
-    showMessageAvatars: true,
-    showUnreadBadge: true,
-    position: 'bottom-right',
-    edgeOffset: 20
-  };`;
-
 type TabKey = 'HTML / JS' | 'Next.js' | 'React' | 'Angular' | 'Vue';
 
 const SNIPPETS: Record<TabKey, string> = {
-  'HTML / JS': `<script>
-  (function() {
-${BASE_CONFIG}
-    var script = document.createElement('script');
-    script.src = 'https://widget.companin.tech/widget.js';
-    script.async = true;
-    document.head.appendChild(script);
-  })();
+  'HTML / JS': `<script
+  src="https://widget.companin.tech/widget.js"
+  data-client-id="YOUR_CLIENT_ID"
+  data-assistant-id="YOUR_ASSISTANT_ID"
+  data-config-id="YOUR_CONFIG_ID"
+  data-locale="en">
 <\/script>`,
 
   'Next.js': `// app/layout.tsx (or pages/_app.tsx)
@@ -48,14 +21,12 @@ import { useEffect } from 'react';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    (window as any).ChatWidgetConfig = {
-      configId: 'YOUR_CONFIG_ID',
-      primaryColor: '#111827',
-      // ... other options
-    };
     const script = document.createElement('script');
     script.src = 'https://widget.companin.tech/widget.js';
-    script.async = true;
+    script.dataset.clientId = 'YOUR_CLIENT_ID';
+    script.dataset.assistantId = 'YOUR_ASSISTANT_ID';
+    script.dataset.configId = 'YOUR_CONFIG_ID';
+    script.dataset.locale = 'en';
     document.head.appendChild(script);
     return () => { script.remove(); };
   }, []);
@@ -68,14 +39,12 @@ import { useEffect } from 'react';
 
 export default function App() {
   useEffect(() => {
-    (window as any).ChatWidgetConfig = {
-      configId: 'YOUR_CONFIG_ID',
-      primaryColor: '#111827',
-      // ... other options
-    };
     const script = document.createElement('script');
     script.src = 'https://widget.companin.tech/widget.js';
-    script.async = true;
+    script.dataset.clientId = 'YOUR_CLIENT_ID';
+    script.dataset.assistantId = 'YOUR_ASSISTANT_ID';
+    script.dataset.configId = 'YOUR_CONFIG_ID';
+    script.dataset.locale = 'en';
     document.head.appendChild(script);
     return () => { script.remove(); };
   }, []);
@@ -89,14 +58,12 @@ import { Component, OnInit } from '@angular/core';
 @Component({ selector: 'app-root', templateUrl: './app.component.html' })
 export class AppComponent implements OnInit {
   ngOnInit(): void {
-    (window as any).ChatWidgetConfig = {
-      configId: 'YOUR_CONFIG_ID',
-      primaryColor: '#111827',
-      // ... other options
-    };
     const script = document.createElement('script');
     script.src = 'https://widget.companin.tech/widget.js';
-    script.async = true;
+    script.dataset['clientId'] = 'YOUR_CLIENT_ID';
+    script.dataset['assistantId'] = 'YOUR_ASSISTANT_ID';
+    script.dataset['configId'] = 'YOUR_CONFIG_ID';
+    script.dataset['locale'] = 'en';
     document.head.appendChild(script);
   }
 }`,
@@ -106,14 +73,12 @@ export class AppComponent implements OnInit {
 import { onMounted } from 'vue';
 
 onMounted(() => {
-  (window as any).ChatWidgetConfig = {
-    configId: 'YOUR_CONFIG_ID',
-    primaryColor: '#111827',
-    // ... other options
-  };
   const script = document.createElement('script');
   script.src = 'https://widget.companin.tech/widget.js';
-  script.async = true;
+  script.dataset.clientId = 'YOUR_CLIENT_ID';
+  script.dataset.assistantId = 'YOUR_ASSISTANT_ID';
+  script.dataset.configId = 'YOUR_CONFIG_ID';
+  script.dataset.locale = 'en';
   document.head.appendChild(script);
 });
 <\/script>
