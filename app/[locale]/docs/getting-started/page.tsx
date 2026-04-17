@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import FrameworkTabs from './FrameworkTabs';
-import { getTranslations } from '../../../lib/i18n';
+import { getTranslations } from '../../../../lib/i18n';
 
-export default function GettingStartedPage() {
-  const t = getTranslations('en') as Record<string, string>;
+export default async function GettingStartedPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = getTranslations(locale) as Record<string, string>;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">

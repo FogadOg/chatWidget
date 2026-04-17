@@ -68,11 +68,17 @@ export const getLocaleDirection = (locale?: string | null): "ltr" | "rtl" => {
   return RTL_LOCALES.has(short) ? "rtl" : "ltr";
 };
 
+// Maps alternate/regional codes to the project's supported locale code
+const LOCALE_ALIASES: Record<string, SupportedLocale> = {
+  no: "nb",  // Norwegian (generic) → Norwegian Bokmål
+};
+
 const resolveSupportedLocale = (locale?: string | null): SupportedLocale | null => {
   const normalized = normalizeLocale(locale);
   if (!normalized) return null;
-  const short = normalized.split("-")[0] as SupportedLocale;
-  if (short in LOCALES) return short;
+  const short = normalized.split("-")[0];
+  if (short in LOCALES) return short as SupportedLocale;
+  if (short in LOCALE_ALIASES) return LOCALE_ALIASES[short];
   return null;
 };
 
