@@ -10,6 +10,20 @@ REPORT_PATH = Path(__file__).resolve().parents[0] / 'locale_issues_report.json'
 PLACEHOLDER_PATTERNS = [r"\{[^}]+\}", r"%[sd]", r"\$\{[^}]+\}"]
 PLACEHOLDER_RE = re.compile('|'.join(f'({p})' for p in PLACEHOLDER_PATTERNS))
 
+# Values that are legitimately identical across all languages and should not be
+# counted as untranslated: symbols, numbers, abbreviations, code/API identifiers.
+ALWAYS_SAME = re.compile(
+    r'^('
+    r'[+\-=<>/*#@!?|~^&%]{1,3}'   # symbols / operators
+    r'|\d[\d.,\-–/ ]*%?'           # numbers, percentages, ranges
+    r'|[A-Z]{2,6}(\s*&\s*[A-Za-z ]+)?'  # abbreviations: API, UX, FAQ, CSS, HTML…
+    r'|[a-z]+\(\)'                 # function calls: open(), close()
+    r'|https?://\S+'               # URLs
+    r'|[A-Z][a-z]+[A-Z]\w*'       # camelCase / PascalCase identifiers
+    r'|\d{3}'                      # HTTP status codes like 403, 404
+    r')$'
+)
+
 
 def flatten(d, parent_key='', sep='.'):
     items = {}
@@ -68,7 +82,7 @@ def main():
                 continue
             if isinstance(loc_val, str) and (loc_val.strip().startswith('PL:') or 'TODO' in loc_val or '__MISSING__' in loc_val):
                 suspicious_markers.append(k)
-            if loc_val == en_val and isinstance(en_val, str):
+            if loc_val == en_val and isinstance(en_val, str) and not ALWAYS_SAME.match(en_val.strip()):
                 untranslated.append({'key': k, 'value': loc_val})
             en_ph = extract_placeholders(en_val)
             loc_ph = extract_placeholders(loc_val)
