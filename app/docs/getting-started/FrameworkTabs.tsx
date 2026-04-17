@@ -12,6 +12,13 @@ const SNIPPETS: Record<TabKey, string> = {
   data-assistant-id="YOUR_ASSISTANT_ID"
   data-config-id="YOUR_CONFIG_ID"
   data-locale="en">
+<\/script>
+<script>
+  window.ChatWidgetConfig = {
+    primaryColor: '#6366f1',
+    position: 'bottom-right',
+    greetingMessage: 'Hi! How can I help you today?',
+  };
 <\/script>`,
 
   'Next.js': `// app/layout.tsx (or pages/_app.tsx)

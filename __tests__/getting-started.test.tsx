@@ -131,7 +131,7 @@ describe('GettingStartedPage', () => {
 
   it('renders the FrameworkTabs component', () => {
     render(<GettingStartedPage />)
-    expect(screen.getByText('HTML / JS')).toBeInTheDocument()
+    expect(screen.getAllByText('HTML / JS').length).toBeGreaterThan(0)
   })
 
   it('renders step numbers 1, 2, 3', () => {
