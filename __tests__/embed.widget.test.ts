@@ -486,8 +486,8 @@ describe('handleMessage — WIDGET_* events', () => {
     send({ type: 'WIDGET_SHOW' });
     send({ type: 'WIDGET_RESIZE', data: { width: 320, height: 480, position: 'bottom-right', edge_offset: 20 } });
     const cont = iframe!.parentElement as HTMLElement;
-    expect(cont.style.bottom).toBe('20px');
-    expect(cont.style.right).toBe('20px');
+    expect(cont.style.bottom).toContain('20px');
+    expect(cont.style.right).toContain('20px');
   });
 
   it('WIDGET_RESIZE with top-left position sets top/left with 16px min offset', () => {

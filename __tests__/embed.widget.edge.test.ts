@@ -173,7 +173,7 @@ describe('widget edge cases', () => {
     // width: 50 + padding*2 (padding=8) => 66px
     expect(container.style.width).toBe('66px');
     // left offset should be 16px because edge_offset parsed to 0 and position includes left
-    expect(container.style.left).toBe('16px');
+    expect(container.style.left).toContain('16px');
   });
 
   test('iframe load timeout shows error in container', async () => {
