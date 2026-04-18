@@ -663,7 +663,6 @@ export default function EmbedClient({
           // Try to refresh auth token silently
           let newToken = authTokenRef.current || token;
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const maybe = await (getAuthToken as any)(initialClientId, initialParentOrigin);
             if (maybe) newToken = maybe;
           } catch {
@@ -800,7 +799,6 @@ export default function EmbedClient({
       }
 
       try {
-        // eslint-disable-next-line no-console
         console.error('EmbedClient.loadSessionMessages error', err, { sessionId, isInitial });
       } catch {}
 
@@ -1721,7 +1719,6 @@ export default function EmbedClient({
         if (!token) {
           try {
             // Attempt to get a fresh auth token silently; hook may update state
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const maybe = await (getAuthToken as any)(initialClientId, initialParentOrigin);
             if (maybe) token = maybe;
           } catch {

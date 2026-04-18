@@ -247,7 +247,6 @@ export default function SessionManager({
       try {
         // Surface full error object in dev console for easier debugging
         // without changing external logging behavior.
-        // eslint-disable-next-line no-console
         console.error('loadSessionMessages error', err, { sessionId, action: 'loadSessionMessages' });
       } catch {}
 

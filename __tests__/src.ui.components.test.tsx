@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import Link from 'next/link'
 
 import { Alert, AlertDescription, AlertTitle } from '../src/components/ui/alert'
 import { Badge } from '../src/components/ui/badge'
@@ -88,7 +89,7 @@ describe('src ui components', () => {
 
     rerender(
       <Badge asChild variant="secondary">
-        <a href="/docs">Docs badge</a>
+        <Link href="/docs">Docs badge</Link>
       </Badge>
     )
     const anchorBadge = screen.getByRole('link', { name: 'Docs badge' })
