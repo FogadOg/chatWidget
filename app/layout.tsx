@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: en.appTitle,
   description: en.appDescription,
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default async function RootLayout({
