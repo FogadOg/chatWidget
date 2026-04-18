@@ -236,12 +236,12 @@
     };
     container.style.cssText = `
       position: fixed;
-      bottom: 20px;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
       width: auto;
       height: auto;
       padding: 0;
       box-sizing: border-box;
-      max-width: 100vw;
+      max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
       z-index: 999999;
       transition: all 0.3s ease;
       display: none;
@@ -692,16 +692,16 @@
                   container.style.left = '';
 
                   if (data.position.includes('bottom')) {
-                    container.style.bottom = `${offset}px`;
+                    container.style.bottom = `calc(${offset}px + env(safe-area-inset-bottom, 0px))`;
                   } else {
-                    container.style.top = `${offset}px`;
+                    container.style.top = `calc(${offset}px + env(safe-area-inset-top, 0px))`;
                   }
 
                   if (data.position.includes('left')) {
-                    container.style.left = `${offset}px`;
+                    container.style.left = `calc(${offset}px + env(safe-area-inset-left, 0px))`;
                     container.style.right = '';
                   } else if (data.position.includes('right')) {
-                    container.style.right = `${offset}px`;
+                    container.style.right = `calc(${offset}px + env(safe-area-inset-right, 0px))`;
                     container.style.left = '';
                   } else {
                     container.style.left = '';
@@ -822,7 +822,8 @@
       errorContainer.id = WIDGET_SCRIPT_ID + '-error';
       errorContainer.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+        right: calc(20px + env(safe-area-inset-right, 0px));
         width: 320px;
         background: #fef2f2;
         border: 1px solid #dc2626;
