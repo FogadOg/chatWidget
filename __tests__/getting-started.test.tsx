@@ -11,6 +11,11 @@ jest.mock('next/link', () => {
   return Link
 })
 
+// Mock next/headers used by the page's async server component
+jest.mock('next/headers', () => ({
+  headers: jest.fn(() => Promise.resolve({ get: jest.fn().mockReturnValue(null) })),
+}));
+
 // Mock shiki so HighlightedCode falls back to plain text in tests
 jest.mock('shiki', () => ({
   codeToHtml: jest.fn().mockRejectedValue(new Error('shiki not available in tests')),
@@ -103,46 +108,53 @@ describe('FrameworkTabs', () => {
 // ─── GettingStartedPage ───────────────────────────────────────────────────────
 
 describe('GettingStartedPage', () => {
-  it('renders the page heading', () => {
-    render(<GettingStartedPage />)
+  it('renders the page heading', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     expect(screen.getByRole('heading', { name: /getting started/i, level: 1 })).toBeInTheDocument()
   })
 
-  it('renders the back link', () => {
-    render(<GettingStartedPage />)
+  it('renders the back link', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     const link = screen.getByRole('link', { name: /back/i })
-    expect(link).toHaveAttribute('href', '/')
+    expect(link).toHaveAttribute('href', '/en')
   })
 
-  it('renders all three step headings', () => {
-    render(<GettingStartedPage />)
+  it('renders all three step headings', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     expect(screen.getByRole('heading', { name: /get your credentials/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /add the snippet/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /done/i })).toBeInTheDocument()
   })
 
-  it('renders the prerequisites section', () => {
-    render(<GettingStartedPage />)
+  it('renders the prerequisites section', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     expect(screen.getByRole('heading', { name: /prerequisites/i })).toBeInTheDocument()
     expect(screen.getAllByText(/Client ID/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Assistant ID/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Config ID/).length).toBeGreaterThan(0)
   })
 
-  it('renders the FrameworkTabs component', () => {
-    render(<GettingStartedPage />)
+  it('renders the FrameworkTabs component', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     expect(screen.getAllByText('HTML / JS').length).toBeGreaterThan(0)
   })
 
-  it('renders step numbers 1, 2, 3', () => {
-    render(<GettingStartedPage />)
+  it('renders step numbers 1, 2, 3', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
   })
 
-  it('mentions YOUR_CONFIG_ID placeholder in snippet instructions', () => {
-    render(<GettingStartedPage />)
+  it('mentions YOUR_CONFIG_ID placeholder in snippet instructions', async () => {
+    const jsx = await (GettingStartedPage as any)()
+    render(jsx)
     expect(screen.getAllByText(/YOUR_CONFIG_ID/).length).toBeGreaterThan(0)
   })
 })

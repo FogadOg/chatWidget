@@ -52,6 +52,7 @@ describe('RootLayout', () => {
     expect(metadata).toEqual({
       title: en.appTitle,
       description: en.appDescription,
+      icons: { icon: '/favicon.png' },
     });
   });
 
