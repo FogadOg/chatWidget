@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import FrameworkTabs from './FrameworkTabs';
+import LanguageSwitcher from '../../../components/LanguageSwitcher';
 import { getTranslations } from '../../../../lib/i18n';
 
 export default async function GettingStartedPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -10,12 +11,15 @@ export default async function GettingStartedPage({ params }: { params: Promise<{
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
       <main className="flex min-h-screen w-full max-w-3xl flex-col gap-10 py-16 px-8 bg-white dark:bg-zinc-900 sm:px-16">
 
-        <Link
-          href={`/${locale}`}
-          className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
-        >
-          {t.gettingStartedBack}
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href={`/${locale}`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+          >
+            {t.gettingStartedBack}
+          </Link>
+          <LanguageSwitcher locale={locale} />
+        </div>
 
         {/* Header */}
         <div className="flex flex-col gap-2">

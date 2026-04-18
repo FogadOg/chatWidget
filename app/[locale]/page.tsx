@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { getTranslations } from "../../lib/i18n";
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
@@ -8,6 +9,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-center gap-8 py-16 px-8 bg-white dark:bg-zinc-900 sm:px-16">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+          <LanguageSwitcher locale={locale} />
+        </div>
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="rounded-full bg-zinc-900 dark:bg-zinc-100 p-4">
             <svg className="w-12 h-12 text-white dark:text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
