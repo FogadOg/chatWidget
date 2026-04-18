@@ -1,16 +1,23 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import FrameworkTabs from './FrameworkTabs';
-import { getTranslations } from '../../../lib/i18n';
+import { getTranslations, resolveLocaleCandidates } from '../../../lib/i18n';
 
-export default function GettingStartedPage() {
-  const t = getTranslations('en') as Record<string, string>;
+export default async function GettingStartedPage() {
+  const headersList = await headers();
+  const acceptLanguage = headersList.get('accept-language');
+  const candidates = (acceptLanguage ?? '')
+    .split(',')
+    .map((s) => s.split(';')[0].trim());
+  const locale = resolveLocaleCandidates(candidates);
+  const t = getTranslations(locale) as Record<string, string>;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
       <main className="flex min-h-screen w-full max-w-3xl flex-col gap-10 py-16 px-8 bg-white dark:bg-zinc-900 sm:px-16">
 
         <Link
-          href="/"
+          href={`/${locale}`}
           className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
         >
           {t.gettingStartedBack}

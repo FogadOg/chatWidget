@@ -11,7 +11,7 @@ export default async function GettingStartedPage({ params }: { params: Promise<{
       <main className="flex min-h-screen w-full max-w-3xl flex-col gap-10 py-16 px-8 bg-white dark:bg-zinc-900 sm:px-16">
 
         <Link
-          href="/"
+          href={`/${locale}`}
           className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
         >
           {t.gettingStartedBack}
