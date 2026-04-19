@@ -2,6 +2,10 @@
   "name": "widget-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
   "types": "types/index.d.ts",
   "exports": {
     ".": {
@@ -14,6 +18,7 @@
     "build:embed": "node scripts/build-embed.js",
     "build:sri": "node scripts/generate-sri.js",
     "build": "QUIET_LOCALE=1 npm run build:embed && npm run check-locales && next build && npm run build:sri && npm run test:coverage",
+    "heroku-postbuild": "QUIET_LOCALE=1 npm run build:embed && next build",
     "check-locales": "QUIET_LOCALE=1 python3 scripts/check_locale_issues.py && QUIET_LOCALE=1 python3 scripts/ci_warn_if_empty.py",
     "size-limit": "size-limit",
     "ci:size-limit": "npm run build && npm run size-limit",
