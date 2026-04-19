@@ -208,7 +208,7 @@
     // Create container with error handling
     const container = document.createElement("div");
     container.id = containerId;
-    const COMPACT_BUTTON_MAX_SIZE = 64;
+    const COMPACT_BUTTON_MAX_SIZE = 90;
     const COMPACT_BUTTON_OUTER_PADDING = 8;
     const parsePixelValue = (value) => {
       if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -237,7 +237,7 @@
     container.style.cssText = `
       position: fixed;
       bottom: 20px;
-      right: 20px;
+      right: max(20px, env(safe-area-inset-right, 0px));
       width: 72px;
       height: 72px;
       padding: 0;
@@ -290,6 +290,7 @@
           height: 100%;
           border: 0;
           background-color: transparent;
+          contain: strict;
         `;
         iframe.setAttribute("allow", "clipboard-write");
         iframe.setAttribute("title", COMPANY_NAME + ' Chat Widget');
@@ -665,9 +666,14 @@
                   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
                   const isSmallScreen = viewportWidth > 0 && viewportWidth < 480;
                   const isLauncherButton = containerPadding > 0;
-                  const offset = data.position.includes('left') && baseOffset === 0
+                  const isLeftPosition = data.position.includes('left');
+                  const offset = isLeftPosition && baseOffset === 0
                     ? (isSmallScreen && isLauncherButton ? 4 : 16)
-                    : (isSmallScreen && isLauncherButton ? Math.min(baseOffset, 4) : baseOffset);
+                    : isSmallScreen && isLauncherButton && isLeftPosition
+                      ? Math.min(baseOffset, 4)
+                      : isSmallScreen && isLauncherButton && !isLeftPosition
+                        ? baseOffset - 62
+                        : baseOffset;
                   const desiredWidth = resizeWidth !== null ? resizeWidth + (containerPadding * 2) : null;
                   const desiredHeight = resizeHeight !== null ? resizeHeight + (containerPadding * 2) : null;
                   // Reset all corner properties
