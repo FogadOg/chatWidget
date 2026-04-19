@@ -6,6 +6,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   typescript: {
     // Enforce type checking in production builds so real issues are surfaced
     // NOTE: some third-party packages ship TypeScript sources that cause
