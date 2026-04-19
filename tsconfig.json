@@ -65,6 +65,10 @@
     "**/__tests__/**",
     "__tests__/**",
     "**/__mocks__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
     "node_modules/react-markdown/**"
   ]
 }
