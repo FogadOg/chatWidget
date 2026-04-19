@@ -36,4 +36,4 @@ jobs:
         run: npm run build -- --webpack
 
       - name: Run size-limit
-        run: npx size-limit
+        run: npm run size-limit
