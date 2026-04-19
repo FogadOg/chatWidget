@@ -125,9 +125,9 @@ describe('useWidgetAuth', () => {
     });
 
     expect(token).toBeNull();
-    expect(result.current.authError).toBe('Configuration error. Please contact support.');
+    expect(result.current.authError).toBe('Configuration error: API base URL missing (got: ""). Set NEXT_PUBLIC_API_BASE_URL as a Docker build arg.');
     expect(createAuthError).toHaveBeenCalledWith(
-      'Widget API base URL is not configured',
+      'Widget API base URL is not configured (got: "")',
       1002
     );
     expect(logError).toHaveBeenCalledWith(
