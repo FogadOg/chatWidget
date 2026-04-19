@@ -532,6 +532,12 @@ export default function EmbedClient({
         let fetchedConfig: ReturnType<typeof validateConfig>['config'] | null = null;
         if (configIdParam) {
           fetchedConfig = await fetchWidgetConfig(configIdParam, token) ?? null;
+          if (fetchedConfig?.ga_measurement_id) {
+            window.parent.postMessage(
+              { type: 'WIDGET_GA_INIT', data: { gaMeasurementId: fetchedConfig.ga_measurement_id } },
+              initialParentOrigin || '*'
+            );
+          }
         }
 
         if (cancelled) return;

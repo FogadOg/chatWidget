@@ -11,6 +11,7 @@ export const EMBED_EVENTS = {
   MESSAGE: 'WIDGET_MESSAGE',
   RESPONSE: 'WIDGET_RESPONSE',
   AUTH_FAILURE: 'WIDGET_AUTH_FAILURE',
+  GA_INIT: 'WIDGET_GA_INIT',
 } as const;
 import { STORAGE_PREFIX } from "./constants";
 
