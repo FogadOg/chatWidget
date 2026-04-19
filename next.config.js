@@ -1,6 +1,8 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 let withBundleAnalyzer = (cfg) => cfg;
 if (process.env.ANALYZE === 'true') {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true });
   } catch {
     // @next/bundle-analyzer not installed (e.g. production CI); skip silently
