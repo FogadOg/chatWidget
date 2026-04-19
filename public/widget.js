@@ -236,12 +236,12 @@
     };
     container.style.cssText = `
       position: fixed;
-      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      width: auto;
-      height: auto;
+      bottom: 20px;
+      right: 20px;
+      width: 72px;
+      height: 72px;
       padding: 0;
       box-sizing: border-box;
-      max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
       z-index: 999999;
       transition: all 0.3s ease;
       display: none;
@@ -661,51 +661,62 @@
                     typeof data.edge_offset !== 'undefined' ? data.edge_offset : data.edgeOffset,
                     20
                   );
-                  const offset = data.position.includes('left') && baseOffset === 0 ? 16 : baseOffset;
                   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
                   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+                  const isSmallScreen = viewportWidth > 0 && viewportWidth < 480;
+                  const isLauncherButton = containerPadding > 0;
+                  const offset = data.position.includes('left') && baseOffset === 0
+                    ? (isSmallScreen && isLauncherButton ? 4 : 16)
+                    : (isSmallScreen && isLauncherButton ? Math.min(baseOffset, 4) : baseOffset);
                   const desiredWidth = resizeWidth !== null ? resizeWidth + (containerPadding * 2) : null;
                   const desiredHeight = resizeHeight !== null ? resizeHeight + (containerPadding * 2) : null;
-                  if (viewportWidth && desiredWidth !== null) {
-                    const maxWidth = Math.max(0, viewportWidth - (offset * 2));
-                    if (maxWidth > 0 && desiredWidth > maxWidth) {
-                      container.style.width = `${maxWidth}px`;
-                    }
-                    if (maxWidth > 0) {
-                      container.style.maxWidth = `${maxWidth}px`;
-                    }
-                  }
-                  if (viewportHeight && desiredHeight !== null) {
-                    const maxHeight = Math.max(0, viewportHeight - (offset * 2));
-                    if (maxHeight > 0 && desiredHeight > maxHeight) {
-                      container.style.height = `${maxHeight}px`;
-                    }
-                    if (maxHeight > 0) {
-                      container.style.maxHeight = `${maxHeight}px`;
-                    }
-                  }
-
                   // Reset all corner properties
                   container.style.bottom = '';
                   container.style.top = '';
                   container.style.right = '';
                   container.style.left = '';
+                  container.style.maxWidth = '';
+                  container.style.maxHeight = '';
 
-                  if (data.position.includes('bottom')) {
-                    container.style.bottom = `calc(${offset}px + env(safe-area-inset-bottom, 0px))`;
-                  } else {
-                    container.style.top = `calc(${offset}px + env(safe-area-inset-top, 0px))`;
-                  }
+                  const isMobile = containerPadding === 0 && viewportWidth > 0 && desiredWidth !== null && desiredWidth >= viewportWidth * 0.85;
 
-                  if (data.position.includes('left')) {
-                    container.style.left = `calc(${offset}px + env(safe-area-inset-left, 0px))`;
-                    container.style.right = '';
-                  } else if (data.position.includes('right')) {
-                    container.style.right = `calc(${offset}px + env(safe-area-inset-right, 0px))`;
-                    container.style.left = '';
+                  if (isMobile) {
+                    // Full-width on small screens: stretch edge to edge with safe-area margins
+                    const mobileMargin = 8;
+                    container.style.left = `max(${mobileMargin}px, env(safe-area-inset-left, 0px))`;
+                    container.style.right = `max(${mobileMargin}px, env(safe-area-inset-right, 0px))`;
+                    container.style.width = '';
+                    container.style.maxWidth = '';
+                    if (data.position.includes('bottom')) {
+                      container.style.bottom = `max(${offset}px, env(safe-area-inset-bottom, 0px))`;
+                    } else {
+                      container.style.top = `max(${offset}px, env(safe-area-inset-top, 0px))`;
+                    }
+                    if (desiredHeight !== null) {
+                      const maxHeight = Math.max(0, viewportHeight - offset - mobileMargin);
+                      container.style.maxHeight = `${maxHeight}px`;
+                    }
                   } else {
-                    container.style.left = '';
-                    container.style.right = '';
+                    // Launcher button on small screens: use plain px offset so safe-area doesn't push it away from corner
+                    if (data.position.includes('bottom')) {
+                      container.style.bottom = isSmallScreen && isLauncherButton ? `${offset}px` : `max(${offset}px, env(safe-area-inset-bottom, 0px))`;
+                    } else {
+                      container.style.top = isSmallScreen && isLauncherButton ? `${offset}px` : `max(${offset}px, env(safe-area-inset-top, 0px))`;
+                    }
+                    if (data.position.includes('left')) {
+                      container.style.left = isSmallScreen && isLauncherButton ? `${offset}px` : `max(${offset}px, env(safe-area-inset-left, 0px))`;
+                    } else if (data.position.includes('right')) {
+                      container.style.right = isSmallScreen && isLauncherButton ? `${offset}px` : `max(${offset}px, env(safe-area-inset-right, 0px))`;
+                    }
+                    // Clamp only via max-width/max-height, keeping edge anchor as reference
+                    if (viewportWidth && desiredWidth !== null) {
+                      const maxWidth = Math.max(0, viewportWidth - offset);
+                      if (maxWidth > 0) container.style.maxWidth = `${maxWidth}px`;
+                    }
+                    if (viewportHeight && desiredHeight !== null) {
+                      const maxHeight = Math.max(0, viewportHeight - offset);
+                      if (maxHeight > 0) container.style.maxHeight = `${maxHeight}px`;
+                    }
                   }
                 }
                 break;
