@@ -44,12 +44,13 @@ export function useWidgetAuth() {
 
     // Check if API base URL is configured
     if (!isApiConfigured()) {
+      const apiBaseUrl = getApiBaseUrl();
       const error = createAuthError(
-        'Widget API base URL is not configured',
+        `Widget API base URL is not configured (got: ${JSON.stringify(apiBaseUrl)})`,
         WidgetErrorCode.AUTH_TOKEN_FAILED
       );
-      setAuthError('Configuration error. Please contact support.');
-      logError(error, { apiBaseUrl: getApiBaseUrl() });
+      setAuthError(`Configuration error: API base URL missing (got: ${JSON.stringify(apiBaseUrl)}). Set NEXT_PUBLIC_API_BASE_URL as a Docker build arg.`);
+      logError(error, { apiBaseUrl });
       return null;
     }
 
