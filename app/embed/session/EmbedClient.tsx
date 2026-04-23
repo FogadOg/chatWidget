@@ -473,14 +473,12 @@ export default function EmbedClient({
     const checkSessionExpiry = () => {
       const stored = helpers.getStoredSession(sessionStorageKey);
       if (!stored && sessionId) {
-        // Session expired in localStorage, clear the state
+        // Session expired — clear the session ID so the next message triggers
+        // a new session, but keep messages visible so the chat history remains.
         setSessionId(null);
-        setMessages([]);
-        setFlowResponses([]);
       }
     };
 
-    // Check every 60 seconds
     const interval = setInterval(checkSessionExpiry, 60000);
     return () => clearInterval(interval);
   }, [sessionId, sessionStorageKey]);
@@ -861,7 +859,8 @@ export default function EmbedClient({
     } catch (err) {
       // ignore
     }
-  }, [activeLocale, authToken, initialParentOrigin, loadSessionMessages, sessionId, sessionStorageKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLocale, initialParentOrigin, loadSessionMessages, sessionStorageKey]);
 
   useEffect(() => {
     // Flush when browser regains connectivity
@@ -938,7 +937,8 @@ export default function EmbedClient({
 
     window.addEventListener('companin:retry-queued', onRetry as EventListener);
     return () => window.removeEventListener('companin:retry-queued', onRetry as EventListener);
-  }, [sessionId, authToken, activeLocale, initialParentOrigin, loadSessionMessages, sessionStorageKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLocale, initialParentOrigin, loadSessionMessages, sessionStorageKey]);
 
 
   // Proactive open trigger: delay-based and/or scroll-depth-based auto-open.
@@ -1127,7 +1127,7 @@ export default function EmbedClient({
   }, [widgetConfig, isCollapsed, initialParentOrigin, parentTargetOrigin]);
   // `loadSessionMessages` helper is defined earlier in the file.
 
-  const createSession = async (assistant: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null) => {
+  const createSession = async (assistant: string, token: string, configSnapshot?: ReturnType<typeof validateConfig>['config'] | null, skipMessageLoad = false) => {
     try {
       const visitorId = helpers.getVisitorId(initialClientId);
 
@@ -1242,8 +1242,11 @@ export default function EmbedClient({
         helpers.storeSession(baseSessionKey, sessionData.session_id, sessionData.expires_at);
       }
 
-      // Load messages after session creation
-      await loadSessionMessages(sessionData.session_id, token, true);
+      // Load messages after session creation — skip when recovering from expiry
+      // so existing in-memory messages are not wiped by the empty new session.
+      if (!skipMessageLoad) {
+        await loadSessionMessages(sessionData.session_id, token, true);
+      }
 
       // Attempt to flush any queued messages now that session/auth are available
       try {
@@ -1732,11 +1735,13 @@ export default function EmbedClient({
           }
         }
 
-        // If we now have a token but no session, try to create one
+        // If we now have a token but no session, try to create one.
+        // Pass skipMessageLoad=true so the empty new session doesn't wipe
+        // the existing in-memory chat history.
         const sidBefore = sessionIdRef.current || sessionId;
         if (token && !sidBefore) {
           try {
-            await createSession(initialAssistantId, token);
+            await createSession(initialAssistantId, token, undefined, true);
           } catch {
             // creation failed — continue to check below
           }
@@ -1890,15 +1895,35 @@ export default function EmbedClient({
         }]);
       }
 
-      // Remove the optimistic temp message before reloading — the server version
-      // (with a real UUID) will be returned by loadSessionMessages, so keeping the
-      // temp entry would produce a duplicate user bubble in the UI.
-      if (!skipAddingUserMessage) {
-        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
-      }
-
-      // Reload all messages from server (only if we have a session and auth)
-      if (sessionId && authToken) await loadSessionMessages(sessionId, authToken);
+      // Replace the optimistic temp message with the confirmed server messages
+      // directly from the response — no extra round-trip, no visible flash.
+      const serverUser = messageData?.user_message;
+      const serverAssistant = messageData?.assistant_message;
+      setMessages(prev => {
+        const withoutTemp = skipAddingUserMessage
+          ? prev
+          : prev.filter(m => m.id !== userMessage.id);
+        const next = [...withoutTemp];
+        if (serverUser) {
+          next.push({
+            id: serverUser.id,
+            text: serverUser.content,
+            from: 'user' as const,
+            timestamp: serverUser.created_at ? new Date(serverUser.created_at).getTime() : Date.now(),
+            sources: [],
+          });
+        }
+        if (serverAssistant) {
+          next.push({
+            id: serverAssistant.id,
+            text: serverAssistant.content,
+            from: 'assistant' as const,
+            timestamp: serverAssistant.created_at ? new Date(serverAssistant.created_at).getTime() : Date.now(),
+            sources: (serverAssistant.sources as SourceData[]) || [],
+          });
+        }
+        return next.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      });
     } catch (err: unknown) {
       const e = err as unknown as { userMessage?: string; message?: string; code?: string | WidgetErrorCode; name?: string };
       const errMsg = (e.message || '').toLowerCase();
