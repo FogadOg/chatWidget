@@ -102,6 +102,9 @@ export type WidgetConfig = {
   variant_id?: string;
   /** Human-readable name of the assigned variant */
   variant_name?: string;
+  // Analytics
+  /** Google Analytics measurement ID (e.g. "G-XXXXXXXXXX") — sent to host page via postMessage */
+  ga_measurement_id?: string | null;
 };
 
 /**

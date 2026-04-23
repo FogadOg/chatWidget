@@ -1,6 +1,6 @@
 import { logError } from './logger';
 
-const SESSION_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+const SESSION_EXPIRY_BUFFER_MS = 30 * 1000;
 
 const createRandomId = (): string => {
   const c = (globalThis as unknown as { crypto?: Crypto }).crypto;

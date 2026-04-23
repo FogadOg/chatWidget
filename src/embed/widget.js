@@ -255,6 +255,40 @@
       return;
     }
 
+    // GA module
+    let _gaGtag = null;
+    let _gaMeasurementId = null;
+
+    function initGA(measurementId) {
+      if (!measurementId) return;
+      _gaMeasurementId = measurementId;
+      if (typeof window.gtag === 'function') {
+        _gaGtag = window.gtag;
+      } else {
+        const existingScript = document.querySelector('script[src*="googletagmanager.com/gtag/js"]');
+        if (!existingScript) {
+          const script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
+          document.head.appendChild(script);
+        }
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function() { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('config', measurementId);
+        _gaGtag = window.gtag;
+      }
+    }
+
+    function _gaTrack(eventName, params) {
+      if (!_gaGtag || !_gaMeasurementId) return;
+      try {
+        _gaGtag('event', eventName, Object.assign({}, params, { send_to: _gaMeasurementId }));
+      } catch (e) {
+        console.error('[Companin GA]', e);
+      }
+    }
+
     function initWidget() {
       try {
         // we no longer render a placeholder button; build iframe immediately
@@ -726,24 +760,28 @@
                 allowDisplay = false;
                 container.style.display = "none";
                 emitEvent('close', data, { rawType: type });
+                _gaTrack('widget_close', { assistant_id: assistantId });
                 break;
 
               case "WIDGET_MINIMIZE":
                 // Widget requested minimize -> show minimized button state
                 // Don't hide container; let the iframe handle its own UI state
                 emitEvent('close', data, { rawType: type });
+                _gaTrack('widget_minimized', { assistant_id: assistantId });
                 break;
 
               case "WIDGET_SHOW":
                 allowDisplay = true;
                 container.style.display = "block";
                 emitEvent('open', data, { rawType: type });
+                _gaTrack('widget_open', { assistant_id: assistantId });
                 break;
 
               case "WIDGET_RESTORE":
                 // Widget requested restore/expand -> treat as open
                 // Container stays visible; iframe handles its own expanded state
                 emitEvent('open', data, { rawType: type });
+                _gaTrack('widget_restored', { assistant_id: assistantId });
                 break;
 
               case "WIDGET_ERROR":
@@ -757,6 +795,13 @@
                   }
                 } catch (e) {
                   logError('onAuthFailure hook check failed', { error: e && e.message });
+                }
+                _gaTrack('widget_error', { assistant_id: assistantId, error_type: data && data.errorType });
+                break;
+
+              case 'WIDGET_GA_INIT':
+                if (data && data.gaMeasurementId) {
+                  initGA(data.gaMeasurementId);
                 }
                 break;
 
@@ -772,6 +817,7 @@
               if (t.includes('response') || t.endsWith('_response')) {
                 try {
                   emitEvent('response', data, { rawType: type, debounceMs: 120 });
+                  _gaTrack('widget_response_received', { assistant_id: assistantId });
                 } catch (e) { logError('onResponse hook threw', { error: e && e.message }); }
               }
 
@@ -792,6 +838,8 @@
                   } else {
                     __lastHostMessage = data;
                     emitEvent('message', data, { rawType: type, debounceMs: 120 });
+                    const _gaMessageText = (data && (data.content || data.message || data.text)) || '';
+                    _gaTrack('widget_message_sent', { assistant_id: assistantId, message_length: _gaMessageText.length });
                   }
                 } catch (e) { logError('onMessage hook threw', { error: e && e.message }); }
               }

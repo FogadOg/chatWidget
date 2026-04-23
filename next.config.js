@@ -1,11 +1,16 @@
-import type { NextConfig } from "next";
-import bundleAnalyzer from '@next/bundle-analyzer';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+let withBundleAnalyzer = (cfg) => cfg;
+if (process.env.ANALYZE === 'true') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true });
+  } catch {
+    // @next/bundle-analyzer not installed (e.g. production CI); skip silently
+  }
+}
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-});
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   output: 'standalone',
   typescript: {
     // Enforce type checking in production builds so real issues are surfaced
@@ -33,11 +38,9 @@ const nextConfig: NextConfig = {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const SizeLimitWebpackWhy = require('@size-limit/webpack-why');
         if (SizeLimitWebpack) {
-          // size-limit webpack plugin has no types in this env
           config.plugins.push(new SizeLimitWebpack());
         }
         if (SizeLimitWebpackWhy) {
-          // size-limit webpack-why plugin has no types in this env
           config.plugins.push(new SizeLimitWebpackWhy());
         }
       } catch {
@@ -133,4 +136,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+module.exports = withBundleAnalyzer(nextConfig);
