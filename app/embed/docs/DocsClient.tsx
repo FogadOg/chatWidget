@@ -93,7 +93,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
-  const [messages, setMessages] = useState<MessageType[]>(() => initialPreviewConfig ? initialMessages : []);
+  const [messages, setMessages] = useState<MessageType[]>([]);
   const conversationEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { getAuthToken, authToken, authError } = useWidgetAuth();
