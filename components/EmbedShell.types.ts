@@ -46,6 +46,9 @@ export type Props = {
   availableLocales?: string[];
   /** Called when the visitor picks a language from the switcher. Omit to hide the switcher. */
   onLocaleChange?: (locale: string) => void;
+  /** Called when the visitor flips the in-widget light/dark toggle, with the mode
+   *  to switch TO. Omit to hide the toggle. */
+  onToggleTheme?: (next: 'light' | 'dark') => void;
   hideCloseButton?: boolean;
   isPersistent?: boolean;
   /** Whether the proactive teaser bubble is currently visible */

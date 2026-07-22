@@ -1,6 +1,7 @@
 {
   "language": "Langue",
   "selectLanguage": "Choisir la langue",
+  "themeToggle": "Basculer entre thème clair et sombre",
   "typeYourMessage": "Tapez votre message...",
   "typeYourMessageLabel": "Tapez votre message",
   "send": "Envoyer",

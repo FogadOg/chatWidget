@@ -1,6 +1,7 @@
 {
   "language": "Sprache",
   "selectLanguage": "Sprache auswählen",
+  "themeToggle": "Helles oder dunkles Thema umschalten",
   "typeYourMessage": "Schreiben Sie Ihre Nachricht...",
   "typeYourMessageLabel": "Schreiben Sie Ihre Nachricht",
   "send": "Senden",

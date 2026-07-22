@@ -1,6 +1,6 @@
 'use client';
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth';
-import { getLocaleDirection, t as tFn, getTranslations, resolveInitialWidgetLocale, resolveSupportedLocale, isTranslatableLocale, SUPPORTED_LOCALES, WIDGET_LOCALE_STORAGE_KEY } from '../../../lib/i18n';
+import { getLocaleDirection, t as tFn, getTranslations, resolveInitialWidgetLocale, resolveSupportedLocale, isTranslatableLocale, SUPPORTED_LOCALES, WIDGET_LOCALE_STORAGE_KEY, WIDGET_THEME_STORAGE_KEY, resolveInitialWidgetTheme } from '../../../lib/i18n';
 import { useRuntimeTranslation, useRuntimeRevision } from '../../../hooks/useRuntimeTranslation';
 import type {
   Message,
@@ -366,6 +366,20 @@ export default function EmbedClient({
   const [themeOverride, setThemeOverride] = useState<'light' | 'dark' | 'system' | null>(
     initialThemeOverride ?? null
   );
+  // The visitor's own light/dark choice from the in-widget toggle. Highest
+  // precedence — overrides the embed's data-theme and the configured theme — and
+  // persists across reloads. Null = no manual choice yet.
+  const [visitorTheme, setVisitorTheme] = useState<'light' | 'dark' | null>(
+    () => resolveInitialWidgetTheme()
+  );
+  const handleToggleTheme = useCallback((next: 'light' | 'dark') => {
+    setVisitorTheme(next);
+    try {
+      localStorage.setItem(WIDGET_THEME_STORAGE_KEY, next);
+    } catch {
+      // storage unavailable (private mode / no consent) — non-fatal.
+    }
+  }, []);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [shouldRender, setShouldRender] = useState(true);
   // The active UI/response locale. Resolved once on the first client render
@@ -2340,8 +2354,11 @@ export default function EmbedClient({
   // wins over the dashboard WidgetConfig.theme — see useWidgetStyles for how the
   // resolved theme drives light/dark colors.
   const baseWidgetConfig: WidgetConfig = widgetConfig || ({} as WidgetConfig);
-  const safeWidgetConfig: WidgetConfig = themeOverride
-    ? { ...baseWidgetConfig, theme: themeOverride }
+  // Precedence: the visitor's in-widget toggle wins, then the embed's data-theme
+  // / setTheme() override, then the dashboard config's own theme.
+  const effectiveTheme = visitorTheme ?? themeOverride ?? null;
+  const safeWidgetConfig: WidgetConfig = effectiveTheme
+    ? { ...baseWidgetConfig, theme: effectiveTheme }
     : baseWidgetConfig;
 
   if (!shouldRender || isBootstrapping) {
@@ -2380,6 +2397,7 @@ export default function EmbedClient({
         locale={activeLocale}
         availableLocales={availableLocales}
         onLocaleChange={handleLocaleChange}
+        onToggleTheme={handleToggleTheme}
         agentName={agentName}
         identifiedUserName={identifiedUserName}
         widgetConfig={safeWidgetConfig}

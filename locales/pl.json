@@ -1,6 +1,7 @@
 {
   "language": "Język",
   "selectLanguage": "Wybierz język",
+  "themeToggle": "Przełącz motyw jasny lub ciemny",
   "typeYourMessage": "Wpisz swoją wiadomość...",
   "typeYourMessageLabel": "Wpisz wiadomość...",
   "send": "Wyślij",

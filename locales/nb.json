@@ -1,6 +1,7 @@
 {
   "language": "Språk",
   "selectLanguage": "Velg språk",
+  "themeToggle": "Veksle lyst eller mørkt tema",
   "typeYourMessage": "Skriv meldingen din...",
   "typeYourMessageLabel": "Skriv meldingen din",
   "send": "Send melding",

@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useWidgetAuth } from '../../../hooks/useWidgetAuth'
-import { t as translate, getTranslations, resolveInitialWidgetLocale, SUPPORTED_LOCALES, WIDGET_LOCALE_STORAGE_KEY } from '../../../lib/i18n'
+import { t as translate, getTranslations, resolveInitialWidgetLocale, SUPPORTED_LOCALES, WIDGET_LOCALE_STORAGE_KEY, WIDGET_THEME_STORAGE_KEY, resolveInitialWidgetTheme } from '../../../lib/i18n'
 import { LanguageMenu } from '../../../components/components/LanguageMenu'
+import { ThemeToggleButton } from '../../../components/components/ThemeToggleButton'
 import { embedOriginHeader } from '../../../lib/api'
 import { validateConfig } from '../../../lib/validateConfig'
 import { STATUS_COLORS } from '../../../lib/constants'
@@ -117,10 +118,19 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
   }, []);
   const [liveMessage, setLiveMessage] = useState<string>('');
   // Theme forced from the embed (data-theme attribute at init, or setTheme() at
-  // runtime). When set it overrides WidgetConfig.theme; null = use the config.
+  // runtime) OR the visitor's own in-widget toggle. Precedence: a persisted
+  // visitor choice wins, then the embed's data-theme; null = use the config.
   const [themeOverride, setThemeOverride] = useState<'light' | 'dark' | 'system' | null>(
-    initialThemeOverride ?? null
+    () => resolveInitialWidgetTheme() ?? initialThemeOverride ?? null
   );
+  const handleToggleTheme = useCallback((next: 'light' | 'dark') => {
+    setThemeOverride(next);
+    try {
+      localStorage.setItem(WIDGET_THEME_STORAGE_KEY, next);
+    } catch {
+      // storage unavailable — non-fatal.
+    }
+  }, []);
   const lastAnnouncedKey = useRef<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -534,6 +544,14 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
                   )}
                   <DialogTitle className='truncate p-0' style={{ fontSize: layout.titlePx }}>{getLocalizedText(widgetConfig?.data?.title, activeLocale) || translate(activeLocale, 'docsTitleFallback')}</DialogTitle>
                 </div>
+                <div className='flex items-center gap-1.5'>
+                  <ThemeToggleButton
+                    isDark={widgetStyles.isDarkTheme}
+                    onToggle={handleToggleTheme}
+                    label={translate(activeLocale, 'themeToggle')}
+                    className='flex h-8 w-8 items-center justify-center rounded-lg opacity-70 transition-opacity hover:opacity-100'
+                    style={{ color: widgetStyles.textColor }}
+                  />
                 {availableLocales.length >= 2 && (
                   <LanguageMenu
                     variant='subtle'
@@ -551,6 +569,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
                     borderRadius={widgetStyles.borderRadius}
                   />
                 )}
+                </div>
               </div>
               {layout.showSubtitle && (
               <DialogDescription className='text-sm text-muted-foreground' style={{ paddingLeft: layout.padX, paddingRight: layout.padX }}>

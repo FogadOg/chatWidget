@@ -30,6 +30,7 @@ import { ConsentBanner } from './components/ConsentBanner';
 import { JumpToLatest } from './components/JumpToLatest';
 import { Composer } from './components/Composer';
 import { LanguageMenu } from './components/LanguageMenu';
+import { ThemeToggleButton } from './components/ThemeToggleButton';
 import MinimalEmbedShell from './layouts/MinimalEmbedShell';
 import PanelEmbedShell from './layouts/PanelEmbedShell';
 
@@ -79,6 +80,7 @@ function ClassicEmbedShell({
   locale: localeProp,
   availableLocales = [],
   onLocaleChange,
+  onToggleTheme,
   sessionExpiredBanner = false,
   onDismissSessionExpiredBanner,
   showConsentPrompt = false,
@@ -298,6 +300,7 @@ function ClassicEmbedShell({
     messageAnimation,
     respectReducedMotion,
     visualEffectStyles,
+    isDarkTheme,
   } = useWidgetStyles(widgetConfig);
 
   const { width: btnWidth, height: btnHeight, icon: btnIcon } = getButtonSizeClasses;
@@ -415,6 +418,17 @@ function ClassicEmbedShell({
       borderColor={subtleBorderColor}
       fontStyles={fontStyles}
       borderRadius={borderRadius}
+    />
+  ) : null;
+  // Visitor-facing light/dark toggle. Styled to match this shell's close button
+  // (primary-colored header → secondary fill + readable header text color).
+  const themeToggle = onToggleTheme ? (
+    <ThemeToggleButton
+      isDark={isDarkTheme}
+      onToggle={onToggleTheme}
+      label={translate(locale, 'themeToggle')}
+      className={`px-2 py-1 rounded text-sm flex items-center justify-center hover:opacity-90 ${FOCUS_RING}`}
+      style={{ backgroundColor: secondaryColor, color: headerTextColor, ['--tw-ring-color' as string]: headerTextColor, ['--tw-ring-offset-color' as string]: primaryColor }}
     />
   ) : null;
   const agentTypingLabel = translate(locale, 'agentTyping');
@@ -660,6 +674,7 @@ function ClassicEmbedShell({
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
+                  {themeToggle}
                   {languageMenu}
                   {unsureMessages.length > 0 && onShowUnsureModal && (
                     <button
@@ -1067,6 +1082,7 @@ function ClassicEmbedShell({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
+                  {themeToggle}
                   {languageMenu}
                   <button
                     type="button"

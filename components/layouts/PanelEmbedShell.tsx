@@ -10,6 +10,7 @@ import { FOCUS_RING } from '../EmbedShell.constants';
 import MessageBubble from '../MessageBubble';
 import { Composer } from '../components/Composer';
 import { Suggestions } from '../components/Suggestions';
+import { ThemeToggleButton } from '../components/ThemeToggleButton';
 
 export default function PanelEmbedShell(props: Props) {
   const {
@@ -41,6 +42,7 @@ export default function PanelEmbedShell(props: Props) {
     messageFeedbackSubmitted,
     onSubmitMessageFeedback,
     agentName,
+    onToggleTheme,
   } = props;
 
   const { locale: hookLocale } = useWidgetTranslation();
@@ -63,6 +65,7 @@ export default function PanelEmbedShell(props: Props) {
     buttonBorderRadius,
     showTimestamps,
     showMessageAvatars,
+    isDarkTheme,
   } = useWidgetStyles(widgetConfig);
 
   const getText = (textObj: Record<string, string> | string | undefined) => {
@@ -150,6 +153,15 @@ export default function PanelEmbedShell(props: Props) {
           >
             ×
           </button>
+          {onToggleTheme && (
+            <ThemeToggleButton
+              isDark={isDarkTheme}
+              onToggle={onToggleTheme}
+              label={translate(locale, 'themeToggle')}
+              className={`w-8 h-8 rounded border flex items-center justify-center ${FOCUS_RING}`}
+              style={{ borderColor: subtleBorderColor, color: textColor }}
+            />
+          )}
           <div className="w-8 h-8 rounded text-xs flex items-center justify-center" style={{ backgroundColor: primaryColor, color: readableOnPrimary }}>
             AI
           </div>

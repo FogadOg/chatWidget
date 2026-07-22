@@ -165,6 +165,7 @@ export function useWidgetStyles(widgetConfig?: WidgetConfig) {
     skeletonColor,
     agentBubbleBg,
     isLightBackground,
+    isDarkTheme,
     borderRadius,
     fontStyles,
     getShadowStyle,

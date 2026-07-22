@@ -14,6 +14,7 @@ import { Suggestions } from '../components/Suggestions';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { Composer } from '../components/Composer';
 import { LanguageMenu } from '../components/LanguageMenu';
+import { ThemeToggleButton } from '../components/ThemeToggleButton';
 
 export default function MinimalEmbedShell(props: Props) {
   const {
@@ -37,6 +38,7 @@ export default function MinimalEmbedShell(props: Props) {
     locale: localeProp,
     availableLocales = [],
     onLocaleChange,
+    onToggleTheme,
     previewPositioning = false,
     isPreview = false,
     fileUploadEnabled = false,
@@ -73,6 +75,7 @@ export default function MinimalEmbedShell(props: Props) {
     showMessageAvatars,
     showUnreadBadge,
     spacingValues,
+    isDarkTheme,
   } = useWidgetStyles(widgetConfig);
 
   const { width: btnWidth, height: btnHeight, icon: btnIcon } = getButtonSizeClasses;
@@ -199,6 +202,15 @@ export default function MinimalEmbedShell(props: Props) {
             <p className="text-xs" style={{ color: mutedTextColor }}>{getText(widgetConfig?.subtitle)}</p>
           </div>
           <div className="flex items-center gap-1.5">
+            {onToggleTheme && (
+              <ThemeToggleButton
+                isDark={isDarkTheme}
+                onToggle={onToggleTheme}
+                label={translate(locale, 'themeToggle')}
+                className={`w-7 h-7 rounded border flex items-center justify-center ${FOCUS_RING}`}
+                style={{ borderColor: subtleBorderColor, color: textColor }}
+              />
+            )}
             {languageMenu}
             <button
               type="button"

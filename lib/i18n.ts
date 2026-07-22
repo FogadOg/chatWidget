@@ -48,6 +48,21 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
 // and takes priority over browser auto-detection.
 export const WIDGET_LOCALE_STORAGE_KEY = `${STORAGE_PREFIX}widget-locale`;
 
+// Where a visitor's manual light/dark choice (from the in-widget theme toggle)
+// is persisted, so it survives reloads and takes priority over the configured
+// theme / embed data-theme. Null = no manual choice yet.
+export const WIDGET_THEME_STORAGE_KEY = `${STORAGE_PREFIX}widget-theme`;
+
+export function resolveInitialWidgetTheme(): 'light' | 'dark' | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage.getItem(WIDGET_THEME_STORAGE_KEY);
+    return stored === 'light' || stored === 'dark' ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
 type PluralForms = {
   zero?: string;
   one?: string;
