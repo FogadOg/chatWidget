@@ -25,8 +25,10 @@ jest.mock('../lib/i18n', () => ({
   t: (_locale: string, key: string) => key,
   getTranslations: () => ({}),
   resolveInitialWidgetLocale: (l?: string) => l || 'en',
+  resolveInitialWidgetTheme: () => null,
   SUPPORTED_LOCALES: ['en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it', 'pl'],
   WIDGET_LOCALE_STORAGE_KEY: 'companin-widget-locale',
+  WIDGET_THEME_STORAGE_KEY: 'companin-widget-theme',
 }))
 jest.mock('../lib/api', () => ({
   API: { sessions: () => '/sessions', sessionMessages: (id: string) => `/sessions/${id}/messages`, widgetConfig: () => '/widget-config', messageFeedback: (id: string) => `/messages/${id}/feedback` },
