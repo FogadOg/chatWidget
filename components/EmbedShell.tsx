@@ -939,6 +939,9 @@ function ClassicEmbedShell({
                 primaryColor={primaryColor}
                 backgroundColor={backgroundColor}
                 subtleBorderColor={subtleBorderColor}
+                textColor={textColor}
+                mutedTextColor={mutedTextColor}
+                inputBackgroundColor={agentBubbleBg}
                 buttonBorderRadius={buttonBorderRadius}
                 fontStyles={fontStyles}
                 placeholder={placeholderText}
@@ -1322,6 +1325,9 @@ function ClassicEmbedShell({
                   primaryColor={primaryColor}
                   backgroundColor={backgroundColor}
                   subtleBorderColor={subtleBorderColor}
+                  textColor={textColor}
+                  mutedTextColor={mutedTextColor}
+                  inputBackgroundColor={agentBubbleBg}
                   buttonBorderRadius={buttonBorderRadius}
                   fontStyles={fontStyles}
                   placeholder={placeholderText}

@@ -339,6 +339,9 @@ export default function MinimalEmbedShell(props: Props) {
           primaryColor={primaryColor}
           backgroundColor={backgroundColor}
           subtleBorderColor={subtleBorderColor}
+          textColor={textColor}
+          mutedTextColor={mutedTextColor}
+          inputBackgroundColor={agentBubbleBg}
           buttonBorderRadius={buttonBorderRadius}
           fontStyles={fontStyles}
           placeholder={getText(widgetConfig?.placeholder) || translate(locale, 'typeYourMessage')}

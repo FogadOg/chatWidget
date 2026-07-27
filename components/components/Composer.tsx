@@ -17,6 +17,9 @@ export function Composer({
   primaryColor,
   backgroundColor,
   subtleBorderColor,
+  textColor,
+  mutedTextColor,
+  inputBackgroundColor,
   buttonBorderRadius,
   fontStyles,
   placeholder,
@@ -39,6 +42,9 @@ export function Composer({
   primaryColor: string;
   backgroundColor: string;
   subtleBorderColor: string;
+  textColor: string;
+  mutedTextColor: string;
+  inputBackgroundColor: string;
   buttonBorderRadius: number;
   fontStyles: React.CSSProperties;
   placeholder: string;
@@ -54,6 +60,10 @@ export function Composer({
   attachLabel?: string;
 }) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  // Unique class so the placeholder color (a pseudo-element that inline styles
+  // can't reach) can be themed per widget instance.
+  const inputId = React.useId().replace(/[:]/g, '');
+  const inputClass = `aw-composer-input-${inputId}`;
   // Allow typing even while the agent is responding; only block submission.
   const canSend = !!input.trim() && !isTyping;
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -99,7 +109,8 @@ export function Composer({
           )}
         </div>
       )}
-      <div className="flex items-end space-x-2">
+      <style>{`.${inputClass}::placeholder{color:${mutedTextColor};opacity:1;}`}</style>
+      <div className="flex items-stretch space-x-2">
         {fileUploadEnabled && (
           <>
             <input
@@ -141,10 +152,12 @@ export function Composer({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className="flex-1 px-3 py-2 border transition-shadow focus:outline-none focus-visible:ring-2"
+          className={`${inputClass} flex-1 min-w-0 px-3 py-2 border transition-shadow focus:outline-none focus-visible:ring-2`}
           style={{
             borderRadius: `${buttonBorderRadius}px`,
             borderColor: subtleBorderColor,
+            backgroundColor: inputBackgroundColor,
+            color: textColor,
             ['--tw-ring-color' as string]: withAlpha(primaryColor, 0.6),
             ...fontStyles,
             fontSize: '16px',
