@@ -1,4 +1,4 @@
-const CACHE_NAME = 'companin-static-v2';
+const CACHE_NAME = 'companin-static-v3';
 const CACHE_PREFIX = 'companin-static-';
 const PRECACHE_URLS = [];
 
@@ -37,6 +37,15 @@ self.addEventListener('fetch', (evt) => {
     return;
   }
   if (url.origin === self.location.origin) {
+    // Never cache-first the app bundles. In dev, Next serves stable chunk names
+    // (e.g. page.js), so a cache-first hit would pin an old build forever — even
+    // through a hard-refresh, which cannot bypass the service worker. In prod
+    // these URLs are content-hashed, so letting the browser's HTTP cache handle
+    // them (network + immutable headers) is correct too. Either way: don't
+    // intercept, so a fresh deploy/recompile is always picked up.
+    if (url.pathname.startsWith('/_next/') || evt.request.destination === 'script') {
+      return;
+    }
     // Navigation/doc requests should always go to network to avoid serving a
     // stale cached redirect for '/'.
     if (evt.request.mode === 'navigate' || evt.request.destination === 'document') {

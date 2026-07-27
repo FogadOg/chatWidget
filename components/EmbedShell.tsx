@@ -343,16 +343,16 @@ function ClassicEmbedShell({
     onButtonClickInternal(button, onFollowUpButtonClick);
   };
 
-  // Keep the static greeting block pinned at the top of the conversation. It only
-  // hides when the greeting already exists as an actual chat message (the server
-  // sometimes re-delivers it with a `greeting-` id / is_greeting metadata), which
-  // would otherwise render it twice. Sending a message must NOT make it disappear.
-  const hasGreetingMessage = messages.some(
-    (m) =>
-      m.id.startsWith('greeting-') ||
-      (m.metadata as Record<string, unknown> | undefined)?.is_greeting === true
-  );
-  const showGreeting = !!widgetConfig?.greeting_message && !hasGreetingMessage;
+  // The greeting is always rendered as a pinned static block at the top of the
+  // conversation whenever one is configured. The backend also persists the greeting
+  // as an `is_greeting` chat message once a conversation exists (with the same text
+  // and buttons), so we filter that server copy out of the message stream below
+  // (see mergedContent) — otherwise it renders twice, and sending a message makes
+  // the static block vanish. Keeping it static means it never disappears.
+  const isServerGreetingMessage = (m: { id: string; metadata?: Message['metadata'] }) =>
+    m.id.startsWith('greeting-') ||
+    (m.metadata as Record<string, unknown> | undefined)?.is_greeting === true;
+  const showGreeting = !!widgetConfig?.greeting_message;
   const greetingText = showGreeting ? getText(widgetConfig.greeting_message.text) : '';
   const displayGreetingText = identifiedUserName && greetingText
     ? `Hi ${identifiedUserName}! ${greetingText}`
@@ -388,9 +388,13 @@ function ClassicEmbedShell({
     handleFormSubmit({ preventDefault: () => {} } as React.FormEvent, text);
   };
 
-  // Merge messages and flow responses, then sort by timestamp
+  // Merge messages and flow responses, then sort by timestamp. The server's
+  // is_greeting copy is dropped here because the greeting is shown as the static
+  // block above; rendering it as a bubble too would duplicate it.
   const mergedContent = [
-    ...messages.map(msg => ({ type: 'message' as const, data: msg, timestamp: msg.timestamp || 0 })),
+    ...messages
+      .filter((msg) => !isServerGreetingMessage(msg))
+      .map(msg => ({ type: 'message' as const, data: msg, timestamp: msg.timestamp || 0 })),
     ...flowResponses.map(flow => ({ type: 'flow' as const, data: flow, timestamp: flow.timestamp || 0 }))
   ].sort((a, b) => a.timestamp - b.timestamp);
 

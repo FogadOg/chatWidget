@@ -92,9 +92,13 @@ export default function MinimalEmbedShell(props: Props) {
     return langs.includes(locale) || langs.includes(base);
   });
 
-  const showGreeting =
-    !!widgetConfig?.greeting_message &&
-    (isPreview || (messages.length === 0 && flowResponses.length === 0));
+  // Always pin the greeting when configured. The backend also persists it as an
+  // is_greeting chat message once a conversation exists; that copy is filtered out
+  // of mergedContent below so the greeting never doubles or vanishes on send.
+  const isServerGreetingMessage = (m: { id: string; metadata?: unknown }) =>
+    m.id.startsWith('greeting-') ||
+    (m.metadata as Record<string, unknown> | undefined)?.is_greeting === true;
+  const showGreeting = !!widgetConfig?.greeting_message;
   const greetingText = showGreeting ? getText(widgetConfig?.greeting_message?.text) : '';
 
   const rawSuggestions = widgetConfig?.suggestions;
@@ -127,7 +131,9 @@ export default function MinimalEmbedShell(props: Props) {
   ) : null;
 
   const mergedContent = [
-    ...messages.map((msg) => ({ type: 'message' as const, data: msg, timestamp: msg.timestamp || 0 })),
+    ...messages
+      .filter((msg) => !isServerGreetingMessage(msg))
+      .map((msg) => ({ type: 'message' as const, data: msg, timestamp: msg.timestamp || 0 })),
     ...flowResponses.map((flow) => ({ type: 'flow' as const, data: flow, timestamp: flow.timestamp || 0 })),
   ].sort((a, b) => a.timestamp - b.timestamp);
 

@@ -38,6 +38,26 @@ describe('EmbedShell', () => {
     expect(screen.getByPlaceholderText('Type your message...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
   });
+
+  test('greeting stays visible (and is not duplicated) after a message is sent', () => {
+    const widgetConfig = {
+      greeting_message: { text: { en: 'Hi there' }, buttons: [{ id: 'b1', label: { en: 'Test' } }] },
+    } as any;
+    // Mirrors the live payload: the backend persists the greeting as an
+    // is_greeting chat message alongside the user's message + the agent reply.
+    const messages = [
+      { id: 'g-1', text: 'Hi there', from: 'agent', metadata: { is_greeting: true } },
+      { id: 'u-1', text: 'hello', from: 'user' },
+      { id: 'a-1', text: 'How can I help?', from: 'agent' },
+    ] as any;
+    render(<EmbedShell {...minimalProps} widgetConfig={widgetConfig} messages={messages} />);
+    // Greeting still rendered exactly once (the server copy is filtered out).
+    expect(screen.getByText('Hi there')).toBeInTheDocument();
+    expect(screen.getAllByText('Hi there')).toHaveLength(1);
+    // The conversation messages are still there too.
+    expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.getByText('How can I help?')).toBeInTheDocument();
+  });
 });
 
 describe('EmbedShell - logo and avatar', () => {
