@@ -343,11 +343,16 @@ function ClassicEmbedShell({
     onButtonClickInternal(button, onFollowUpButtonClick);
   };
 
-  // In preview mode keep the greeting block pinned so it doesn't vanish when the
-  // user sends a message. In the live widget the server re-delivers the greeting
-  // as the first chat message, so the static block correctly hides once messages load.
-  const hasGreetingMessage = !isPreview && (messages.length > 0 || (flowResponses?.length ?? 0) > 0);
-  const showGreeting = widgetConfig?.greeting_message && !hasGreetingMessage;
+  // Keep the static greeting block pinned at the top of the conversation. It only
+  // hides when the greeting already exists as an actual chat message (the server
+  // sometimes re-delivers it with a `greeting-` id / is_greeting metadata), which
+  // would otherwise render it twice. Sending a message must NOT make it disappear.
+  const hasGreetingMessage = messages.some(
+    (m) =>
+      m.id.startsWith('greeting-') ||
+      (m.metadata as Record<string, unknown> | undefined)?.is_greeting === true
+  );
+  const showGreeting = !!widgetConfig?.greeting_message && !hasGreetingMessage;
   const greetingText = showGreeting ? getText(widgetConfig.greeting_message.text) : '';
   const displayGreetingText = identifiedUserName && greetingText
     ? `Hi ${identifiedUserName}! ${greetingText}`
