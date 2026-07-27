@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { Composer } from '../Composer';
 
 function renderComposer(over: Partial<React.ComponentProps<typeof Composer>> = {}) {
-  const inputRef = React.createRef<HTMLTextAreaElement>();
+  const inputRef = React.createRef<HTMLInputElement>();
   const props: React.ComponentProps<typeof Composer> = {
     input: '',
     setInput: jest.fn(),
@@ -64,7 +64,7 @@ describe('Composer', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it('updates input and auto-grows the textarea on change', () => {
+  it('updates input on change', () => {
     const setInput = jest.fn();
     renderComposer({ setInput });
     fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'abc' } });

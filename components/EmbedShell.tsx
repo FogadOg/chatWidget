@@ -124,7 +124,7 @@ function ClassicEmbedShell({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Ref for input (for focus management)
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   // Ref for the collapsed launcher button, so focus returns to it on close. (#15)
   const launcherRef = useRef<HTMLButtonElement>(null);
   const wasOpenRef = useRef(false);

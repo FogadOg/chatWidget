@@ -4,8 +4,8 @@ import React from 'react';
 import { withAlpha, getReadableTextColor } from '../../lib/colors';
 import { FOCUS_RING } from '../EmbedShell.constants';
 
-// Shared message composer: auto-growing textarea with Enter-to-send /
-// Shift+Enter for a newline, and a 16px font size to avoid iOS focus zoom.
+// Shared message composer: a single-line text input with Enter-to-send and a
+// 16px font size to avoid iOS focus zoom.
 type ComposerAttachment = { id: string; filename: string };
 
 export function Composer({
@@ -45,7 +45,7 @@ export function Composer({
   ariaLabel: string;
   sendLabel: string;
   stopLabel: string;
-  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   fileUploadEnabled?: boolean;
   pendingAttachments?: ComposerAttachment[];
   uploadingFiles?: number;
@@ -54,14 +54,9 @@ export function Composer({
   attachLabel?: string;
 }) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const autoGrow = (el: HTMLTextAreaElement | null) => {
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  };
   // Allow typing even while the agent is responding; only block submission.
   const canSend = !!input.trim() && !isTyping;
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (canSend) onSubmit(e as unknown as React.FormEvent);
@@ -138,20 +133,16 @@ export function Composer({
             </button>
           </>
         )}
-        <textarea
+        <input
           ref={inputRef}
-          rows={1}
+          type="text"
           value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            autoGrow(e.target);
-          }}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className="flex-1 resize-none overflow-y-auto px-3 py-2 border transition-shadow focus:outline-none focus-visible:ring-2"
+          className="flex-1 px-3 py-2 border transition-shadow focus:outline-none focus-visible:ring-2"
           style={{
-            maxHeight: '120px',
             borderRadius: `${buttonBorderRadius}px`,
             borderColor: subtleBorderColor,
             ['--tw-ring-color' as string]: withAlpha(primaryColor, 0.6),

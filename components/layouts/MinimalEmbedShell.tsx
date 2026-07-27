@@ -52,7 +52,7 @@ export default function MinimalEmbedShell(props: Props) {
 
   const { locale: hookLocale } = useWidgetTranslation();
   const locale = localeProp || hookLocale;
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const {
     primaryColor,
