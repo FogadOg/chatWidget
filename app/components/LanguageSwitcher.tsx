@@ -14,6 +14,10 @@ const LANGUAGES = [
   { code: 'sv', name: 'Svenska', flag: 'se' },
   { code: 'it', name: 'Italiano', flag: 'it' },
   { code: 'pl', name: 'Polski', flag: 'pl' },
+  { code: 'tr', name: 'Türkçe', flag: 'tr' },
+  { code: 'id', name: 'Bahasa Indonesia', flag: 'id' },
+  { code: 'ko', name: '한국어', flag: 'kr' },
+  { code: 'ru', name: 'Русский', flag: 'ru' },
 ];
 
 const LOCALE_PATTERN = new RegExp(`^/(${LANGUAGES.map((l) => l.code).join('|')})(?=/|$)`);

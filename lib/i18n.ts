@@ -8,14 +8,12 @@ import nl from "../locales/nl.json";
 import nb from "../locales/nb.json";
 import it from "../locales/it.json";
 import pl from "../locales/pl.json";
+import tr from "../locales/tr.json";
+import id from "../locales/id.json";
+import ko from "../locales/ko.json";
+import ru from "../locales/ru.json";
 import { STORAGE_PREFIX } from "./constants";
 
-// NOTE: tr/id/ko/ru are intentionally NOT bundled as native locales yet — their
-// translated bundles haven't been generated. They are still offered to visitors
-// and handled via the runtime LLM-translation fallback (same path as e.g. "ja"),
-// so leaving them out of LOCALES keeps that fallback active instead of serving
-// an empty English-only "native" bundle. Add imports + entries here once the
-// locales/{tr,id,ko,ru}.json bundles are translated.
 const LOCALES = {
   en,
   de,
@@ -27,6 +25,10 @@ const LOCALES = {
   nb,
   it,
   pl,
+  tr,
+  id,
+  ko,
+  ru,
 } as const;
 
 export type SupportedLocale = keyof typeof LOCALES;
@@ -47,6 +49,10 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   nb: "Norsk",
   it: "Italiano",
   pl: "Polski",
+  tr: "Türkçe",
+  id: "Bahasa Indonesia",
+  ko: "한국어",
+  ru: "Русский",
 };
 
 // Where a visitor's manual language choice is persisted. Shared by the
