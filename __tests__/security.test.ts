@@ -116,6 +116,23 @@ describe('CSP nonce proxy', () => {
     expect(pp).toContain('microphone=()');
   });
 
+  it('allows the API origin in img-src and connect-src so backend media/config load', () => {
+    const prev = process.env.NEXT_PUBLIC_API_BASE_URL;
+    process.env.NEXT_PUBLIC_API_BASE_URL = 'http://localhost:8000';
+    try {
+      const csp = getHeaderValue(proxy(makeRequest('/embed/docs')), 'Content-Security-Policy') ?? '';
+      const imgSrc = csp.split(';').find(d => d.trim().startsWith('img-src')) ?? '';
+      const connectSrc = csp.split(';').find(d => d.trim().startsWith('connect-src')) ?? '';
+      // The widget renders logo/bot-avatar as <img> from the backend media host;
+      // without this the http dev origin is CSP-blocked and shows as broken.
+      expect(imgSrc).toContain('http://localhost:8000');
+      expect(connectSrc).toContain('http://localhost:8000');
+    } finally {
+      if (prev === undefined) delete process.env.NEXT_PUBLIC_API_BASE_URL;
+      else process.env.NEXT_PUBLIC_API_BASE_URL = prev;
+    }
+  });
+
   it('injects x-nonce into request headers', () => {
     const resp = proxy(makeRequest('/'));
     // NextResponse.next() with modified request headers doesn't expose them

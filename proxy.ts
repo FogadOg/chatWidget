@@ -18,9 +18,14 @@ function buildCsp(nonce: string, pathname: string): string {
     process.env.NEXT_PUBLIC_BACKEND_URL ||
     '';
   // Only add to connect-src when it's a real URL (not empty / already 'self')
-  const extraConnectSrc = apiOriginRaw && !apiOriginRaw.includes("'self'")
+  const extraApiOrigin = apiOriginRaw && !apiOriginRaw.includes("'self'")
     ? ` ${apiOriginRaw}`
     : '';
+  // The widget renders the org's logo/bot-avatar as <img src> pointing at the
+  // backend media host (e.g. http://localhost:8000/uploads/… in dev). Without
+  // the API origin in img-src those images are CSP-blocked and show as broken —
+  // `https:` alone doesn't cover the http dev origin. Mirror connect-src.
+  const extraImgSrc = extraApiOrigin;
 
   // Embed iframe pages must allow framing from any origin so the host page
   // (potentially on a different port or domain) can embed the widget.
@@ -35,8 +40,8 @@ function buildCsp(nonce: string, pathname: string): string {
     'default-src': "'self'",
     'script-src': `'self' 'nonce-${nonce}'${unsafeEval}`,
     'style-src': "'self' 'unsafe-inline'",
-    'connect-src': `'self'${extraConnectSrc}`,
-    'img-src': "'self' data: https:",
+    'connect-src': `'self'${extraApiOrigin}`,
+    'img-src': `'self' data: https:${extraImgSrc}`,
     'font-src': "'self' data:",
     'object-src': "'none'",
     'base-uri': "'self'",
