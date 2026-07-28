@@ -367,7 +367,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
             ? '!left-0 !right-auto border-r'
             : '!right-0 !left-auto border-l',
         )
-      : 'mb-8 !max-w-none sm:!max-w-none flex-col justify-between',
+      : 'docs-widget-content--modal mb-8 !max-w-none sm:!max-w-none flex-col justify-between',
     layout.openAnimationClass,
   );
   const docsContentStyle = {
@@ -377,7 +377,12 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     WebkitBackdropFilter: theme.backdropFilter,
     ...(isDocsPanel
       ? { width: layout.panelWidthPx, maxWidth: '100%', height: '100%' }
-      : { width: `${layout.widthVw}vw`, height: `${layout.heightVh}vh`, maxWidth: '100%', maxHeight: 'calc(100vh - 2rem)' }),
+      : {
+          width: `min(${layout.widthVw}vw, calc(100vw - 1rem))`,
+          height: `min(${layout.heightVh}vh, calc(100vh - 1rem))`,
+          maxWidth: 'calc(100vw - 1rem)',
+          maxHeight: 'calc(100vh - 1rem)',
+        }),
   };
 
   // Load the selected Google Font (parity with the chat widget).
@@ -515,7 +520,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
             </div>
           )}
           <div className='flex min-h-0 flex-1 flex-col justify-between overflow-hidden'>
-          <ScrollArea ref={scrollAreaRef} className='flex min-h-0 flex-1 flex-col justify-between overflow-hidden'>
+          <ScrollArea ref={scrollAreaRef} className='docs-scrollarea flex min-h-0 flex-1 flex-col justify-between overflow-hidden'>
             <DialogHeader className='contents space-y-0 text-left'>
               <div
                 className='flex items-start justify-between gap-3'
@@ -572,7 +577,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
                 </div>
               </div>
               {layout.showSubtitle && (
-              <DialogDescription className='text-sm text-muted-foreground' style={{ paddingLeft: layout.padX, paddingRight: layout.padX }}>
+              <DialogDescription className='text-sm text-muted-foreground' style={{ paddingLeft: layout.padX, paddingRight: layout.padX, paddingTop: 10 }}>
                 {getLocalizedText(widgetConfig?.data?.subtitle, activeLocale) || translate(activeLocale, 'docsSubtitleFallback')}
               </DialogDescription>
               )}
@@ -755,7 +760,15 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
               </DialogDescription>
             </DialogHeader>
           </ScrollArea>
-          <DialogFooter className='sm:justify-end w-full' style={{ paddingLeft: layout.padX, paddingRight: layout.padX, paddingBottom: layout.padY, paddingTop: layout.padY }}>
+          <DialogFooter
+            className='sm:justify-end w-full'
+            style={{
+              paddingLeft: layout.padX,
+              paddingRight: layout.padX,
+              paddingBottom: `calc(${layout.padY}px + env(safe-area-inset-bottom, 0px))`,
+              paddingTop: layout.padY,
+            }}
+          >
             <div className="flex flex-col gap-4 w-full">
               {(() => {
                 const resolved = resolveLocalizedSuggestions(

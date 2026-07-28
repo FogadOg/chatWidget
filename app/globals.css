@@ -247,6 +247,28 @@
 .docs-open--spring { animation: docs-open-spring 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both !important; }
 .docs-open--none   { animation: none !important; }
 
+/* Phone layout guard for docs modal: keep the widget inside the visual viewport
+   and account for browser UI/safe-area insets so the composer is never clipped. */
+@media (max-width: 640px) {
+  .docs-widget-content--modal {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    height: min(92svh, calc(100dvh - 1rem - env(safe-area-inset-bottom, 0px))) !important;
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Radix ScrollArea wraps its children in an inner `display: table; min-width:
+   100%` element, which grows to the content's max-content width instead of the
+   viewport's. Inside the docs modal that let the header/subtitle/search row push
+   past the panel's right edge (clipped) on narrow phone viewports. Force the
+   inner box to a plain block so its children shrink/wrap to the panel width and
+   the header's truncate/min-w-0 can take effect. Scoped to the docs scroll area. */
+.docs-scrollarea [data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+  min-width: 0 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .docs-open--slide,
   .docs-open--fade,

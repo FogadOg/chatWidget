@@ -159,7 +159,7 @@ export function PreviewModeWidget({
       {/* Header */}
       <div style={{ padding: `${layout.padY}px ${layout.padX}px`, borderBottom: layout.showSectionBorders ? `1px solid ${theme.border}` : 'none', flexShrink: 0 }}>
         <h2 style={{ margin: 0, fontSize: `${layout.titlePx}px`, fontWeight: 600, color: theme.title, lineHeight: 1.3 }}>{title}</h2>
-        {layout.showSubtitle && subtitle && <p style={{ margin: '4px 0 0', fontSize: '14px', color: theme.subtitle, lineHeight: 1.5 }}>{subtitle}</p>}
+        {layout.showSubtitle && subtitle && <p style={{ margin: '10px 0 0', fontSize: '14px', color: theme.subtitle, lineHeight: 1.5 }}>{subtitle}</p>}
         {error && (
           <div style={{ marginTop: '8px', background: 'color-mix(in oklab, var(--warning) 10%, var(--background))', borderLeft: '4px solid var(--warning)', color: 'var(--warning)', padding: '6px 12px', fontSize: '13px' }} role="alert">
             {error}
