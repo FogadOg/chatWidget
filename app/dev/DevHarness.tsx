@@ -15,7 +15,7 @@ import { t as translate } from '../../lib/i18n';
 
 // localStorage keys for remembering the last-used IDs between reloads.
 const LS_PREFIX = 'companin-devharness-';
-const LOCALES = ['en', 'es', 'fr', 'de', 'nb', 'sv', 'da', 'nl', 'it', 'pt'];
+const LOCALES = ['en', 'es', 'fr', 'de', 'nb', 'sv', 'da', 'nl', 'it', 'pt', 'tr', 'id', 'ko', 'ru'];
 
 type LogEntry = { id: number; at: number; dir: '←'; type: string; data: unknown };
 

@@ -46,6 +46,7 @@ const LOCALE_TO_FLAG: Record<string, string> = {
   fi: 'fi',
   it: 'it',
   pl: 'pl',
+  id: 'id',
   cs: 'cz',
   sk: 'sk',
   ro: 'ro',

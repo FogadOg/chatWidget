@@ -10,6 +10,12 @@ import it from "../locales/it.json";
 import pl from "../locales/pl.json";
 import { STORAGE_PREFIX } from "./constants";
 
+// NOTE: tr/id/ko/ru are intentionally NOT bundled as native locales yet — their
+// translated bundles haven't been generated. They are still offered to visitors
+// and handled via the runtime LLM-translation fallback (same path as e.g. "ja"),
+// so leaving them out of LOCALES keeps that fallback active instead of serving
+// an empty English-only "native" bundle. Add imports + entries here once the
+// locales/{tr,id,ko,ru}.json bundles are translated.
 const LOCALES = {
   en,
   de,
