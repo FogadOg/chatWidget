@@ -86,6 +86,7 @@ import json
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 # ---------------------------------------------------------------------------
 # Load .env file (widget/.env) into os.environ for keys not already set.
@@ -128,6 +129,8 @@ SKIP_KEYS = set()
 # RPM than the old free Google tier did, but a tiny pause keeps us well clear
 # of per-minute limits on the cheaper accounts.
 REQUEST_DELAY = 0.05
+# Top-level keys are independent, so translate several concurrently.
+DEFAULT_WORKERS = 10
 # Matches TRANSLATION_MODEL in agent/lib/openaiTranslate.ts so the script
 # and the live widget proxy produce comparable output.
 TRANSLATION_MODEL = "gpt-4o-mini"
@@ -286,6 +289,13 @@ Examples:
         help="Only translate these top-level keys, space-separated (e.g. --key chatControl unreadMessages)",
         default=None,
     )
+    parser.add_argument(
+        "--workers",
+        metavar="N",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help=f"Concurrent API calls per locale (default: {DEFAULT_WORKERS})",
+    )
     args = parser.parse_args()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     base = os.path.normpath(os.path.join(script_dir, "..", "locales"))
@@ -322,28 +332,33 @@ Examples:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         keys_written = 0
+        keys_to_process = args.key if args.key else list(en_data.keys())
+        # Skip keys already present unless overwriting.
+        todo = [
+            k for k in keys_to_process
+            if args.overwrite or data.get(k) is None
+        ]
+        print(f"  {len(todo)} key(s) to translate ({args.workers} concurrent)")
         try:
-            keys_to_process = args.key if args.key else list(en_data.keys())
-            for key in keys_to_process:
-                en_val = en_data[key]
-                existing_val = data.get(key)
-                # Skip if already present and not overwriting
-                if existing_val is not None and not args.overwrite:
-                    continue
-                print(f"\n  [{key}]")
-                # The outer filter above guarantees the target either has no
-                # value yet or the user passed --overwrite, so we want to
-                # translate the English source unconditionally. Passing
-                # overwrite=False here would trip translate_value's
-                # short-circuit (it inspects `value`, which is the source,
-                # not the target's existing value) and write English back.
-                translated_val = translate_value(key, en_val, target, overwrite=True)
-                data[key] = translated_val
-                keys_written += 1
-                # Incremental save after each top-level key
-                with open(path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                    f.write("\n")
+            # Top-level keys are independent; translate them concurrently. Each
+            # worker only translates the English source (translate_value with
+            # overwrite=True) — the target-skip decision is made above. Results
+            # are collected and saved on the main thread, so writes stay
+            # serialized (no file-write race) and Ctrl+C still leaves a valid
+            # file.
+            with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+                future_to_key = {
+                    pool.submit(translate_value, k, en_data[k], target, True): k
+                    for k in todo
+                }
+                for future in as_completed(future_to_key):
+                    key = future_to_key[future]
+                    data[key] = future.result()
+                    keys_written += 1
+                    with open(path, "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                        f.write("\n")
+                    print(f"  {keys_written}/{len(todo)} [{key}]", flush=True)
         except KeyboardInterrupt:
             print("\n\nInterrupted — progress has been saved.")
         summary[lang] = keys_written
