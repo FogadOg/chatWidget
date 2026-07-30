@@ -13,7 +13,7 @@ import type {
 import { ButtonLike } from '../../../hooks/useClickedButtons';
 import { validateMessageInput } from '../../../lib/validation';
 import { checkAndConsume } from '../../../lib/rateLimiter';
-import { trackEvent, embedOriginHeader, createSupportTicket } from '../../../lib/api';
+import { trackEvent, embedOriginHeader, createSupportTicket, trackConversion } from '../../../lib/api';
 import { HandoffModal } from '../HandoffModal';
 import FeedbackDialog from '../../../components/FeedbackDialog';
 import {
@@ -2206,6 +2206,32 @@ export function useEmbedController(props: EmbedClientProps) {
               // Merge into the ref — excluded keys are internal action routing fields.
               const { action: _a, ...rest } = d as { action?: unknown; [k: string]: unknown };
               pageContextRef.current = { ...pageContextRef.current, ...rest };
+            }
+            return;
+          }
+
+          if (command.action === 'conversion') {
+            // A goal fired on the host page via CompaninWidget.trackConversion().
+            // Attribute it to the current session; no-op silently until a session
+            // exists so an early call never throws on the host page.
+            const d = command.data as Record<string, unknown> | null | undefined;
+            const sid = sessionIdRef.current;
+            const goalType = typeof d?.goal_type === 'string' ? d.goal_type : '';
+            if (sid && goalType) {
+              trackConversion(
+                sid,
+                {
+                  goal_type: goalType,
+                  goal_label: typeof d?.goal_label === 'string' ? d.goal_label : null,
+                  value: typeof d?.value === 'number' ? d.value : null,
+                  currency: typeof d?.currency === 'string' ? d.currency : null,
+                  metadata: (d?.metadata && typeof d.metadata === 'object')
+                    ? (d.metadata as Record<string, unknown>)
+                    : null,
+                },
+                authTokenRef.current ?? undefined,
+                embedHeaders,
+              ).catch(() => {});
             }
             return;
           }

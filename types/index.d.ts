@@ -98,6 +98,7 @@ export type WidgetEventName =
   | 'message.received'
   // User
   | 'user.updated'
+  | 'conversion.tracked'
   | 'file.uploaded'
   // Error / auth
   | 'error'
@@ -138,6 +139,7 @@ export type WidgetEventName =
  *   chat.on('message.sent',            h)   // user sent a message
  *   chat.on('message.received',        h)   // agent replied
  *   chat.on('user.updated',            h)   // identify() called
+ *   chat.on('conversion.tracked',      h)   // trackConversion() called
  *   chat.on('file.uploaded',           h)   // file uploaded (future)
  */
 export interface WidgetAPI {
@@ -158,7 +160,8 @@ export interface WidgetAPI {
    *   'message.sent'           — user sent a message      (alias: 'message')
    *   'message.received'       — agent replied            (alias: 'response')
    *   'user.updated'           — identify() was called
-   *   'file.uploaded'          — file upload completed (future)
+   *   'conversion.tracked'     — trackConversion() was called
+ *   'file.uploaded'          — file upload completed (future)
    *   'auth.failed'            — authentication failed    (alias: 'authFailure')
    *   'error'                  — widget error
    */
@@ -252,6 +255,26 @@ export interface WidgetAPI {
    * Useful for sending cart state, page name, or any structured metadata.
    */
   setContext(data: Record<string, unknown>): void;
+
+  /**
+   * Record a goal/outcome event attributed to the current conversation, so the
+   * ROI dashboard can report assisted conversions and their value. Common goal
+   * presets: `add_to_cart`, `checkout`, `signup`, `lead`, `booking`; any custom
+   * slug is accepted. Emits a `conversion.tracked` event.
+   *
+   * @param goal  Goal identifier (preset or custom slug).
+   * @param value Optional monetary value of the goal (e.g. order total).
+   * @param opts  Optional `{ currency, label, metadata }`.
+   * @returns The `WidgetAPI` instance for chaining.
+   *
+   * @example
+   * chat.trackConversion('checkout', 129.0, { currency: 'USD', metadata: { order_id: '1234' } });
+   */
+  trackConversion(
+    goal: string,
+    value?: number,
+    opts?: { currency?: string; label?: string; metadata?: Record<string, unknown> },
+  ): WidgetAPI;
 
   /**
    * Live-update widget configuration without destroying and re-creating the

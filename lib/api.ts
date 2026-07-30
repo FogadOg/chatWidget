@@ -56,6 +56,7 @@ export const API = {
   },
   sessionFeedback: (sessionId: string) => `${getApiV1BaseUrl()}/sessions/${sessionId}/feedback`,
   sessionHeartbeat: (sessionId: string) => `${getApiV1BaseUrl()}/sessions/${sessionId}/heartbeat`,
+  sessionConversions: (sessionId: string) => `${getApiV1BaseUrl()}/sessions/${sessionId}/conversions`,
   sessionFiles: (sessionId: string) => {
     if (!sessionId) {
       throw new Error('API.sessionFiles called with empty sessionId');
@@ -173,6 +174,50 @@ export async function trackEvent(
     if (process.env.NODE_ENV !== 'production') {
 
       console.warn('telemetry post failed', err);
+    }
+  }
+}
+
+export interface ConversionPayload {
+  goal_type: string;
+  goal_label?: string | null;
+  value?: number | null;
+  currency?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+/**
+ * Record a goal/outcome event (feature A4) attributed to the given session's
+ * conversation. Posted with the same visitor JWT the widget uses to send
+ * messages so the backend can trust the session and attribute the goal.
+ * Fire-and-forget: failures are swallowed (a missed goal must never break the
+ * host page's own flow).
+ */
+export async function trackConversion(
+  sessionId: string,
+  payload: ConversionPayload,
+  authToken?: string,
+  embedHeaders?: Record<string, string>,
+): Promise<void> {
+  if (!sessionId || !payload || !payload.goal_type) return;
+  if (!getApiBaseUrl()) return;
+  const body: Record<string, unknown> = { goal_type: payload.goal_type };
+  if (payload.goal_label) body.goal_label = payload.goal_label;
+  if (typeof payload.value === 'number' && isFinite(payload.value)) body.value = payload.value;
+  if (payload.currency) body.currency = payload.currency;
+  if (payload.metadata && typeof payload.metadata === 'object') body.metadata = payload.metadata;
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (embedHeaders) Object.assign(headers, embedHeaders);
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    await fetch(API.sessionConversions(sessionId), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('conversion post failed', err);
     }
   }
 }

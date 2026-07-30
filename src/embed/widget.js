@@ -1289,6 +1289,43 @@
           },
 
           /**
+           * trackConversion(goal, value, opts) — record a goal/outcome event
+           * (feature A4) attributed to the current conversation, so the ROI
+           * dashboard can report assisted conversions and their value.
+           *
+           * Common presets: 'add_to_cart', 'checkout', 'signup', 'lead',
+           * 'booking'. Any custom slug is accepted.
+           *
+           * @param {string} goal - goal identifier
+           * @param {number} [value] - optional monetary value of the goal
+           * @param {{ currency?: string, label?: string, metadata?: object }} [opts]
+           * @returns chainable
+           */
+          trackConversion: (goal, value, opts) => {
+            try {
+              const goalType = (typeof goal === 'string' ? goal : '').trim();
+              if (!goalType) {
+                logError('trackConversion() requires a non-empty goal string', { goal });
+                return widgetApi;
+              }
+              const o = (opts && typeof opts === 'object') ? opts : {};
+              const data = {
+                action: 'conversion',
+                goal_type: goalType,
+                value: typeof value === 'number' && isFinite(value) ? value : null,
+                currency: typeof o.currency === 'string' ? o.currency : null,
+                goal_label: typeof o.label === 'string' ? o.label : null,
+                metadata: (o.metadata && typeof o.metadata === 'object') ? o.metadata : null,
+              };
+              postToIframe({ type: 'HOST_MESSAGE', data });
+              emitEvent('conversion.tracked', data, { rawType: 'HOST_CONVERSION' });
+            } catch (err) {
+              logError('Failed to track conversion', { error: err && err.message });
+            }
+            return widgetApi;
+          },
+
+          /**
            * setTheme(theme) — switch the widget's light/dark theme at runtime.
            * Accepts 'light', 'dark', or 'system' (follow the visitor's OS setting).
            * Overrides the dashboard WidgetConfig.theme and any data-theme attribute.
