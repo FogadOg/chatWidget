@@ -183,6 +183,7 @@ export interface ConversionPayload {
   goal_label?: string | null;
   value?: number | null;
   currency?: string | null;
+  dedup_key?: string | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -205,6 +206,7 @@ export async function trackConversion(
   if (payload.goal_label) body.goal_label = payload.goal_label;
   if (typeof payload.value === 'number' && isFinite(payload.value)) body.value = payload.value;
   if (payload.currency) body.currency = payload.currency;
+  if (payload.dedup_key) body.dedup_key = payload.dedup_key;
   if (payload.metadata && typeof payload.metadata === 'object') body.metadata = payload.metadata;
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };

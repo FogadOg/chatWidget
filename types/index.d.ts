@@ -273,7 +273,17 @@ export interface WidgetAPI {
   trackConversion(
     goal: string,
     value?: number,
-    opts?: { currency?: string; label?: string; metadata?: Record<string, unknown> },
+    opts?: {
+      currency?: string;
+      label?: string;
+      /**
+       * Idempotency key (e.g. an order id) so a refreshed confirmation page or
+       * SPA re-render doesn't double-count. Falls back to `metadata.order_id`
+       * when omitted.
+       */
+      dedupKey?: string;
+      metadata?: Record<string, unknown>;
+    },
   ): WidgetAPI;
 
   /**

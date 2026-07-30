@@ -1309,13 +1309,21 @@
                 return widgetApi;
               }
               const o = (opts && typeof opts === 'object') ? opts : {};
+              // Idempotency key: explicit opts.dedupKey wins, else fall back to a
+              // metadata.order_id so a refreshed order-confirmation page dedupes
+              // automatically without the integrator wiring anything extra.
+              const meta = (o.metadata && typeof o.metadata === 'object') ? o.metadata : null;
+              const dedupKey = typeof o.dedupKey === 'string'
+                ? o.dedupKey
+                : (meta && typeof meta.order_id === 'string' ? meta.order_id : null);
               const data = {
                 action: 'conversion',
                 goal_type: goalType,
                 value: typeof value === 'number' && isFinite(value) ? value : null,
                 currency: typeof o.currency === 'string' ? o.currency : null,
                 goal_label: typeof o.label === 'string' ? o.label : null,
-                metadata: (o.metadata && typeof o.metadata === 'object') ? o.metadata : null,
+                dedup_key: dedupKey,
+                metadata: meta,
               };
               postToIframe({ type: 'HOST_MESSAGE', data });
               emitEvent('conversion.tracked', data, { rawType: 'HOST_CONVERSION' });

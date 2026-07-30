@@ -2225,6 +2225,7 @@ export function useEmbedController(props: EmbedClientProps) {
                   goal_label: typeof d?.goal_label === 'string' ? d.goal_label : null,
                   value: typeof d?.value === 'number' ? d.value : null,
                   currency: typeof d?.currency === 'string' ? d.currency : null,
+                  dedup_key: typeof d?.dedup_key === 'string' ? d.dedup_key : null,
                   metadata: (d?.metadata && typeof d.metadata === 'object')
                     ? (d.metadata as Record<string, unknown>)
                     : null,
