@@ -134,12 +134,18 @@
       if (!agentId) missing.push("data-agent-id");
       if (!configId) missing.push("data-config-id");
 
-      logError("Missing required attributes", { missing });
+      logError("Missing required attributes", { missing, hasInstallKey: !!installKey });
 
-      // Show user-friendly error
+      // Lead with the single data-widget-key: it's what the default dashboard
+      // snippet uses, so it's the form 95% of installs intend. Demoting the
+      // explicit client/agent/config triple to "advanced" keeps the common
+      // case from reading as "you're missing three attributes you never set."
       showErrorWidget(
         "Configuration Error",
-        `Missing required attributes: ${missing.join(", ")} (or a single data-widget-key). Please check your docs widget installation.`
+        'Missing widget ID. Add data-widget-key="YOUR_WIDGET_ID" to the docs widget <script> tag ' +
+        '(copy the full snippet from your dashboard Install page). Advanced setups may ' +
+        'instead pass data-client-id, data-agent-id, and data-config-id. ' +
+        'Please check your docs widget installation.'
       );
       return;
     }
