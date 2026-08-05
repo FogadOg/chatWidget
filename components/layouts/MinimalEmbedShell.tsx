@@ -11,6 +11,7 @@ import { FOCUS_RING } from '../EmbedShell.constants';
 import MessageBubble from '../MessageBubble';
 import InteractionButtons from '../InteractionButtons';
 import { Suggestions } from '../components/Suggestions';
+import { EmptyStatePrompt } from '../components/EmptyStatePrompt';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { Composer } from '../components/Composer';
 import { LanguageMenu } from '../components/LanguageMenu';
@@ -231,6 +232,14 @@ export default function MinimalEmbedShell(props: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto" style={{ padding: spacingValues.padding }}>
+          {!(showGreeting && greetingText) && !showSuggestions && mergedContent.length === 0 && !isTyping && !streamingMessage && (
+            <EmptyStatePrompt
+              label={translate(locale, 'emptyStatePrompt')}
+              textColor={textColor}
+              mutedTextColor={mutedTextColor}
+              fontStyles={fontStyles}
+            />
+          )}
           {showGreeting && greetingText && (
             <div className="mb-3">
               <div className="max-w-[85%] px-3 py-2 border" style={{ borderColor: subtleBorderColor, borderRadius: `${messageBubbleRadius}px`, backgroundColor: agentBubbleBg, color: textColor }}>

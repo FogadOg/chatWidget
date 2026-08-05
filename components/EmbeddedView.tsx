@@ -31,6 +31,7 @@ import { JumpToLatest } from './components/JumpToLatest';
 import { Composer } from './components/Composer';
 import { LanguageMenu } from './components/LanguageMenu';
 import { ThemeToggleButton } from './components/ThemeToggleButton';
+import { EmptyStatePrompt } from './components/EmptyStatePrompt';
 import MinimalEmbedShell from './layouts/MinimalEmbedShell';
 import PanelEmbedShell from './layouts/PanelEmbedShell';
 
@@ -424,6 +425,14 @@ export function EmbeddedView({ vm }: { vm: ClassicShellVM }) {
                     <ChatSkeleton skeletonColor={skeletonColor} />
                   ) : (
                     <>
+                      {!(showGreeting && greetingText) && !showSuggestions && mergedContent.length === 0 && !isTyping && !streamingMessage && (
+                        <EmptyStatePrompt
+                          label={translate(locale, 'emptyStatePrompt')}
+                          textColor={textColor}
+                          mutedTextColor={mutedTextColor}
+                          fontStyles={fontStyles}
+                        />
+                      )}
                       {showGreeting && greetingText && (
                         <div className="flex flex-col items-start w-full">
                           <div className="flex items-start gap-2">

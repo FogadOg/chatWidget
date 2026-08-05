@@ -220,5 +220,6 @@
   "consentNoticeTitle": "Ingat obrolan ini?",
   "consentNoticeBody": "Kami ingin menyimpan percakapan Anda di browser Anda sehingga tidak hilang jika Anda memuat ulang. Tidak ada yang disimpan sampai Anda setuju.",
   "consentAccept": "Izinkan",
-  "consentDecline": "Tidak terima kasih"
+  "consentDecline": "Tidak terima kasih",
+  "emptyStatePrompt": "Bagaimana saya bisa membantu Anda hari ini?"
 }

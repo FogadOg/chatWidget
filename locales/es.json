@@ -220,5 +220,6 @@
   "consentDecline": "No gracias",
   "docsSearchError": "La búsqueda falló. Por favor, inténtalo de nuevo.",
   "docsSearchRetry": "Reintentar",
-  "gettingStartedCredentialAlt": "¿Prefieres un solo valor? En lugar de los tres ID anteriores, puedes pasar un atributo {code} con tu Clave de Widget (cópialo de la misma configuración del widget). Usa el que prefiera tu integración."
+  "gettingStartedCredentialAlt": "¿Prefieres un solo valor? En lugar de los tres ID anteriores, puedes pasar un atributo {code} con tu Clave de Widget (cópialo de la misma configuración del widget). Usa el que prefiera tu integración.",
+  "emptyStatePrompt": "¿Cómo puedo ayudarte hoy?"
 }

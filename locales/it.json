@@ -220,5 +220,6 @@
   "consentDecline": "No grazie",
   "docsSearchError": "Ricerca non riuscita. Per favore riprova.",
   "docsSearchRetry": "Riprova",
-  "gettingStartedCredentialAlt": "Preferisci un valore singolo? Invece dei tre ID sopra, puoi passare un attributo {code} con la tua Chiave Widget (copia dalla stessa configurazione del widget). Usa quello che la tua integrazione preferisce."
+  "gettingStartedCredentialAlt": "Preferisci un valore singolo? Invece dei tre ID sopra, puoi passare un attributo {code} con la tua Chiave Widget (copia dalla stessa configurazione del widget). Usa quello che la tua integrazione preferisce.",
+  "emptyStatePrompt": "Come posso aiutarti oggi?"
 }

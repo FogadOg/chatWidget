@@ -31,6 +31,7 @@ import { JumpToLatest } from './components/JumpToLatest';
 import { Composer } from './components/Composer';
 import { LanguageMenu } from './components/LanguageMenu';
 import { ThemeToggleButton } from './components/ThemeToggleButton';
+import { EmptyStatePrompt } from './components/EmptyStatePrompt';
 import MinimalEmbedShell from './layouts/MinimalEmbedShell';
 import PanelEmbedShell from './layouts/PanelEmbedShell';
 
@@ -261,7 +262,16 @@ export function FloatingView({ vm }: { vm: ClassicShellVM }) {
                     aria-label={translate(locale, 'chatMessages')}
                     style={{ padding: spacingValues.padding, rowGap: spacingValues.gap }}
                   >
-  
+
+                    {!(showGreeting && greetingText) && !showSuggestions && mergedContent.length === 0 && !isTyping && !streamingMessage && (
+                      <EmptyStatePrompt
+                        label={translate(locale, 'emptyStatePrompt')}
+                        textColor={textColor}
+                        mutedTextColor={mutedTextColor}
+                        fontStyles={fontStyles}
+                      />
+                    )}
+
                     {showGreeting && greetingText && (
                       <div className="flex flex-col items-start w-full">
                         <div className="flex items-start gap-2">

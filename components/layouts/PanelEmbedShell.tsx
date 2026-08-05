@@ -10,6 +10,7 @@ import { FOCUS_RING } from '../EmbedShell.constants';
 import MessageBubble from '../MessageBubble';
 import { Composer } from '../components/Composer';
 import { Suggestions } from '../components/Suggestions';
+import { EmptyStatePrompt } from '../components/EmptyStatePrompt';
 import { ThemeToggleButton } from '../components/ThemeToggleButton';
 
 export default function PanelEmbedShell(props: Props) {
@@ -174,6 +175,14 @@ export default function PanelEmbedShell(props: Props) {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {suggestionList.length === 0 && mergedContent.length === 0 && !isTyping && !streamingMessage && (
+              <EmptyStatePrompt
+                label={translate(locale, 'emptyStatePrompt')}
+                textColor={textColor}
+                mutedTextColor={mutedTextColor}
+                fontStyles={fontStyles}
+              />
+            )}
             {suggestionList.length > 0 && messages.length === 0 && !isTyping && (
               <Suggestions
                 suggestions={suggestionList}

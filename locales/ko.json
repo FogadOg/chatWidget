@@ -220,5 +220,6 @@
   "consentNoticeTitle": "이 대화 기억나?",
   "consentNoticeBody": "브라우저에 대화를 저장하여 새로 고침할 때 잃어버리지 않도록 하고 싶습니다. 동의하기 전까지는 아무것도 저장되지 않습니다.",
   "consentAccept": "허용하다",
-  "consentDecline": "괜찮습니다."
+  "consentDecline": "괜찮습니다.",
+  "emptyStatePrompt": "오늘 무엇을 도와드릴까요?"
 }

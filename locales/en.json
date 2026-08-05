@@ -15,6 +15,7 @@
   "failedToCreateSession": "Failed to create session",
   "chat": "Chat",
   "chatMessages": "Chat messages",
+  "emptyStatePrompt": "How can I help you today?",
   "chatControl": {
     "open": "Open chat",
     "close": "Close chat",
