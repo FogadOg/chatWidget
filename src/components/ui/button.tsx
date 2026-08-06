@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -41,21 +42,47 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  loading = false,
+  children,
+  disabled,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /**
+     * Shows a centered spinner, disables the button (blocking double-submit), and
+     * sets `aria-busy`. The label stays in flow but invisible so the button keeps
+     * exactly the same size (no layout shift). See §3 of INTERACTION_STANDARD.md.
+     * Ignored when `asChild` is set (a slotted element can only take one child).
+     */
+    loading?: boolean
   }) {
   const Comp = asChild ? Slot : "button"
+  const showSpinner = loading && !asChild
+  const isDisabled = disabled || (loading && !asChild)
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, className }), showSpinner && "relative")}
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      {showSpinner ? (
+        <>
+          <span className="absolute inset-0 grid place-items-center">
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          </span>
+          <span className="inline-flex items-center gap-2 opacity-0">{children}</span>
+        </>
+      ) : (
+        children
+      )}
+    </Comp>
   )
 }
 
