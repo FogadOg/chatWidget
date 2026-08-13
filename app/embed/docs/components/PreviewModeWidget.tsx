@@ -1,6 +1,6 @@
 'use client'
 
-import { MutableRefObject } from 'react'
+import { MutableRefObject, ReactNode } from 'react'
 import { t as translate } from '../../../../lib/i18n'
 import {
   MessageBranch,
@@ -79,6 +79,12 @@ interface PreviewModeWidgetProps {
   searchResultsLabel: string;
   searchClearLabel: string;
   searchResultQuery: string;
+  /**
+   * Collapsed bottom search bar, rendered under the panel so admins can see the
+   * widget's entry point and its live panel at the same time. Null when no
+   * teaser message is configured (the bar is off).
+   */
+  searchBar?: ReactNode;
 }
 
 export function PreviewModeWidget({
@@ -116,8 +122,9 @@ export function PreviewModeWidget({
   searchResultsLabel,
   searchClearLabel,
   searchResultQuery,
+  searchBar,
 }: PreviewModeWidgetProps) {
-  return (
+  const panel = (
     <div style={{ width: '100%', height: '100%', display: 'flex', boxSizing: 'border-box', padding: '16px', alignItems: layout.showRail ? 'stretch' : 'center', justifyContent: layout.showRail ? (layout.panelSide === 'left' ? 'flex-start' : 'flex-end') : 'center' }}>
     {/* Sized, floating panel — reflects the size preset + panel side so the
         "Widget layout styles" presets visibly change the preview (parity with
@@ -290,6 +297,17 @@ export function PreviewModeWidget({
       </div>
       </div>
     </div>
+    </div>
+  );
+
+  if (!searchBar) return panel;
+
+  // With a bar configured the canvas splits: panel above, collapsed bar below —
+  // both visible at once so the admin can style the entry point.
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ flex: 1, minHeight: 0 }}>{panel}</div>
+      <div style={{ flexShrink: 0, padding: '0 16px 16px' }}>{searchBar}</div>
     </div>
   );
 }

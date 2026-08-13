@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { API } from '../../../../lib/api'
 import { validateConfig } from '../../../../lib/validateConfig'
 import { logError, logWarn } from '../../../../lib/logger'
@@ -8,11 +8,17 @@ import {
   getStoredSession as helpersGetStoredSession,
 } from '../helpers'
 import { isTrustedParentMessage } from '../DocsClient.utils'
+import { DOCS_SEARCH_BAR_SIZE } from '../DocsClient.constants'
 import { MessageType } from '../DocsClient.types'
 
 interface UseDialogStateParams {
   open: boolean;
   setOpen: (open: boolean) => void;
+  /**
+   * True while the collapsed bottom search bar is on screen. Drives the
+   * iframe footprint the loader is asked for (bar-sized instead of hidden).
+   */
+  searchBarVisible: boolean;
   parentOrigin: string;
   initialPreviewConfig?: string;
   clientId: string;
@@ -38,6 +44,7 @@ interface UseDialogStateParams {
 export function useDialogState({
   open,
   setOpen,
+  searchBarVisible,
   parentOrigin,
   initialPreviewConfig,
   clientId,
@@ -64,51 +71,98 @@ export function useDialogState({
   const userTokenRef = useRef<string | null>(null);
   // Ensures session is created only once (on first open), not on every open/close.
   const sessionInitializedRef = useRef(false);
+  // Guards the mount-time config load against React StrictMode's double effect.
+  const configBootstrappedRef = useRef(false);
+  // A/B variant assignment learned from the config fetch — reused by the
+  // deferred session creation so it never refetches the config.
+  const variantInfoRef = useRef<{ variant_id?: string; variant_name?: string } | undefined>(undefined);
+  const configPromiseRef = useRef<Promise<{ variant_id?: string; variant_name?: string } | undefined> | null>(null);
+  // Visitor JWT minted for this page view, reused by both phases below —
+  // mirrors the chat widget's `readyRef` in useBootstrap.
+  const authTokenRef = useRef<string | null>(null);
+  const tokenPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  // handleOpenChange never fires for the initial state, so WIDGET_RESIZE is
-  // never sent on mount. Send it once here: full-screen when starting open
-  // (startOpen=true), and an explicit hide when starting closed — otherwise the
-  // loader never learns the widget has no collapsed UI and falls back to an
-  // invisible 420x280 container that blocks clicks on the page (and on the chat
-  // widget's teaser bubble) in the bottom-right corner.
+  // Mint at most one visitor JWT: the mount-time config load and the deferred
+  // session creation share whichever mint is already in flight. The promise ref
+  // is cleared once settled so a failed mint can still be retried on open.
+  const ensureAuthToken = useCallback((): Promise<string | null> => {
+    if (authTokenRef.current) return Promise.resolve(authTokenRef.current);
+    if (!tokenPromiseRef.current) {
+      tokenPromiseRef.current = getAuthToken(clientId, resolveParentOrigin())
+        .then((token) => {
+          if (token) authTokenRef.current = token;
+          return token;
+        })
+        .finally(() => { tokenPromiseRef.current = null; });
+    }
+    return tokenPromiseRef.current;
+  }, [clientId, getAuthToken, resolveParentOrigin]);
+
+  // Same deduplication for the config GET. `undefined` means the fetch failed
+  // (fetchWidgetConfig swallows its own errors), so it stays retryable.
+  const ensureWidgetConfig = useCallback((token: string) => {
+    if (variantInfoRef.current) return Promise.resolve(variantInfoRef.current);
+    if (!configPromiseRef.current) {
+      configPromiseRef.current = fetchWidgetConfig(configId, token)
+        .then((info) => {
+          if (info) variantInfoRef.current = info;
+          return info;
+        })
+        .finally(() => { configPromiseRef.current = null; });
+    }
+    return configPromiseRef.current;
+  }, [configId, fetchWidgetConfig]);
+
+  // Load the widget config on mount (auth token + config only — no session, so
+  // page-load visitors who never interact still generate no DB records). The
+  // collapsed search bar is themed and labelled from this config, so it cannot
+  // wait for the first open the way the session does. Parity with the chat
+  // widget, whose launcher is configured the same way (see useBootstrap).
+  useEffect(() => {
+    if (initialPreviewConfig) return;
+    if (!clientId || !configId) return;
+    if (configBootstrappedRef.current) return;
+    configBootstrappedRef.current = true;
+    (async () => {
+      try {
+        const token = await ensureAuthToken();
+        if (!token) return;
+        await ensureWidgetConfig(token);
+      } catch (err) {
+        // Non-fatal: the widget still opens, it just falls back to defaults
+        // (and the open path retries both calls).
+        logWarn('Docs widget config preload failed', { error: err });
+      }
+    })();
+  }, [clientId, configId, initialPreviewConfig, ensureAuthToken, ensureWidgetConfig]);
+
+  // Single source of truth for the iframe footprint. It runs on mount too —
+  // handleOpenChange never fires for the initial state, and without an explicit
+  // message the loader never learns the widget has no full-size collapsed UI and
+  // falls back to an invisible 420x280 container that blocks clicks on the page
+  // (and on the chat widget's teaser bubble) in the bottom-right corner.
+  //   open              → full-screen overlay
+  //   collapsed + bar   → bar-sized strip anchored bottom-center
+  //   collapsed, no bar → hidden entirely
   useEffect(() => {
     if (initialPreviewConfig) return;
     if (typeof window === 'undefined' || !window.parent || window.parent === window) return;
+    const data = open
+      ? { width: '100vw', height: '100vh' }
+      : searchBarVisible
+        ? { ...DOCS_SEARCH_BAR_SIZE, anchor: 'bottom-center' }
+        : { width: 0, height: 0, hide: true };
     try {
-      window.parent.postMessage(
-        open
-          ? { type: 'WIDGET_RESIZE', data: { width: '100vw', height: '100vh' } }
-          : { type: 'WIDGET_RESIZE', data: { width: 0, height: 0, hide: true } },
-        parentOrigin,
-      );
+      window.parent.postMessage({ type: 'WIDGET_RESIZE', data }, parentOrigin);
     } catch {
       // ignore — parent may be cross-origin/unreachable in some embed contexts
     }
-  }, []);
+  }, [open, searchBarVisible, initialPreviewConfig, parentOrigin]);
 
   const handleOpenChange = (newOpen: boolean) => {
+    // The resize effect above follows this state change — no postMessage here,
+    // so the open/collapsed/hidden footprints can never drift apart.
     setOpen(newOpen);
-
-    // Send resize message to parent
-    if (typeof window !== 'undefined' && window.parent) {
-      try {
-        if (newOpen) {
-          // Full screen when dialog opens
-          window.parent.postMessage({
-            type: 'WIDGET_RESIZE',
-            data: { width: '100vw', height: '100vh' }
-          }, parentOrigin);
-        } else {
-          // Back to original size and position when dialog closes
-          window.parent.postMessage({
-            type: 'WIDGET_RESIZE',
-            data: { width: 0, height: 0, hide: true }
-          }, parentOrigin);
-        }
-      } catch {
-        // ignore — parent may be cross-origin/unreachable in some embed contexts
-      }
-    }
   };
 
   // Initialize session when the dialog is first opened. Deferred (not on mount)
@@ -119,12 +173,12 @@ export function useDialogState({
     if (initialPreviewConfig) return;
     if (clientId && agentId) {
       sessionInitializedRef.current = true;
-      const detectedParentOrigin = resolveParentOrigin();
 
-      getAuthToken(clientId, detectedParentOrigin).then(async (token) => {
+      ensureAuthToken().then(async (token) => {
         if (token) {
-          // Fetch widget config first so variant info is available for session creation
-          const variantInfo = await fetchWidgetConfig(configId, token);
+          // Variant info comes from the config — joins the preload's in-flight
+          // fetch (or its result) rather than issuing a second one.
+          const variantInfo = await ensureWidgetConfig(token);
 
           const storedSession = helpersGetStoredSession(clientId, agentId);
           if (storedSession) {
@@ -148,7 +202,7 @@ export function useDialogState({
     } else {
       logWarn('Missing clientId or agentId');
     }
-  }, [open, clientId, agentId, configId, createSession, validateAndRestoreSession, fetchWidgetConfig, getAuthToken, initialPreviewConfig, resolveParentOrigin, authError]);
+  }, [open, clientId, agentId, createSession, validateAndRestoreSession, ensureAuthToken, ensureWidgetConfig, initialPreviewConfig, authError]);
 
   // Preview mode only: apply live config updates pushed from the admin customize
   // panel via postMessage, so appearance edits update without reloading the
@@ -194,19 +248,20 @@ export function useDialogState({
     return () => clearInterval(interval);
   }, [sessionId, clientId, agentId]);
 
-  // Apply hide_on_mobile from widget config for docs widget
+  // Apply hide_on_mobile from widget config for docs widget. Only the hide side
+  // is posted: the container's visibility is otherwise driven by WIDGET_RESIZE,
+  // and an unconditional WIDGET_SHOW would make the loader emit a spurious
+  // "open" event (and a GA widget_open hit) on every page load now that the
+  // config is fetched at mount rather than on first open.
   useEffect(() => {
     if (!widgetConfig) return;
     const ua = navigator.userAgent;
     const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|Mobi/i.test(ua);
-    const hideOnMobile = Boolean(widgetConfig?.data?.hide_on_mobile);
+    if (!isMobileDevice || !widgetConfig?.data?.hide_on_mobile) return;
 
     try {
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage(
-          { type: hideOnMobile && isMobileDevice ? 'WIDGET_HIDE' : 'WIDGET_SHOW' },
-          parentOrigin
-        );
+        window.parent.postMessage({ type: 'WIDGET_HIDE' }, parentOrigin);
       }
     } catch (e) {
       // ignore

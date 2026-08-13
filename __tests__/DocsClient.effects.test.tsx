@@ -622,4 +622,79 @@ describe('DocsClient missing effect/flow coverage', () => {
     })
     consoleErrorSpy.mockRestore()
   })
+  it('renders the collapsed bottom search bar and sizes the iframe to it', async () => {
+    const parentPostMessage = jest.fn()
+    const originalParent = window.parent
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: { postMessage: parentPostMessage },
+    })
+    global.fetch = jest.fn(async (url: any, opts?: any) => {
+      const method = opts?.method || 'GET'
+      if (method === 'GET' && String(url).includes('widget-config')) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              widget_type: 'docs',
+              teaser_message: { en: 'Search the docs' },
+              teaser_delay: 0,
+            },
+          }),
+        } as any
+      }
+      return { ok: true, json: async () => ({ status: 'success', data: {} }) } as any
+    }) as any
+
+    render(<DocsClient clientId="c16" agentId="a16" configId="cfg16" locale="en" startOpen={false} />)
+
+    const field = await waitFor(() => screen.getByPlaceholderText('Search the docs'))
+    // Collapsed: the loader is asked for a bar-sized strip, not a hidden or
+    // full-screen container, so the rest of the host page stays clickable.
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'WIDGET_RESIZE', data: { width: 600, height: 88, anchor: 'bottom-center' } },
+      expect.any(String)
+    )
+
+    // Clicking the bar opens the panel full-screen.
+    fireEvent.click(field)
+    await waitFor(() => {
+      expect(parentPostMessage).toHaveBeenCalledWith(
+        { type: 'WIDGET_RESIZE', data: { width: '100vw', height: '100vh' } },
+        expect.any(String)
+      )
+    })
+    expect(screen.queryByPlaceholderText('Search the docs')).toBeNull()
+
+    Object.defineProperty(window, 'parent', { configurable: true, value: originalParent })
+  })
+  it('keeps the search bar hidden when no teaser message is configured', async () => {
+    const parentPostMessage = jest.fn()
+    const originalParent = window.parent
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: { postMessage: parentPostMessage },
+    })
+    global.fetch = jest.fn(async (url: any, opts?: any) => {
+      const method = opts?.method || 'GET'
+      if (method === 'GET' && String(url).includes('widget-config')) {
+        return { ok: true, json: async () => ({ data: { widget_type: 'docs' } }) } as any
+      }
+      return { ok: true, json: async () => ({ status: 'success', data: {} }) } as any
+    }) as any
+
+    render(<DocsClient clientId="c17" agentId="a17" configId="cfg17" locale="en" startOpen={false} />)
+
+    await waitFor(() => {
+      expect(parentPostMessage).toHaveBeenCalledWith(
+        { type: 'WIDGET_RESIZE', data: { width: 0, height: 0, hide: true } },
+        expect.any(String)
+      )
+    })
+    expect(
+      parentPostMessage.mock.calls.some(([msg]) => msg?.data?.anchor === 'bottom-center')
+    ).toBe(false)
+
+    Object.defineProperty(window, 'parent', { configurable: true, value: originalParent })
+  })
 })

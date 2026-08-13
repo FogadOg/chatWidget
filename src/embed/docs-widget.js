@@ -330,6 +330,48 @@
         container.style.height = `${errorHeight}px`;
       }
     };
+    // Collapsed docs search bar (the docs widget's launcher — see
+    // DocsSearchBar.tsx): a bar-sized strip floating at the bottom-center of the
+    // page. The container is sized to the bar and nothing more, so the rest of
+    // the host page stays clickable while it is on screen.
+    let bottomBarSize = null;
+    const applyBottomCenterLayout = (barData) => {
+      const requestedWidth = parsePixelValue(barData && barData.width) || 600;
+      const requestedHeight = parsePixelValue(barData && barData.height) || 88;
+      bottomBarSize = { width: requestedWidth, height: requestedHeight };
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+      // Requested width is a maximum — narrow viewports clamp to the screen.
+      const width = viewportWidth > 0
+        ? Math.min(requestedWidth, Math.max(240, viewportWidth - 24))
+        : requestedWidth;
+      container.style.padding = '0';
+      // !important throughout for the same reason as the full-screen branch:
+      // host-page `iframe`/`div` rules must not reshape the strip.
+      container.style.setProperty('width', `${width}px`, 'important');
+      container.style.setProperty('height', `${requestedHeight}px`, 'important');
+      container.style.setProperty('left', '50%', 'important');
+      container.style.setProperty('bottom', '0px', 'important');
+      container.style.setProperty('transform', 'translateX(-50%)', 'important');
+      container.style.setProperty('max-width', 'none', 'important');
+      container.style.setProperty('max-height', 'none', 'important');
+      container.style.removeProperty('top');
+      container.style.removeProperty('right');
+    };
+    // Restore the default top-left anchoring used by every other layout.
+    const clearBottomCenterLayout = () => {
+      if (!bottomBarSize) return;
+      bottomBarSize = null;
+      container.style.removeProperty('transform');
+      container.style.removeProperty('bottom');
+      container.style.removeProperty('right');
+      container.style.setProperty('top', '0');
+      container.style.setProperty('left', '0');
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => {
+        if (bottomBarSize) applyBottomCenterLayout(bottomBarSize);
+      });
+    }
     container.style.cssText = `
       position: fixed;
       top: 0;
@@ -1101,11 +1143,19 @@
                 // recovered, so error-card suppression no longer applies.
                 transientRetryPending = false;
                 if (data?.hide) {
+                  clearBottomCenterLayout();
                   container.style.display = "none";
                   container.style.width = "0";
                   container.style.height = "0";
                   container.style.padding = "0";
+                } else if (data?.anchor === "bottom-center") {
+                  // Collapsed search bar — a floating strip, not a corner box.
+                  applyBottomCenterLayout(data);
+                  if (allowDisplay) {
+                    container.style.display = "block";
+                  }
                 } else if (data?.height) {
+                  clearBottomCenterLayout();
                   const parsedWidth = parsePixelValue(data?.width);
                   const parsedHeight = parsePixelValue(data?.height);
                   const containerPadding = getContainerPadding(parsedWidth, parsedHeight);
@@ -1135,7 +1185,9 @@
                     }
                   }
                 }
-                if (data?.width && data.width !== "100vw") {
+                // The bottom-center branch already sized the container (and
+                // clamped it to the viewport) — don't overwrite that here.
+                if (data?.anchor !== "bottom-center" && data?.width && data.width !== "100vw") {
                   const parsedWidth = parsePixelValue(data.width);
                   const parsedHeight = parsePixelValue(data?.height);
                   const containerPadding = getContainerPadding(parsedWidth, parsedHeight);

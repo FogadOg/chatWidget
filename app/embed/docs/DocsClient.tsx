@@ -67,7 +67,9 @@ import { useHeartbeat } from '../useHeartbeat'
 import { useWidgetConfig } from './hooks/useWidgetConfig'
 import { useMessageOperations } from './hooks/useMessageOperations'
 import { useDialogState } from './hooks/useDialogState'
+import { useDocsSearchBar } from './hooks/useDocsSearchBar'
 import { PreviewModeWidget } from './components/PreviewModeWidget'
+import { DocsSearchBar } from './components/DocsSearchBar'
 import { MessageFeedbackButtons } from './components/MessageFeedbackButtons'
 import { DevOverlay, useDebugMode, reportDevState } from '../../../src/components/DevOverlay'
 import { useInstantSearch } from './hooks/useInstantSearch'
@@ -290,9 +292,29 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     setText(hit.title);
   }, [clearSearch, setText]);
 
+  // Collapsed entry point: a search field pinned to the bottom of the host
+  // page, configured from the same teaser fields as the chat widget's bubble.
+  // hide_on_mobile suppresses it on phones, matching the panel itself.
+  const searchBarEnabled = useMemo(() => {
+    if (!widgetConfig?.data?.hide_on_mobile) return true;
+    if (typeof navigator === 'undefined') return true;
+    return !/Android|iPhone|iPad|iPod|Mobile|Mobi/i.test(navigator.userAgent);
+  }, [widgetConfig?.data?.hide_on_mobile]);
+  const {
+    visible: searchBarVisible,
+    placeholder: searchBarPlaceholder,
+    dismiss: dismissSearchBar,
+  } = useDocsSearchBar({
+    configData: widgetConfig?.data,
+    locale: activeLocale,
+    open,
+    enabled: searchBarEnabled,
+  });
+
   const { handleOpenChange } = useDialogState({
     open,
     setOpen,
+    searchBarVisible,
     parentOrigin,
     initialPreviewConfig,
     clientId,
@@ -385,6 +407,18 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
         }),
   };
 
+  // Opening from the collapsed search bar. Anything the visitor already typed
+  // is handed to the panel's own search box — or to the composer in the minimal
+  // variant, which has no search box (layout.showSearch === false).
+  const handleSearchBarOpen = useCallback((seed?: string) => {
+    const value = (seed ?? '').trim();
+    if (value) {
+      if (layout.showSearch) setSearchQuery(value);
+      else setText(value);
+    }
+    handleOpenChange(true);
+  }, [layout.showSearch, setSearchQuery, setText, handleOpenChange]);
+
   // Load the selected Google Font (parity with the chat widget).
   const fontSource = widgetConfig?.data?.font_source;
   const fontFamily = widgetConfig?.data?.font_family;
@@ -448,6 +482,18 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
           searchResultsLabel={translate(activeLocale, 'docsSearchResultsLabel')}
           searchClearLabel={translate(activeLocale, 'docsSearchClear')}
           searchResultQuery={searchState.status === 'success' ? searchState.query : searchQuery}
+          // Preview shows the collapsed bar whenever one is configured, without
+          // waiting out teaser_delay — the point is to see and style it.
+          searchBar={searchBarPlaceholder ? (
+            <DocsSearchBar
+              placeholder={searchBarPlaceholder}
+              theme={theme}
+              activeLocale={activeLocale}
+              onOpen={() => {}}
+              onDismiss={() => {}}
+              positioning='static'
+            />
+          ) : null}
         />
         {isDebug && <DevOverlay />}
       </>
@@ -463,6 +509,18 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
       >
         {liveMessage}
       </div>
+
+      {/* Collapsed state: the bottom search bar. The loader shrinks the iframe
+          to just this strip, so the rest of the host page stays clickable. */}
+      {searchBarVisible && searchBarPlaceholder && (
+        <DocsSearchBar
+          placeholder={searchBarPlaceholder}
+          theme={theme}
+          activeLocale={activeLocale}
+          onOpen={handleSearchBarOpen}
+          onDismiss={dismissSearchBar}
+        />
+      )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
