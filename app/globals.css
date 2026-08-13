@@ -222,6 +222,71 @@
 
 .teaser-bubble-enter { animation: teaser-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
+/* ── Docs collapsed search bar ───────────────────────────────────────────────
+   The pill floats over the host page's own content, so it earns its separation
+   with layered elevation (a tight contact shadow + a wide ambient one) rather
+   than width. Colors stay inline in DocsSearchBar because they come from the
+   widget config; only the depth, states and motion live here — which also lets
+   the reduced-motion block below strip the animation. */
+@keyframes docs-search-bar-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.docs-search-bar {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 10px 28px -8px rgba(0, 0, 0, 0.22);
+  transition: transform 0.16s ease-out, box-shadow 0.16s ease-out;
+  animation: docs-search-bar-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.docs-search-bar:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.07),
+    0 16px 36px -10px rgba(0, 0, 0, 0.26);
+}
+
+/* Ring on keyboard focus so tabbing into the pill is as legible as clicking it.
+   `focus-within` covers the inner input, which is the real focus target. */
+.docs-search-bar:focus-within {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 10px 28px -8px rgba(0, 0, 0, 0.22),
+    0 0 0 3px color-mix(in oklab, var(--primary) 28%, transparent);
+}
+
+/* Dismiss stays quiet until the visitor goes looking for it. */
+.docs-search-bar__dismiss {
+  opacity: 0.5;
+  transition: opacity 0.16s ease-out, background-color 0.16s ease-out;
+}
+
+.docs-search-bar:hover .docs-search-bar__dismiss { opacity: 0.75; }
+
+.docs-search-bar__dismiss:hover,
+.docs-search-bar__dismiss:focus-visible {
+  opacity: 1;
+  background-color: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+/* Placeholder inherits the pill's text color (which follows the widget config's
+   light/dark palette) instead of the browser's grey, which can vanish on a dark
+   surface. ::placeholder can't be set from the inline styles in the component. */
+.docs-search-bar input::placeholder {
+  color: inherit;
+  opacity: 0.55;
+}
+
+.docs-search-bar__go { transition: transform 0.16s ease-out; }
+.docs-search-bar:hover .docs-search-bar__go { transform: translateX(1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-search-bar,
+  .docs-search-bar__go { animation: none !important; transform: none !important; }
+}
+
 /* ── Message entry animations ────────────────────────────────────────────── */
 
 @keyframes message-fade-kf  { from { opacity: 0; } to { opacity: 1; } }
