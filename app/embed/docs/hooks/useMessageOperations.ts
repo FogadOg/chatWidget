@@ -341,6 +341,31 @@ export function useMessageOperations({
     [sendMessageToAPI, sessionId, authToken, setError, setMessages, setStatus]
   );
 
+  // Preview mode (admin Customize panel, public docs demo): there is no session
+  // or token, so echo the visitor's message and answer with a canned reply
+  // instead of calling the API. Shared by the composer and the suggestion chips
+  // — routing chips through addUserMessage would surface a session/auth error.
+  const appendPreviewExchange = useCallback((content: string) => {
+    const ts = Date.now();
+    setMessages(prev => [
+      ...prev,
+      { key: `user-${ts}`, from: 'user', versions: [{ id: `user-${ts}`, content }] },
+    ]);
+    setStatus('streaming');
+    setTimeout(() => {
+      const replyTs = Date.now();
+      setMessages(prev => [
+        ...prev,
+        {
+          key: `preview-agent-${replyTs}`,
+          from: 'agent',
+          versions: [{ id: `preview-agent-${replyTs}`, content: translate(activeLocale, 'previewModeReply') }],
+        },
+      ]);
+      setStatus('ready');
+    }, 800);
+  }, [activeLocale, setMessages, setStatus]);
+
   const handleSubmit = (message: PromptInputMessage) => {
     const hasText = Boolean(message.text);
     const hasAttachments = Boolean(message.files?.length);
@@ -351,25 +376,8 @@ export function useMessageOperations({
 
     // Preview mode: add user message then return a dummy agent reply
     if (initialPreviewConfig) {
-      const content = message.text || 'Sent with attachments';
-      const ts = Date.now();
-      setMessages(prev => [
-        ...prev,
-        { key: `user-${ts}`, from: 'user', versions: [{ id: `user-${ts}`, content }] },
-      ]);
+      appendPreviewExchange(message.text || 'Sent with attachments');
       setText('');
-      setStatus('streaming');
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          {
-            key: `preview-agent-${Date.now()}`,
-            from: 'agent',
-            versions: [{ id: `preview-agent-${Date.now()}`, content: 'This is a preview — in the live widget your AI agent will respond here.' }],
-          },
-        ]);
-        setStatus('ready');
-      }, 800);
       return;
     }
 
@@ -386,6 +394,10 @@ export function useMessageOperations({
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    if (initialPreviewConfig) {
+      appendPreviewExchange(suggestion);
+      return;
+    }
     // Don't set status here - let addUserMessage handle it
     addUserMessage(suggestion);
   };

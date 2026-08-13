@@ -91,6 +91,7 @@
   "nextCitation": "Nästa",
   "modelContextUsage": "Modellens kontextanvändning",
   "previewTitle": "Förhandsvisning",
+  "previewModeReply": "Detta är en förhandsgranskning — i den skarpa widgeten svarar din AI-agent här.",
   "chainOfThought": "Tankekedja",
   "modelSelectorTitle": "Modellväljare",
   "prevBranch": "Tidigare gren",

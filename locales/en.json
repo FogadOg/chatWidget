@@ -99,6 +99,7 @@
   "nextCitation": "Next",
   "modelContextUsage": "Model context usage",
   "previewTitle": "Preview",
+  "previewModeReply": "This is a preview — in the live widget your AI agent will respond here.",
   "poweredBy": "Powered by ",
   "gettingStartedTitle": "Getting Started",
   "gettingStartedSubtitle": "Add the chat widget to your website in 3 steps",

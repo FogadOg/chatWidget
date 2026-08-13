@@ -91,6 +91,7 @@
   "nextCitation": "Neste",
   "modelContextUsage": "Modell kontekstbruk",
   "previewTitle": "Forhåndsvisning",
+  "previewModeReply": "Dette er en forhåndsvisning — i det ekte widgeten svarer AI-agenten din her.",
   "chainOfThought": "Tankegang",
   "modelSelectorTitle": "Modellvelger",
   "prevBranch": "Tidligere gren",

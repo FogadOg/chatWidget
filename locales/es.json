@@ -91,6 +91,7 @@
   "nextCitation": "Siguiente",
   "modelContextUsage": "Uso del contexto del modelo",
   "previewTitle": "Vista previa",
+  "previewModeReply": "Esto es una vista previa — en el widget en vivo tu agente de IA responderá aquí.",
   "chainOfThought": "Cadena de Pensamiento",
   "modelSelectorTitle": "Selector de modelo",
   "prevBranch": "Rama anterior",

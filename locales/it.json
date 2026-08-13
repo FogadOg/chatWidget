@@ -91,6 +91,7 @@
   "nextCitation": "Avanti",
   "modelContextUsage": "Utilizzo del contesto del modello",
   "previewTitle": "Anteprima",
+  "previewModeReply": "Questa è un'anteprima — nel widget live il tuo agente AI risponderà qui.",
   "chainOfThought": "Catena di pensiero",
   "modelSelectorTitle": "Selettore del modello",
   "prevBranch": "Ramo precedente",
