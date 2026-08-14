@@ -290,6 +290,9 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
   // session is created asynchronously — hold the text until there is one to
   // attach it to rather than dropping it (parity with the chat widget, where
   // host-sent text always lands in the conversation).
+  // Footprint the collapsed bar reports for itself — the suggestion chips
+  // wrap, so the height is only knowable once rendered.
+  const [searchBarSize, setSearchBarSize] = useState<{ width: number; height: number } | null>(null);
   const pendingHostTextRef = useRef<string | null>(null);
   const handleHostText = useCallback((text: string) => {
     const value = text.trim();
@@ -333,6 +336,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     open,
     setOpen,
     searchBarVisible,
+    searchBarSize,
     parentOrigin,
     initialPreviewConfig,
     clientId,
@@ -513,6 +517,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
               placeholder={searchBarPlaceholder}
               theme={theme}
               activeLocale={activeLocale}
+              suggestions={resolvedSuggestions}
               onOpen={() => {}}
               onDismiss={() => {}}
               positioning='static'
@@ -541,6 +546,9 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
           placeholder={searchBarPlaceholder}
           theme={theme}
           activeLocale={activeLocale}
+          suggestions={resolvedSuggestions}
+          onSuggestionSelect={handleHostText}
+          onMeasure={setSearchBarSize}
           onOpen={handleSearchBarOpen}
           onDismiss={dismissSearchBar}
         />

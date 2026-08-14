@@ -24,6 +24,8 @@ interface UseDialogStateParams {
    * iframe footprint the loader is asked for (bar-sized instead of hidden).
    */
   searchBarVisible: boolean;
+  /** Footprint the bar measured for itself; falls back to the constant. */
+  searchBarSize?: { width: number; height: number } | null;
   parentOrigin: string;
   initialPreviewConfig?: string;
   clientId: string;
@@ -65,6 +67,7 @@ export function useDialogState({
   open,
   setOpen,
   searchBarVisible,
+  searchBarSize,
   parentOrigin,
   initialPreviewConfig,
   clientId,
@@ -175,14 +178,18 @@ export function useDialogState({
     const data = open
       ? { width: '100vw', height: '100vh' }
       : searchBarVisible
-        ? { ...DOCS_SEARCH_BAR_SIZE, anchor: 'bottom-center' }
+        ? {
+            width: searchBarSize?.width || DOCS_SEARCH_BAR_SIZE.width,
+            height: searchBarSize?.height || DOCS_SEARCH_BAR_SIZE.height,
+            anchor: 'bottom-center',
+          }
         : { width: 0, height: 0, hide: true };
     try {
       window.parent.postMessage({ type: 'WIDGET_RESIZE', data }, parentOrigin);
     } catch {
       // ignore — parent may be cross-origin/unreachable in some embed contexts
     }
-  }, [open, searchBarVisible, initialPreviewConfig, parentOrigin]);
+  }, [open, searchBarVisible, searchBarSize?.width, searchBarSize?.height, initialPreviewConfig, parentOrigin]);
 
   const handleOpenChange = (newOpen: boolean) => {
     // The resize effect above follows this state change — no postMessage here,

@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useEffect, useRef } from 'react'
 import { t as translate } from '../../../../lib/i18n'
 import type { DocsTheme } from '../DocsClient.types'
 
@@ -9,6 +10,15 @@ interface DocsSearchBarProps {
   /** Resolved docs theme (CSS custom properties + chrome colors). */
   theme: DocsTheme;
   activeLocale: string;
+  /** Configured suggested questions, rendered as chips above the card. */
+  suggestions?: string[];
+  /** Ask one of the suggestions — opens the panel and sends it. */
+  onSuggestionSelect?: (text: string) => void;
+  /**
+   * Reports the rendered footprint so the host iframe can be sized to it. The
+   * chips wrap, so the height isn't knowable up front.
+   */
+  onMeasure?: (size: { width: number; height: number }) => void;
   /**
    * Open the widget. `seed` carries anything the visitor typed into the bar
    * before it opened so the query isn't lost.
@@ -42,11 +52,39 @@ export function DocsSearchBar({
   placeholder,
   theme,
   activeLocale,
+  suggestions,
+  onSuggestionSelect,
+  onMeasure,
   onOpen,
   onDismiss,
   positioning = 'fixed',
 }: DocsSearchBarProps) {
   const openLabel = placeholder || translate(activeLocale, 'docsSearchPlaceholder');
+  // Exactly what the dashboard configured, in order — the same list the open
+  // panel renders. The iframe measures itself, so more chips simply make the
+  // collapsed footprint taller instead of being clipped.
+  const chips = (suggestions ?? []).filter((s) => typeof s === 'string' && s.trim());
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  // Report the rendered size (content + the wrapper's padding) so the loader can
+  // shrink-wrap the iframe around it. A zero height means the element hasn't
+  // been laid out yet (or we're in jsdom) — reporting that would collapse the
+  // iframe, so it's ignored.
+  const report = useCallback(() => {
+    const el = contentRef.current;
+    if (!el || !onMeasure) return;
+    const rect = el.getBoundingClientRect();
+    if (!rect.height) return;
+    onMeasure({ width: Math.ceil(rect.width) + 32, height: Math.ceil(rect.height) + 32 });
+  }, [onMeasure]);
+
+  useEffect(() => {
+    report();
+    if (typeof ResizeObserver === 'undefined' || !contentRef.current) return;
+    const observer = new ResizeObserver(() => report());
+    observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [report, chips.length, placeholder]);
 
   return (
     <div
@@ -65,6 +103,46 @@ export function DocsSearchBar({
       }}
     >
       <div
+        ref={contentRef}
+        style={{
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          gap: '8px',
+          width: '100%',
+          maxWidth: '560px',
+        }}
+      >
+        {chips.length > 0 && (
+          // Suggested questions sit above the card: they read as things you can
+          // ask it, and asking one skips straight to an answer.
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end' }}>
+            {chips.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                className="docs-search-bar__chip"
+                onClick={(e) => { e.stopPropagation(); (onSuggestionSelect ?? onOpen)(suggestion); }}
+                style={{
+                  maxWidth: '100%',
+                  padding: '7px 13px',
+                  borderRadius: '9999px',
+                  border: `1px solid ${theme.border}`,
+                  background: 'var(--background)',
+                  color: theme.title,
+                  fontSize: '13px',
+                  lineHeight: 1.3,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
+      <div
         // A click anywhere on the card means "ask", so the whole surface opens
         // the widget. The inner input exists for the look and for keyboard
         // users who tab in and start typing (onChange below).
@@ -76,7 +154,6 @@ export function DocsSearchBar({
           flexDirection: 'column',
           gap: '10px',
           width: '100%',
-          maxWidth: '560px',
           padding: '14px 14px 12px',
           // Deliberately the opaque surface color rather than theme.panelBackground:
           // a translucent/glassmorphism config is fine for the panel, which sits
@@ -164,6 +241,7 @@ export function DocsSearchBar({
             </svg>
           </span>
         </div>
+      </div>
       </div>
     </div>
   );
