@@ -282,7 +282,7 @@ export function PreviewModeWidget({
             </Suggestions>
           </div>
         )}
-        <PromptInput globalDrop multiple onSubmit={handleSubmit}>
+        <PromptInput className="docs-composer" globalDrop multiple onSubmit={handleSubmit}>
           <PromptInputHeader>
             <PromptInputAttachments>{(attachment) => <PromptInputAttachment data={attachment} />}</PromptInputAttachments>
           </PromptInputHeader>
@@ -291,7 +291,13 @@ export function PreviewModeWidget({
           </PromptInputBody>
           <PromptInputFooter>
             <PromptInputTools />
-            <PromptInputSubmit disabled={!text.trim() || status === 'streaming'} status={status} />
+            <PromptInputSubmit disabled={!text.trim() || status === 'streaming'} status={status}>
+              {status === 'streaming' || status === 'submitted' || status === 'error' ? undefined : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
+                </svg>
+              )}
+            </PromptInputSubmit>
           </PromptInputFooter>
         </PromptInput>
       </div>

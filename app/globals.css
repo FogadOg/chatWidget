@@ -287,6 +287,56 @@
   .docs-search-bar__go { animation: none !important; transform: none !important; }
 }
 
+/* ── Docs widget composer ────────────────────────────────────────────────────
+   The docs panel's ask box, styled as a soft card: generous radius, hairline
+   border, no inner shadow, and a circular send button — the shape modern docs
+   assistants use. Applied here rather than at the call site because the visible
+   card is the InputGroup nested inside PromptInput's <form>, which the call
+   site cannot reach. Scoped to `.docs-composer` so the shared ai-elements
+   primitive is untouched for every other consumer.                    ─────── */
+.docs-composer [data-slot="input-group"] {
+  border-radius: 16px;
+  border-color: var(--border);
+  background: var(--background);
+  box-shadow: none;
+  padding: 4px 4px 4px 2px;
+}
+
+/* Focus lives on the card, not on a ring around the textarea. */
+.docs-composer [data-slot="input-group"]:has([data-slot="input-group-control"]:focus-visible) {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent);
+}
+
+.docs-composer textarea {
+  min-height: 56px;
+  padding: 12px 14px 4px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.docs-composer textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.85;
+}
+
+/* Circular send button, sized to sit comfortably in the footer row. */
+.docs-composer button[type="submit"] {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  transition: opacity 0.16s ease-out, background-color 0.16s ease-out;
+}
+
+/* Disabled = quiet grey circle rather than a dimmed brand button, so an empty
+   composer reads as "nothing to send yet" instead of "something is broken". */
+.docs-composer button[type="submit"]:disabled {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
 /* ── Message entry animations ────────────────────────────────────────────── */
 
 @keyframes message-fade-kf  { from { opacity: 0; } to { opacity: 1; } }

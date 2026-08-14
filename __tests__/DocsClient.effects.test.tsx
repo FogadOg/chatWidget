@@ -653,7 +653,7 @@ describe('DocsClient missing effect/flow coverage', () => {
     // Collapsed: the loader is asked for a bar-sized strip, not a hidden or
     // full-screen container, so the rest of the host page stays clickable.
     expect(parentPostMessage).toHaveBeenCalledWith(
-      { type: 'WIDGET_RESIZE', data: { width: 480, height: 88, anchor: 'bottom-center' } },
+      { type: 'WIDGET_RESIZE', data: { width: 600, height: 140, anchor: 'bottom-center' } },
       expect.any(String)
     )
 
