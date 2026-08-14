@@ -3,6 +3,7 @@ import { API } from '../../../../lib/api'
 import { t as translate } from '../../../../lib/i18n'
 import { logError } from '../../../../lib/logger'
 import { getPageContext as helpersGetPageContext } from '../helpers'
+import { getHostContext } from '../hostContext'
 import { fetchWithTimeout } from '../resilientFetch'
 import {
   queueMessage,
@@ -58,6 +59,8 @@ interface UseMessageOperationsParams {
   setMessageFeedbackSubmitted: React.Dispatch<React.SetStateAction<Set<string>>>;
   setText: (text: string) => void;
   loadSessionMessages: (sessionId: string, token: string, isNewSession?: boolean) => Promise<void>;
+  /** Host-page beforeSend interceptor; returns null to cancel the send. */
+  interceptOutgoing?: (content: string) => Promise<string | null>;
 }
 
 export function useMessageOperations({
@@ -73,6 +76,7 @@ export function useMessageOperations({
   setMessageFeedbackSubmitted,
   setText,
   loadSessionMessages,
+  interceptOutgoing,
 }: UseMessageOperationsParams) {
   const rateLimitUntilRef = useRef<number>(0);
 
@@ -117,7 +121,9 @@ export function useMessageOperations({
         body: JSON.stringify({
           content,
           locale: activeLocale,
-          page_context: helpersGetPageContext(),
+          // Host-supplied context (setContext) rides along with the page's own
+          // URL/title, matching the chat widget's payload.
+          page_context: { ...helpersGetPageContext(), ...getHostContext() },
         }),
       }, TIMEOUTS.MESSAGE_SEND);
 
@@ -312,13 +318,19 @@ export function useMessageOperations({
   }, [authToken, initialParentOrigin]);
 
   const addUserMessage = useCallback(
-    async (content: string) => {
+    async (rawContent: string) => {
 
       if (!sessionId || !authToken) {
         logError('Cannot send message: missing sessionId or authToken', { sessionId, authToken: !!authToken });
         setError(translate(activeLocale, 'sessionOrAuthError'));
         return;
       }
+
+      // beforeSend interceptor registered by the host page: it can rewrite the
+      // text or cancel the send by returning null. No-op round-trip when the
+      // host registered none.
+      const content = interceptOutgoing ? await interceptOutgoing(rawContent) : rawContent;
+      if (content === null || content === undefined || !String(content).trim()) return;
 
       const qid = `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const userMessage: MessageType = {
@@ -338,7 +350,7 @@ export function useMessageOperations({
 
       await sendMessageToAPI(content, qid);
     },
-    [sendMessageToAPI, sessionId, authToken, setError, setMessages, setStatus]
+    [sendMessageToAPI, sessionId, authToken, setError, setMessages, setStatus, interceptOutgoing, activeLocale]
   );
 
   // Preview mode (admin Customize panel, public docs demo): there is no session

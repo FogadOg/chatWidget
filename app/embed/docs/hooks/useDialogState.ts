@@ -1,12 +1,17 @@
 import React, { useCallback, useEffect, useRef } from 'react'
-import { API } from '../../../../lib/api'
+import { API, trackConversion } from '../../../../lib/api'
 import { validateConfig } from '../../../../lib/validateConfig'
 import { logError, logWarn } from '../../../../lib/logger'
 import { enableDebug, disableDebug, simulateOffline, restoreOnline } from '../../../../src/components/DevOverlay'
 import { setLogLevel, enableLogStream, disableLogStream } from '../../../../lib/logger'
 import {
   getStoredSession as helpersGetStoredSession,
+  clearStoredSession as helpersClearStoredSession,
 } from '../helpers'
+import { clearHostContext, mergeHostContext } from '../hostContext'
+// The host-command grammar is shared with the chat widget so both embeds accept
+// exactly the same messages from `CompaninWidget` / `CompaninDocsWidget`.
+import { parseHostMessageCommand } from '../../session/embed.utils'
 import { isTrustedParentMessage } from '../DocsClient.utils'
 import { DOCS_SEARCH_BAR_SIZE } from '../DocsClient.constants'
 import { MessageType } from '../DocsClient.types'
@@ -39,6 +44,21 @@ interface UseDialogStateParams {
   resolveParentOrigin: () => string | undefined;
   messages?: MessageType[];
   error?: string | null;
+  /**
+   * Host-page API surface (`CompaninDocsWidget.*`). Every command the loader
+   * can post has a handler here — parity with the chat widget, where a missing
+   * handler would make the documented API silently no-op.
+   */
+  hostActions: {
+    /** prefill(text) — drop text into the composer without sending. */
+    prefill: (text: string) => void;
+    /** sendMessage(text) — open the panel and send as the visitor. */
+    sendText: (text: string) => void;
+    /** setTheme(theme) — override the configured light/dark palette. */
+    setThemeOverride: (theme: 'light' | 'dark' | 'system') => void;
+    /** Flush messages queued while offline (service-worker FLUSH_QUEUE). */
+    flushQueue: () => void;
+  };
 }
 
 export function useDialogState({
@@ -65,7 +85,12 @@ export function useDialogState({
   resolveParentOrigin,
   messages,
   error,
+  hostActions,
 }: UseDialogStateParams) {
+  // Callbacks come from the client's render scope; reading them through a ref
+  // keeps the message listener from re-subscribing on every render.
+  const hostActionsRef = useRef(hostActions);
+  useEffect(() => { hostActionsRef.current = hostActions; });
   // Signed user JWT last seen via chat.identify({ token }) / data-user-token.
   // Guards against re-triggering re-auth when the same token arrives twice.
   const userTokenRef = useRef<string | null>(null);
@@ -279,37 +304,129 @@ export function useDialogState({
       if (!isTrustedParentMessage(event, parentOrigin)) return;
       const { type, requestId, level, data: hostData } = (event.data || {}) as Record<string, unknown>;
 
-      // Logged-in user handshake: the host page (or data-user-token) sends a
-      // signed user JWT via chat.identify({ token }). Re-auth with the token to
-      // get a user-claimed visitor JWT, then look up and restore the user's
-      // existing conversation across devices/browsers. Non-fatal throughout —
-      // any failure leaves the widget running anonymously.
+      // Host-page commands (CompaninDocsWidget.*). Parsed with the chat
+      // widget's grammar so both embeds accept the same payloads — a bare
+      // string, { action: … }, or { text: … }.
       if (type === 'HOST_MESSAGE') {
-        const action = (hostData as Record<string, unknown> | undefined)?.action;
-        if (action === 'identify') {
-          const userJwt = typeof (hostData as Record<string, unknown>)?.token === 'string'
-            ? (hostData as Record<string, string>).token
-            : null;
-          if (userJwt && userJwt !== userTokenRef.current) {
-            userTokenRef.current = userJwt;
-            (async () => {
-              try {
-                const newToken = await getAuthToken(clientId, resolveParentOrigin(), userJwt);
-                if (!newToken) return;
-                const resp = await fetch(API.sessionByUser(), {
-                  headers: { Authorization: `Bearer ${newToken}`, ...embedHeaders },
-                });
-                if (resp.ok) {
-                  const payload = await resp.json();
-                  const existingSessionId = payload?.data?.session_id;
-                  if (existingSessionId) {
-                    await validateAndRestoreSession(existingSessionId, newToken);
-                  }
-                }
-              } catch { /* non-fatal — user continues with current session */ }
-            })();
-          }
+        const command = parseHostMessageCommand(hostData);
+        if (!command) return;
+
+        if (command.kind === 'message') {
+          hostActionsRef.current.sendText(command.text);
+          return;
         }
+
+        const payload = (command.data ?? {}) as Record<string, unknown>;
+        switch (command.action) {
+          case 'open':
+            handleOpenChange(true);
+            return;
+          case 'close':
+            handleOpenChange(false);
+            return;
+          case 'toggle':
+            handleOpenChange(!open);
+            return;
+          case 'reset': {
+            // Drop the conversation and forget the session so the next open
+            // starts a fresh one. Mirrors the chat widget's reset().
+            setMessages([]);
+            setSessionId(null);
+            setError(null);
+            clearHostContext();
+            sessionInitializedRef.current = false;
+            helpersClearStoredSession(clientId, agentId);
+            return;
+          }
+          case 'prefill': {
+            const text = typeof payload.text === 'string' ? payload.text : '';
+            if (text) hostActionsRef.current.prefill(text);
+            return;
+          }
+          case 'context':
+            mergeHostContext(payload);
+            return;
+          case 'setTheme': {
+            const next = typeof payload.theme === 'string' ? payload.theme.trim().toLowerCase() : '';
+            if (next === 'light' || next === 'dark' || next === 'system') {
+              hostActionsRef.current.setThemeOverride(next);
+            }
+            return;
+          }
+          case 'conversion': {
+            // A goal fired on the host page via trackConversion(). Attribute it
+            // to the current session; silently no-op until one exists so an
+            // early call never throws on the host page.
+            const goalType = typeof payload.goal_type === 'string' ? payload.goal_type : '';
+            if (sessionId && goalType) {
+              trackConversion(
+                sessionId,
+                {
+                  goal_type: goalType,
+                  goal_label: typeof payload.goal_label === 'string' ? payload.goal_label : null,
+                  value: typeof payload.value === 'number' ? payload.value : null,
+                  currency: typeof payload.currency === 'string' ? payload.currency : null,
+                  dedup_key: typeof payload.dedup_key === 'string' ? payload.dedup_key : null,
+                  metadata: (payload.metadata && typeof payload.metadata === 'object')
+                    ? (payload.metadata as Record<string, unknown>)
+                    : null,
+                },
+                authTokenRef.current ?? undefined,
+                embedHeaders,
+              ).catch(() => {});
+            }
+            return;
+          }
+          case 'identify': {
+            // Logged-in user handshake: the host page (or data-user-token) sends
+            // a signed user JWT. Re-auth with it to get a user-claimed visitor
+            // JWT, then restore that user's conversation across devices.
+            // Non-fatal throughout — any failure leaves the widget anonymous.
+            const userJwt = typeof payload.token === 'string' ? payload.token : null;
+            if (userJwt && userJwt !== userTokenRef.current) {
+              userTokenRef.current = userJwt;
+              (async () => {
+                try {
+                  const newToken = await getAuthToken(clientId, resolveParentOrigin(), userJwt);
+                  if (!newToken) return;
+                  const resp = await fetch(API.sessionByUser(), {
+                    headers: { Authorization: `Bearer ${newToken}`, ...embedHeaders },
+                  });
+                  if (resp.ok) {
+                    const responsePayload = await resp.json();
+                    const existingSessionId = responsePayload?.data?.session_id;
+                    if (existingSessionId) {
+                      await validateAndRestoreSession(existingSessionId, newToken);
+                    }
+                  }
+                } catch { /* non-fatal — user continues with current session */ }
+              })();
+            }
+            return;
+          }
+          default:
+            return;
+        }
+      }
+
+      // Storage consent, toggled from the host page. Revoking also wipes the
+      // widget's persisted keys (see lib/sessionStorage), so the docs widget
+      // honors it exactly like the chat widget.
+      if (type === 'WIDGET_CONSENT_GRANT' || type === 'WIDGET_CONSENT_REVOKE') {
+        (async () => {
+          try {
+            const mod = await import('../../../../lib/sessionStorage');
+            if (type === 'WIDGET_CONSENT_GRANT') mod.grantStorageConsent();
+            else mod.revokeStorageConsent();
+          } catch { /* storage unavailable — nothing to consent to */ }
+        })();
+        return;
+      }
+
+      // The service worker asks every client to retry queued sends when the
+      // network returns.
+      if (type === 'FLUSH_QUEUE') {
+        hostActionsRef.current.flushQueue();
         return;
       }
 
@@ -365,7 +482,9 @@ export function useDialogState({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [handleOpenChange, sessionId, clientId, agentId, configId, messages, error, parentOrigin, getAuthToken, resolveParentOrigin, embedHeaders, validateAndRestoreSession]);
+  // `open` is read by the toggle command; hostActions is read through a ref so
+  // it doesn't churn this subscription.
+  }, [handleOpenChange, open, sessionId, clientId, agentId, configId, messages, error, parentOrigin, getAuthToken, resolveParentOrigin, embedHeaders, validateAndRestoreSession, setMessages, setSessionId, setError]);
 
   return { handleOpenChange };
 }

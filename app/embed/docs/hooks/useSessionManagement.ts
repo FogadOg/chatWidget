@@ -43,6 +43,8 @@ interface UseSessionManagementParams {
   setError: (err: string | null) => void;
   setMessages: React.Dispatch<React.SetStateAction<MessageType[]>>;
   setIsInitialLoad: (val: boolean) => void;
+  /** Host-page afterReceive interceptor, applied to each new agent reply. */
+  interceptIncoming?: (content: string) => Promise<string | null>;
 }
 
 export function useSessionManagement({
@@ -55,8 +57,35 @@ export function useSessionManagement({
   setError,
   setMessages,
   setIsInitialLoad,
+  interceptIncoming,
 }: UseSessionManagementParams) {
   const rateLimitUntilRef = useRef<number>(0);
+  // Only the newest agent reply is handed to the host's afterReceive hook —
+  // message reloads would otherwise re-intercept the whole transcript.
+  const lastInterceptedAgentKeyRef = useRef<string | null>(null);
+
+  /**
+   * Run the host's afterReceive interceptor over the newest agent reply,
+   * rewriting it in place. `seedOnly` marks a transcript the visitor did not
+   * just receive (a restored session, or the greeting of a brand-new one):
+   * those are remembered but never intercepted, so the hook fires on genuine
+   * incoming replies only.
+   */
+  const applyIncomingInterceptor = useCallback(async (loaded: MessageType[], seedOnly: boolean) => {
+    const newestAgent = [...loaded].reverse().find((m) => m.from === 'agent');
+    if (!newestAgent) return;
+    if (seedOnly || !interceptIncoming) {
+      lastInterceptedAgentKeyRef.current = newestAgent.key;
+      return;
+    }
+    if (newestAgent.key === lastInterceptedAgentKeyRef.current) return;
+    lastInterceptedAgentKeyRef.current = newestAgent.key;
+    const original = newestAgent.versions[0]?.content ?? '';
+    const rewritten = await interceptIncoming(original);
+    if (typeof rewritten === 'string' && rewritten !== original) {
+      newestAgent.versions = [{ ...newestAgent.versions[0], content: rewritten }];
+    }
+  }, [interceptIncoming]);
 
   const ensureNotCoolingDown = useCallback((): string | null => {
     if (Date.now() >= rateLimitUntilRef.current) return null;
@@ -104,6 +133,7 @@ export function useSessionManagement({
                 content: msg.content
               }]
             }));
+          await applyIncomingInterceptor(loadedMessages, isNewSession);
           setMessages(loadedMessages.length > 0 ? loadedMessages : initialMessages);
           setIsInitialLoad(false);
         }
@@ -231,6 +261,8 @@ export function useSessionManagement({
                 content: msg.content
               }]
             }));
+          // Restored history — remember it without firing afterReceive.
+          await applyIncomingInterceptor(loadedMessages, true);
           setMessages(loadedMessages.length > 0 ? loadedMessages : initialMessages);
           setIsInitialLoad(false);
         } else {

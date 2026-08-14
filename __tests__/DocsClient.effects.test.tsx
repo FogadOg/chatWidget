@@ -8,6 +8,7 @@ jest.mock('../app/embed/docs/helpers', () => ({
   getPageContext: jest.fn(() => ({ path: '/docs/page' })),
   getStoredSession: jest.fn(() => ({ sessionId: 'stored-session' })),
   storeSession: jest.fn(),
+  clearStoredSession: jest.fn(),
   getLocalizedText: jest.fn((obj) => {
     if (!obj || typeof obj !== 'object') return ''
     return (obj as Record<string, string>).en || Object.values(obj)[0] || ''
@@ -667,6 +668,64 @@ describe('DocsClient missing effect/flow coverage', () => {
     expect(screen.queryByPlaceholderText('Search the docs')).toBeNull()
 
     Object.defineProperty(window, 'parent', { configurable: true, value: originalParent })
+  })
+  it('honors host commands: open, prefill and reset (parity with the chat widget)', async () => {
+    const parentPostMessage = jest.fn()
+    const originalParent = Object.getOwnPropertyDescriptor(window, 'parent')
+    const mockParent = { postMessage: parentPostMessage }
+    Object.defineProperty(window, 'parent', { configurable: true, value: mockParent })
+    global.fetch = jest.fn(async (url: any, opts?: any) => {
+      const method = opts?.method || 'GET'
+      if (method === 'GET' && String(url).includes('widget-config')) {
+        return { ok: true, json: async () => ({ data: { widget_type: 'docs' } }) } as any
+      }
+      if (method === 'GET') {
+        return {
+          ok: true,
+          json: async () => ({ status: 'success', data: { messages: [{ id: 'a1', sender: 'assistant', content: 'agent message' }, { id: 'u1', sender: 'user', content: 'hello' }] } }),
+        } as any
+      }
+      return { ok: true, json: async () => ({ status: 'success', data: { session_id: 'sess-h', expires_at: new Date(Date.now() + 60000).toISOString() } }) } as any
+    }) as any
+
+    render(<DocsClient clientId="c18" agentId="a18" configId="cfg18" locale="en" startOpen />)
+    await waitFor(() => expect(screen.getByText('agent message')).toBeTruthy())
+
+    // prefill(text) lands in the composer without sending.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        source: mockParent as any,
+        data: { type: 'HOST_MESSAGE', data: { action: 'prefill', text: 'from the host' } },
+      }))
+    })
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Type your message')).toHaveValue('from the host')
+    })
+
+    // reset() clears the conversation.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        source: mockParent as any,
+        data: { type: 'HOST_MESSAGE', data: { action: 'reset' } },
+      }))
+    })
+    await waitFor(() => expect(screen.queryByText('agent message')).toBeNull())
+
+    // A bare string command opens the panel — the loader's open() equivalent.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        source: mockParent as any,
+        data: { type: 'HOST_MESSAGE', data: 'open' },
+      }))
+    })
+    await waitFor(() => {
+      expect(parentPostMessage).toHaveBeenCalledWith(
+        { type: 'WIDGET_RESIZE', data: { width: '100vw', height: '100vh' } },
+        expect.any(String)
+      )
+    })
+
+    if (originalParent) Object.defineProperty(window, 'parent', originalParent)
   })
   it('keeps the search bar hidden when no teaser message is configured', async () => {
     const parentPostMessage = jest.fn()

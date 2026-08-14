@@ -161,6 +161,15 @@ export const getStoredSessionByKey = (storageKey: string): StoredSession | null 
   }
 };
 
+/**
+ * Forget a stored session (host called reset(), or the widget is starting a
+ * fresh conversation). Clears both the real storage entry and the in-memory
+ * fallback used while storage consent is withheld.
+ */
+export const clearStoredSessionByKey = (storageKey: string): void => {
+  safeRemove(storageKey);
+};
+
 export const storeSessionByKey = (storageKey: string, sessionId: string, expiresAt: string) => {
   try {
     safeSet(

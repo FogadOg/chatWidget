@@ -68,6 +68,7 @@ import { useWidgetConfig } from './hooks/useWidgetConfig'
 import { useMessageOperations } from './hooks/useMessageOperations'
 import { useDialogState } from './hooks/useDialogState'
 import { useDocsSearchBar } from './hooks/useDocsSearchBar'
+import { useHostInterceptors } from './hooks/useHostInterceptors'
 import { PreviewModeWidget } from './components/PreviewModeWidget'
 import { DocsSearchBar } from './components/DocsSearchBar'
 import { MessageFeedbackButtons } from './components/MessageFeedbackButtons'
@@ -175,30 +176,9 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     return resolveParentOriginUtil(initialParentOrigin);
   }, [initialParentOrigin]);
 
-  // Runtime theme switching from the host page (window.CompaninWidget.setTheme()).
-  // The loader posts HOST_MESSAGE { action: 'setTheme', theme }. Origin-validate
-  // against the known parent before accepting it, then override the config theme.
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      try {
-        if (typeof window !== 'undefined' && window.parent === window) return;
-        if (parentOrigin && parentOrigin !== '*' && event.origin !== parentOrigin) return;
-        const payload = (event.data || {}) as { type?: string; data?: Record<string, unknown> };
-        if (payload.type !== 'HOST_MESSAGE') return;
-        const data = payload.data;
-        const action = typeof data?.action === 'string' ? data.action.toLowerCase() : '';
-        if (action !== 'settheme') return;
-        const next = typeof data?.theme === 'string' ? data.theme.trim().toLowerCase() : '';
-        if (next === 'light' || next === 'dark' || next === 'system') {
-          setThemeOverride(next);
-        }
-      } catch {
-        // Malformed message — ignore.
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [parentOrigin]);
+  // Runtime theme switching (setTheme) arrives as a HOST_MESSAGE and is handled
+  // by the single host-command dispatcher in useDialogState, alongside every
+  // other CompaninDocsWidget command.
 
   useWidgetLifecycle({
     messages,
@@ -216,6 +196,18 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
 
   // helper utilities are provided by ./helpers
 
+  // Host-page message interceptors (beforeSend / afterReceive), same protocol
+  // as the chat widget so the loader's documented hooks actually run.
+  const { runInterceptors } = useHostInterceptors(parentOrigin);
+  const interceptOutgoing = useCallback(
+    (content: string) => runInterceptors('before_send', content),
+    [runInterceptors],
+  );
+  const interceptIncoming = useCallback(
+    (content: string) => runInterceptors('after_receive', content),
+    [runInterceptors],
+  );
+
   const { createSession, validateAndRestoreSession, loadSessionMessages } = useSessionManagement({
     agentId,
     activeLocale,
@@ -226,6 +218,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     setError,
     setMessages,
     setIsInitialLoad,
+    interceptIncoming,
   });
 
   // Presence heartbeat — keeps the admin "live visitors" count accurate.
@@ -252,6 +245,7 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     setMessageFeedbackSubmitted,
     setText,
     loadSessionMessages,
+    interceptOutgoing,
   });
 
   // Connectivity: detect offline/online so the user is never left wondering why
@@ -291,6 +285,30 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     clearSearch();
     setText(hit.title);
   }, [clearSearch, setText]);
+
+  // sendMessage() from the host page. The panel opens immediately, but the
+  // session is created asynchronously — hold the text until there is one to
+  // attach it to rather than dropping it (parity with the chat widget, where
+  // host-sent text always lands in the conversation).
+  const pendingHostTextRef = useRef<string | null>(null);
+  const handleHostText = useCallback((text: string) => {
+    const value = text.trim();
+    if (!value) return;
+    setOpen(true);
+    if (sessionId && authToken) {
+      void addUserMessage(value);
+      return;
+    }
+    pendingHostTextRef.current = value;
+  }, [sessionId, authToken, addUserMessage, setOpen]);
+
+  useEffect(() => {
+    if (!sessionId || !authToken) return;
+    const pending = pendingHostTextRef.current;
+    if (!pending) return;
+    pendingHostTextRef.current = null;
+    void addUserMessage(pending);
+  }, [sessionId, authToken, addUserMessage]);
 
   // Collapsed entry point: a search field pinned to the bottom of the host
   // page, configured from the same teaser fields as the chat widget's bubble.
@@ -335,6 +353,12 @@ export default function DocsClient({ clientId, agentId, configId, locale: initia
     resolveParentOrigin,
     messages,
     error,
+    hostActions: {
+      prefill: setText,
+      sendText: handleHostText,
+      setThemeOverride,
+      flushQueue,
+    },
   });
 
   // Developer overlay: active when debug mode is on (?widget_debug=1,

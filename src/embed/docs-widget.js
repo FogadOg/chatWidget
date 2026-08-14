@@ -883,6 +883,79 @@
             }
             return docsWidgetApi;
           },
+          /**
+           * resize(width, height) — accepted for parity with CompaninWidget so
+           * shared host integrations don't throw, but it is a no-op here: the
+           * docs panel is a full-screen overlay whose dimensions come from the
+           * dashboard's size preset, not from the container box.
+           */
+          resize: (width, height) => {
+            logError('resize() does not apply to the docs widget (full-screen panel)', { width, height });
+            return docsWidgetApi;
+          },
+
+          /**
+           * trackConversion(goal, value, opts) — attribute a host-page goal
+           * (signup, purchase, …) to the visitor's docs conversation. Mirrors
+           * CompaninWidget.trackConversion so both embeds report the same way.
+           * @param {string} goal - goal type, e.g. 'signup'
+           * @param {number} [value] - monetary value
+           * @param {{currency?: string, label?: string, dedupKey?: string, metadata?: object}} [opts]
+           * @returns chainable
+           */
+          trackConversion: (goal, value, opts) => {
+            try {
+              const goalType = (typeof goal === 'string' ? goal : '').trim();
+              if (!goalType) {
+                logError('trackConversion() requires a non-empty goal string', { goal });
+                return docsWidgetApi;
+              }
+              const o = (opts && typeof opts === 'object') ? opts : {};
+              // Idempotency key: explicit opts.dedupKey wins, else fall back to a
+              // metadata.order_id so a refreshed confirmation page dedupes
+              // automatically without the integrator wiring anything extra.
+              const meta = (o.metadata && typeof o.metadata === 'object') ? o.metadata : null;
+              const dedupKey = typeof o.dedupKey === 'string'
+                ? o.dedupKey
+                : (meta && typeof meta.order_id === 'string' ? meta.order_id : null);
+              const data = {
+                action: 'conversion',
+                goal_type: goalType,
+                value: typeof value === 'number' && isFinite(value) ? value : null,
+                currency: typeof o.currency === 'string' ? o.currency : null,
+                goal_label: typeof o.label === 'string' ? o.label : null,
+                dedup_key: dedupKey,
+                metadata: meta,
+              };
+              postToIframe({ type: 'HOST_MESSAGE', data });
+              emitEvent('conversion.tracked', data, { rawType: 'HOST_CONVERSION' });
+            } catch (err) {
+              logError('Failed to track conversion', { error: err && err.message });
+            }
+            return docsWidgetApi;
+          },
+
+          /**
+           * grantConsent() / revokeConsent() — the host page's cookie banner
+           * tells the widget whether it may persist visitor/session IDs.
+           * Until consent is granted the widget keeps them in memory only.
+           */
+          grantConsent: () => {
+            try {
+              postToIframe({ type: 'WIDGET_CONSENT_GRANT' });
+            } catch (err) {
+              logError('Failed to forward consent grant', { error: err && err.message });
+            }
+            return docsWidgetApi;
+          },
+          revokeConsent: () => {
+            try {
+              postToIframe({ type: 'WIDGET_CONSENT_REVOKE' });
+            } catch (err) {
+              logError('Failed to forward consent revoke', { error: err && err.message });
+            }
+            return docsWidgetApi;
+          },
           reset: () => {
             try {
               _isOpen = false;
@@ -1142,6 +1215,25 @@
                 // A resize means the real widget booted — the retried load
                 // recovered, so error-card suppression no longer applies.
                 transientRetryPending = false;
+                // The resize payload IS the open/closed signal for the docs
+                // widget (full-viewport = panel open; bar-sized or hidden =
+                // collapsed). Deriving state here keeps isOpen()/toggle() honest
+                // and emits open/close exactly once per transition — the widget
+                // deliberately doesn't post WIDGET_SHOW on load, which would
+                // otherwise fire a spurious "open" on every page view.
+                (function trackOpenState() {
+                  const nextOpen = !data?.hide && data?.height === "100vh";
+                  if (nextOpen === _isOpen) return;
+                  _isOpen = nextOpen;
+                  _isReady = true;
+                  if (nextOpen) {
+                    emitEvent("open", { source: "widget" }, { rawType: "WIDGET_RESIZE" });
+                    _gaTrack('widget_open', { agent_id: agentId });
+                  } else {
+                    emitEvent("close", { source: "widget" }, { rawType: "WIDGET_RESIZE" });
+                    _gaTrack('widget_close', { agent_id: agentId });
+                  }
+                })();
                 if (data?.hide) {
                   clearBottomCenterLayout();
                   container.style.display = "none";
@@ -1281,9 +1373,16 @@
                 break;
 
               case 'WIDGET_INTERCEPT_REQUEST': {
-                var _reqId = data && data.requestId;
-                var _interceptType = data && data.interceptType;
-                var _origContent = (data && data.content != null) ? data.content : null;
+                // The iframe posts these at the message root (see EMBED_EVENTS
+                // usage in the widget clients); older builds nested them under
+                // `data`, so accept both rather than silently running zero
+                // interceptors and echoing the content back unchanged.
+                var _msg = event.data || {};
+                var _reqId = (data && data.requestId) || _msg.requestId;
+                var _interceptType = (data && data.interceptType) || _msg.interceptType;
+                var _origContent = (data && data.content != null)
+                  ? data.content
+                  : (_msg.content != null ? _msg.content : null);
                 var _fns = _interceptType === 'before_send' ? _beforeSendFns
                          : _interceptType === 'after_receive' ? _afterReceiveFns
                          : [];

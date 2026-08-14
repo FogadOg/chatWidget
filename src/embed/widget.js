@@ -1777,9 +1777,16 @@
               case 'WIDGET_INTERCEPT_REQUEST': {
                 // Iframe asked the parent to run its registered interceptors.
                 // Run them in order, then reply with the (possibly modified) content.
-                var _reqId = data && data.requestId;
-                var _interceptType = data && data.interceptType;
-                var _origContent = (data && data.content != null) ? data.content : null;
+                // The iframe posts these at the message root (see EMBED_EVENTS
+                // usage in the widget clients); older builds nested them under
+                // `data`, so accept both rather than silently running zero
+                // interceptors and echoing the content back unchanged.
+                var _msg = event.data || {};
+                var _reqId = (data && data.requestId) || _msg.requestId;
+                var _interceptType = (data && data.interceptType) || _msg.interceptType;
+                var _origContent = (data && data.content != null)
+                  ? data.content
+                  : (_msg.content != null ? _msg.content : null);
                 var _fns = _interceptType === 'before_send' ? _beforeSendFns
                          : _interceptType === 'after_receive' ? _afterReceiveFns
                          : [];

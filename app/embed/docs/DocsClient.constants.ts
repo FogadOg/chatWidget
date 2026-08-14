@@ -1,4 +1,3 @@
-import { nanoid } from 'nanoid'
 import { MessageType } from './DocsClient.types'
 
 /**
@@ -9,13 +8,20 @@ import { MessageType } from './DocsClient.types'
  */
 export const DOCS_SEARCH_BAR_SIZE = { width: 480, height: 88 } as const;
 
+/**
+ * Local id generator instead of nanoid: these ids are only React keys for the
+ * placeholder greeting, and nanoid ships as ESM, which breaks any Jest suite
+ * that reaches this module (node_modules aren't transformed).
+ */
+const localId = () => `docs-${Math.random().toString(36).slice(2, 10)}`;
+
 export const initialMessages: MessageType[] = [
   {
-    key: nanoid(),
+    key: localId(),
     from: "agent",
     versions: [
       {
-        id: nanoid(),
+        id: localId(),
         content: "Hello! I'm your documentation agent. How can I help you today?",
       },
     ],

@@ -146,6 +146,43 @@ The widget fetches its configuration from the config endpoint using the config_i
 
 - Container automatically resizes via postMessage communication
 
+### Docs widget: collapsed search bar
+
+The docs widget has no launcher button. Its collapsed state is a search field
+pinned to the bottom-center of the host page — clicking it (or typing into it)
+opens the full-screen panel, and closing the panel brings it back, so it is the
+visitor's only way in and out.
+
+- Configured from the same fields as the chat widget's teaser bubble:
+  `teaser_message` (the field's placeholder — **empty means no bar**, and the
+  widget then only opens via `CompaninDocsWidget.open()`), `teaser_delay`, and
+  `teaser_dismiss_after`.
+- The iframe is sized to just the bar, so the rest of the host page stays
+  clickable. `WIDGET_RESIZE` carries `{ width, height, anchor: 'bottom-center' }`
+  and the loader anchors/clamps the container to the viewport; the open panel
+  posts the usual `100vw × 100vh`, and a hidden state posts `hide: true`.
+- The bar always paints an opaque surface, even when the config asks for
+  glassmorphism/reduced opacity — it floats over the customer's own content,
+  which would otherwise show through it.
+
+### Host API parity
+
+`CompaninDocsWidget` exposes the same methods as `CompaninWidget` and the docs
+runtime handles every command the loader can send — open/close/toggle, reset,
+prefill, sendMessage, setContext, setTheme, identify, trackConversion,
+grantConsent/revokeConsent, and the `beforeSend` / `afterReceive` interceptors.
+Both embeds parse host payloads with the same grammar (`parseHostMessageCommand`),
+so a bare string, `{ action: … }`, or `{ text: … }` behaves identically.
+
+Two deliberate differences:
+
+- `resize()` is a no-op on the docs widget — its panel is a full-screen overlay
+  sized by the dashboard's size preset, not by the container box.
+- The docs widget has no launcher button, so open/close state is derived from
+  the `WIDGET_RESIZE` it posts (full-viewport = open) rather than from
+  `WIDGET_SHOW`/`WIDGET_HIDE`. That keeps `isOpen()`, `toggle()` and the
+  open/close events accurate without firing a spurious "open" on page load.
+
 ### Positioning
 
 - Button position controlled by config (bottom-right, bottom-left, etc.)

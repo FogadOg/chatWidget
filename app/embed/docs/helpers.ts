@@ -1,4 +1,16 @@
-// Helper utilities extracted from DocsClient for testing
+// Helper utilities extracted from DocsClient for testing.
+//
+// Storage goes through lib/sessionStorage — the same consent-gated layer the
+// chat widget uses. Writing to localStorage directly (as this file used to)
+// persisted visitor and session IDs even when the visitor had not granted
+// storage consent; the shared layer keeps them in memory until they do.
+
+import {
+  clearStoredSessionByKey,
+  getOrCreateVisitorId,
+  getStoredSessionByKey,
+  storeSessionByKey,
+} from '../../../lib/sessionStorage';
 
 export const getSessionStorageKey = (clientId: string, agentId: string) => {
   return `companin-docs-session-${clientId}-${agentId}`;
@@ -7,13 +19,7 @@ export const getSessionStorageKey = (clientId: string, agentId: string) => {
 export const getVisitorKey = (clientId: string) => `companin-visitor-${clientId}`;
 
 export const getVisitorId = (clientId: string) => {
-  const visitorKey = getVisitorKey(clientId);
-  let visitorId = localStorage.getItem(visitorKey);
-  if (!visitorId) {
-    visitorId = `docs-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem(visitorKey, visitorId);
-  }
-  return visitorId;
+  return getOrCreateVisitorId(getVisitorKey(clientId), 'docs-widget');
 }
 
 export const getPageContext = (win: any = window, doc: any = document) => {
@@ -35,30 +41,16 @@ export const getPageContext = (win: any = window, doc: any = document) => {
 }
 
 export const getStoredSession = (clientId: string, agentId: string) => {
-  try {
-    const storageKey = getSessionStorageKey(clientId, agentId);
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.expiresAt && new Date(data.expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
-        return data;
-      } else {
-        localStorage.removeItem(storageKey);
-      }
-    }
-  } catch (e) {
-    // swallow
-  }
-  return null;
+  return getStoredSessionByKey(getSessionStorageKey(clientId, agentId));
 }
 
 export const storeSession = (clientId: string, agentId: string, sessionId: string, expiresAt: string) => {
-  try {
-    const storageKey = getSessionStorageKey(clientId, agentId);
-    localStorage.setItem(storageKey, JSON.stringify({ sessionId, expiresAt, createdAt: new Date().toISOString() }));
-  } catch (e) {
-    // swallow
-  }
+  storeSessionByKey(getSessionStorageKey(clientId, agentId), sessionId, expiresAt);
+}
+
+/** Forget the stored session — used by the host API's reset(). */
+export const clearStoredSession = (clientId: string, agentId: string) => {
+  clearStoredSessionByKey(getSessionStorageKey(clientId, agentId));
 }
 
 export const getLocalizedText = (textObj: { [lang: string]: string } | undefined, locale?: string): string => {
