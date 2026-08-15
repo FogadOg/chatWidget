@@ -1,4 +1,4 @@
-const CACHE_NAME = 'companin-static-v3';
+const CACHE_NAME = 'companin-static-v4';
 const CACHE_PREFIX = 'companin-static-';
 const PRECACHE_URLS = [];
 
@@ -46,10 +46,24 @@ self.addEventListener('fetch', (evt) => {
     if (url.pathname.startsWith('/_next/') || evt.request.destination === 'script') {
       return;
     }
-    // Navigation/doc requests should always go to network to avoid serving a
-    // stale cached redirect for '/'.
-    if (evt.request.mode === 'navigate' || evt.request.destination === 'document') {
-      evt.respondWith(fetch(evt.request));
+    // The embed surfaces are the product: never let the service worker sit in
+    // front of them. Any failure inside respondWith() surfaces to the host page
+    // as "FetchEvent … resulted in a network error response", which leaves the
+    // iframe on about:blank — and every later postMessage from the host then
+    // fails with an origin mismatch, because about:blank inherits the parent's
+    // origin. Returning without respondWith() hands the request back to the
+    // browser, which is exactly what these documents need.
+    if (url.pathname.startsWith('/embed/') || url.pathname.startsWith('/preview')) {
+      return;
+    }
+
+    // Same reasoning for any other document/frame navigation.
+    if (
+      evt.request.mode === 'navigate' ||
+      evt.request.destination === 'document' ||
+      evt.request.destination === 'iframe' ||
+      evt.request.destination === 'frame'
+    ) {
       return;
     }
 
@@ -70,8 +84,16 @@ self.addEventListener('fetch', (evt) => {
             }
           }
           return response;
-        });
-      })
+        }).catch(() =>
+          // A rejected respondWith() becomes a hard network error for the page,
+          // so a failed fetch must always degrade to something. Retry once with
+          // a plain URL request (this drops any mode/redirect quirks carried by
+          // the original Request object), then fall back to whatever is cached,
+          // and finally to an explicit 504 the caller can handle.
+          fetch(url.href, { credentials: 'same-origin' })
+            .catch(() => cached || new Response('', { status: 504, statusText: 'Service Worker fetch failed' }))
+        );
+      }).catch(() => fetch(url.href, { credentials: 'same-origin' }))
     );
   }
 });
