@@ -133,6 +133,32 @@ describe('CSP nonce proxy', () => {
     }
   });
 
+  it('allows both loopback spellings in img-src in development, but not in production', () => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevApi = process.env.NEXT_PUBLIC_API_BASE_URL;
+    // The backend mints media URLs from its own BACKEND_URL, which may spell
+    // loopback differently than the widget's API base does — a logo on
+    // http://localhost:8000 must still load when the API base says 127.0.0.1.
+    process.env.NEXT_PUBLIC_API_BASE_URL = 'http://127.0.0.1:8000';
+    try {
+      (process.env as Record<string, string>).NODE_ENV = 'development';
+      const devImgSrc = (getHeaderValue(proxy(makeRequest('/embed/docs')), 'Content-Security-Policy') ?? '')
+        .split(';').find(d => d.trim().startsWith('img-src')) ?? '';
+      expect(devImgSrc).toContain('http://localhost:*');
+      expect(devImgSrc).toContain('http://127.0.0.1:*');
+
+      (process.env as Record<string, string>).NODE_ENV = 'production';
+      const prodImgSrc = (getHeaderValue(proxy(makeRequest('/embed/docs')), 'Content-Security-Policy') ?? '')
+        .split(';').find(d => d.trim().startsWith('img-src')) ?? '';
+      expect(prodImgSrc).not.toContain('localhost');
+      expect(prodImgSrc).toContain('https:');
+    } finally {
+      (process.env as Record<string, string>).NODE_ENV = prevEnv as string;
+      if (prevApi === undefined) delete process.env.NEXT_PUBLIC_API_BASE_URL;
+      else process.env.NEXT_PUBLIC_API_BASE_URL = prevApi;
+    }
+  });
+
   it('injects x-nonce into request headers', () => {
     const resp = proxy(makeRequest('/'));
     // NextResponse.next() with modified request headers doesn't expose them

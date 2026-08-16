@@ -25,7 +25,17 @@ function buildCsp(nonce: string, pathname: string): string {
   // backend media host (e.g. http://localhost:8000/uploads/… in dev). Without
   // the API origin in img-src those images are CSP-blocked and show as broken —
   // `https:` alone doesn't cover the http dev origin. Mirror connect-src.
-  const extraImgSrc = extraApiOrigin;
+  //
+  // In dev that isn't quite enough: media URLs are minted by the backend from
+  // its own BACKEND_URL, which may spell loopback differently than the widget's
+  // NEXT_PUBLIC_API_BASE_URL does (`localhost` vs `127.0.0.1`). Those are
+  // distinct CSP hosts, so a logo served from http://localhost:8000 is blocked
+  // even though config fetches to http://127.0.0.1:8000 succeed. Allow both
+  // spellings for images in development only; production media is https and is
+  // already covered by the `https:` source above.
+  const devLoopbackImgSrc =
+    process.env.NODE_ENV === 'development' ? ' http://localhost:* http://127.0.0.1:*' : '';
+  const extraImgSrc = `${extraApiOrigin}${devLoopbackImgSrc}`;
 
   // Embed iframe pages must allow framing from any origin so the host page
   // (potentially on a different port or domain) can embed the widget.
