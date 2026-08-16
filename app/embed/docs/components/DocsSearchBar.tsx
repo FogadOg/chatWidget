@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { t as translate } from '../../../../lib/i18n'
+import { dedupeSuggestions } from '../DocsClient.utils'
 import type { DocsTheme } from '../DocsClient.types'
 
 interface DocsSearchBarProps {
@@ -61,9 +62,10 @@ export function DocsSearchBar({
 }: DocsSearchBarProps) {
   const openLabel = placeholder || translate(activeLocale, 'docsSearchPlaceholder');
   // Exactly what the dashboard configured, in order — the same list the open
-  // panel renders. The iframe measures itself, so more chips simply make the
-  // collapsed footprint taller instead of being clipped.
-  const chips = (suggestions ?? []).filter((s) => typeof s === 'string' && s.trim());
+  // panel renders, minus blanks and repeats (a repeated question would collide
+  // on the chip's React key). The iframe measures itself, so more chips simply
+  // make the collapsed footprint taller instead of being clipped.
+  const chips = dedupeSuggestions(suggestions ?? []);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   // Report the rendered size (content + the wrapper's padding) so the loader can

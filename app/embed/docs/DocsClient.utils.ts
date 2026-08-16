@@ -179,13 +179,33 @@ export function getLocalizedText(textObj: { [lang: string]: string } | undefined
   return values.length > 0 ? values[0] : '';
 }
 
+/**
+ * Keeps the usable suggestion strings, in order, with blanks and repeats
+ * dropped. A dashboard config can hold the same question twice (or the same
+ * question padded with whitespace); rendering both produces duplicate React
+ * keys in the chip lists, so the list is deduplicated here — at the single
+ * place every render path reads it from — rather than in each consumer.
+ */
+export function dedupeSuggestions(raw: unknown[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of raw) {
+    if (typeof s !== 'string') continue;
+    const text = s.trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push(text);
+  }
+  return out;
+}
+
 export function resolveLocalizedSuggestions(
   raw: unknown,
   loc?: string,
   defaultLanguage?: string,
 ): string[] {
   if (Array.isArray(raw)) {
-    return raw.filter((s): s is string => typeof s === 'string');
+    return dedupeSuggestions(raw);
   }
   if (raw && typeof raw === 'object') {
     const map = raw as Record<string, unknown>;
@@ -193,12 +213,12 @@ export function resolveLocalizedSuggestions(
     for (const lang of candidates) {
       const arr = map[lang];
       if (Array.isArray(arr) && arr.length > 0) {
-        return arr.filter((s): s is string => typeof s === 'string');
+        return dedupeSuggestions(arr);
       }
     }
     for (const arr of Object.values(map)) {
       if (Array.isArray(arr) && arr.length > 0) {
-        return arr.filter((s): s is string => typeof s === 'string');
+        return dedupeSuggestions(arr);
       }
     }
   }
