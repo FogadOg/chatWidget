@@ -61,6 +61,7 @@ export function FloatingView({ vm }: { vm: ClassicShellVM }) {
     onSubmitMessageFeedback,
     unsureModal,
     handoffModal,
+    leadCaptureCard,
     onCloseUnsureModal,
     onDismissHandoff,
     sessionExpiredBanner,
@@ -428,6 +429,10 @@ export function FloatingView({ vm }: { vm: ClassicShellVM }) {
                         label={agentTypingLabel}
                       />
                     ))}
+                    {/* Pinned to the end of the flow rather than inserted next
+                        to the message that triggered it: the offer stays
+                        visible if the visitor keeps typing. */}
+                    {leadCaptureCard}
                     {showJumpButton && (
                       <JumpToLatest onClick={scrollToBottom} label={jumpToLatestLabel} primaryColor={primaryColor} />
                     )}

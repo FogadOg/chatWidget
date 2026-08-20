@@ -24,12 +24,11 @@ export function renderDocsEmbedErrorCard(
   };
   const encodedPayload = encodeURIComponent(JSON.stringify(payload));
 
-  logError('[Companin Docs Embed Error]', {
-    errorType,
-    title,
-    message: consoleMessage,
-    ...(options?.context || {}),
-  });
+  // Details go in the message, not just the context object: this runs during the
+  // server render and Next collapses object arguments forwarded to the browser
+  // overlay down to `{}`.
+  const context = { errorType, title, message: consoleMessage, ...(options?.context || {}) };
+  logError(`[Companin Docs Embed Error] ${errorType}: ${consoleMessage} ${JSON.stringify(context)}`, context);
 
   return (
     <div

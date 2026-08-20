@@ -15,6 +15,7 @@ import { validateMessageInput } from '../../../lib/validation';
 import { checkAndConsume } from '../../../lib/rateLimiter';
 import { trackEvent, embedOriginHeader, createSupportTicket } from '../../../lib/api';
 import { HandoffModal } from '../HandoffModal';
+import { LeadCaptureCard } from '../LeadCaptureCard';
 import FeedbackDialog from '../../../components/FeedbackDialog';
 import {
   createSessionError,
@@ -130,6 +131,9 @@ export default function EmbedClient(props: EmbedClientProps) {
     setHasEscalated,
     handoffConversationIdRef,
     supportTicketsEnabled,
+    captureOffer,
+    handleCaptureSubmit,
+    handleCaptureDismiss,
     unreadCount,
     fatalError,
     handleConsentAccept,
@@ -295,6 +299,29 @@ export default function EmbedClient(props: EmbedClientProps) {
             <UnsureMessagesModal
               messages={unsureMessages}
               onClose={() => setShowUnsureModal(false)}
+              primaryColor={widgetConfig?.primary_color || '#111827'}
+              backgroundColor={widgetConfig?.background_color || '#ffffff'}
+              textColor={widgetConfig?.text_color || '#1f2937'}
+              borderRadius={widgetConfig?.border_radius || 8}
+            />
+          ) : undefined
+        }
+        leadCaptureCard={
+          captureOffer ? (
+            <LeadCaptureCard
+              translations={{
+                leadCaptureTitle: String(t.leadCaptureTitle),
+                leadCaptureBody: String(t.leadCaptureBody),
+                leadCaptureNameLabel: String(t.leadCaptureNameLabel),
+                leadCaptureEmailLabel: String(t.leadCaptureEmailLabel),
+                leadCaptureSubmit: String(t.leadCaptureSubmit),
+                leadCaptureSubmitting: String(t.leadCaptureSubmitting),
+                leadCaptureSuccess: String(t.leadCaptureSuccess),
+                leadCaptureError: String(t.leadCaptureError),
+                leadCaptureDismiss: String(t.leadCaptureDismiss),
+              }}
+              onSubmit={handleCaptureSubmit}
+              onDismiss={handleCaptureDismiss}
               primaryColor={widgetConfig?.primary_color || '#111827'}
               backgroundColor={widgetConfig?.background_color || '#ffffff'}
               textColor={widgetConfig?.text_color || '#1f2937'}

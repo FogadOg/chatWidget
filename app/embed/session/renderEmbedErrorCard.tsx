@@ -23,12 +23,12 @@ export function renderSessionEmbedErrorCard(
   };
   const encodedPayload = encodeURIComponent(JSON.stringify(payload));
 
-  console.error('[Companin Widget Embed Error]', {
-    errorType,
-    title,
-    message: consoleMessage,
-    ...(options?.context || {}),
-  });
+  // This runs during the server render, and Next forwards server console output
+  // to the browser overlay — which stringifies object arguments to a useless
+  // `{}`. Everything that identifies the failure therefore goes in the message
+  // itself; the object stays as a second arg for terminals that render it.
+  const context = { errorType, title, message: consoleMessage, ...(options?.context || {}) };
+  console.error(`[Companin Widget Embed Error] ${errorType}: ${consoleMessage} ${JSON.stringify(context)}`, context);
 
   return (
     <div

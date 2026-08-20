@@ -432,6 +432,19 @@ export function useEmbedController(props: EmbedClientProps) {
   const [hasEscalated, setHasEscalated] = useState(false);
   const handoffConversationIdRef = useRef<string | null>(null);
   const supportTicketsEnabled = widgetConfig?.support_tickets_enabled === true;
+  // Inline capture offered after an unanswered question. Separate from the
+  // handoff modal: available on every plan, asks for one field, and never
+  // blocks the conversation. Missing/unknown flags are treated as disabled.
+  const leadCaptureEnabled = widgetConfig?.lead_capture_enabled === true;
+  const [captureOffer, setCaptureOffer] = useState<{
+    question: string;
+    unansweredQuestionId: string | null;
+    conversationId: string | null;
+    timestamp: number;
+  } | null>(null);
+  // One offer per session — set by both submit and dismiss, so a visitor who
+  // said no once is not asked again on the next unanswered question.
+  const [captureResolved, setCaptureResolved] = useState(false);
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const postedEdgeOffset = useRef<number | undefined>(undefined);
   const {
@@ -546,6 +559,36 @@ export function useEmbedController(props: EmbedClientProps) {
     setConsentPromptVisible(false);
     safePostToParent({ type: EMBED_EVENTS.CONSENT_CHANGED, data: { granted: false } });
   }, [safePostToParent]);
+
+  // Submit the inline capture. Deliberately lets errors propagate: the card
+  // catches them to show its inline error state and keeps the typed email, so a
+  // transient network failure doesn't silently discard the lead.
+  const handleCaptureSubmit = useCallback(async (email: string, name: string) => {
+    if (!leadCaptureEnabled || !captureOffer) return;
+    await createSupportTicket(
+      authToken ?? '',
+      {
+        name,
+        email,
+        // The question the agent couldn't answer is the useful payload — it's
+        // what the operator needs in order to reply.
+        message: captureOffer.question,
+        source: 'unanswered',
+        unanswered_question_id: captureOffer.unansweredQuestionId ?? undefined,
+        conversation_id: captureOffer.conversationId ?? undefined,
+        session_id: sessionId ?? undefined,
+      },
+      embedHeaders,
+    );
+    // Only mark resolved after a confirmed write, so a failed attempt can be
+    // retried from the same card.
+    setCaptureResolved(true);
+  }, [leadCaptureEnabled, captureOffer, authToken, sessionId, embedHeaders]);
+
+  const handleCaptureDismiss = useCallback(() => {
+    setCaptureOffer(null);
+    setCaptureResolved(true);
+  }, []);
 
   // Allow the host page to toggle debug mode via postMessage. Works in
   // production so integrators can debug a live embed (chat.enableDebug()).
@@ -1648,7 +1691,9 @@ export function useEmbedController(props: EmbedClientProps) {
       );
 
       // Check if agent was unsure
-      if (messageData?.assistant_message?.metadata?.assistant_unsure) {
+      const agentWasUnsure = Boolean(messageData?.assistant_message?.metadata?.assistant_unsure);
+      const handoffRequested = messageData?.assistant_message?.metadata?.handoff === true;
+      if (agentWasUnsure) {
         const userMsg = messageData.user_message?.content || message;
         const agentMsg = messageData.assistant_message?.content || '';
         setUnsureMessages(prev => [...prev, {
@@ -1658,10 +1703,30 @@ export function useEmbedController(props: EmbedClientProps) {
         }]);
       }
 
+      // Offer inline capture when the agent couldn't answer. Suppressed while a
+      // handoff is firing for the same message — the handoff modal already asks
+      // for the visitor's details, and two asks in a row for one question reads
+      // as nagging. The handoff branch below owns that case.
+      if (
+        agentWasUnsure
+        && leadCaptureEnabled
+        && !captureResolved
+        && !captureOffer
+        && !(handoffRequested && supportTicketsEnabled)
+      ) {
+        setCaptureOffer({
+          question: messageData.user_message?.content || message,
+          unansweredQuestionId:
+            messageData.assistant_message?.metadata?.unanswered_question_id ?? null,
+          conversationId: messageData.conversation_id ?? null,
+          timestamp: Date.now(),
+        });
+      }
+
       // Check if agent requested a human handoff. Only offer it when the org's
       // plan explicitly includes support tickets — otherwise creating the ticket
       // would 403. Missing/unknown flags are treated as disabled.
-      if (messageData?.assistant_message?.metadata?.handoff === true && !hasEscalated && supportTicketsEnabled) {
+      if (handoffRequested && !hasEscalated && supportTicketsEnabled) {
         setLastUserMessage(message);
         setHasEscalated(true);
         handoffConversationIdRef.current = messageData.conversation_id ?? null;
@@ -2423,6 +2488,11 @@ export function useEmbedController(props: EmbedClientProps) {
     setHasEscalated,
     handoffConversationIdRef,
     supportTicketsEnabled,
+    leadCaptureEnabled,
+    captureOffer,
+    captureResolved,
+    handleCaptureSubmit,
+    handleCaptureDismiss,
     postedShowUnreadBadge,
     postedEdgeOffset,
     unreadCount,

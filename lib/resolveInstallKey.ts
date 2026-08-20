@@ -18,7 +18,11 @@ export type ResolvedInstallKey = {
 export type ResolveInstallKeyResult =
   | ({ status: 'resolved' } & ResolvedInstallKey)
   | { status: 'not_found' }
-  | { status: 'unavailable' };
+  // `reason` is a short human-readable cause ("HTTP 502", "fetch failed:
+  // ECONNREFUSED"). It exists purely so the error card can say WHY the resolver
+  // was unreachable — without it the only signal is a generic card, and
+  // diagnosing a down backend means reproducing the whole embed in a browser.
+  | { status: 'unavailable'; reason?: string };
 
 const MAX_ATTEMPTS = 3;
 const PER_ATTEMPT_TIMEOUT_MS = 4000;
@@ -31,13 +35,37 @@ function isTransientHttpStatus(status: number): boolean {
   return status >= 500 || status === 408 || status === 429;
 }
 
+/**
+ * Undici wraps connection failures in a generic `TypeError: fetch failed` whose
+ * real cause (ECONNREFUSED, ENOTFOUND, …) only lives on `.cause`. Unwrap one
+ * level so the reason names the actual problem.
+ */
+function describeFetchError(err: unknown): string {
+  if (err instanceof Error) {
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      return `timed out after ${PER_ATTEMPT_TIMEOUT_MS}ms`;
+    }
+    const cause = (err as { cause?: unknown }).cause;
+    const causeCode =
+      cause && typeof cause === 'object' && 'code' in cause
+        ? String((cause as { code?: unknown }).code)
+        : cause instanceof Error
+          ? cause.message
+          : undefined;
+    return causeCode ? `${err.message}: ${causeCode}` : err.message;
+  }
+  return 'unknown error';
+}
+
 async function attemptResolve(key: string): Promise<ResolveInstallKeyResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PER_ATTEMPT_TIMEOUT_MS);
   try {
     const res = await fetch(API.embedResolveServer(key), { cache: 'no-store', signal: controller.signal });
     if (!res.ok) {
-      return isTransientHttpStatus(res.status) ? { status: 'unavailable' } : { status: 'not_found' };
+      return isTransientHttpStatus(res.status)
+        ? { status: 'unavailable', reason: `HTTP ${res.status}` }
+        : { status: 'not_found' };
     }
     const json = await res.json();
     const data = json?.data;
@@ -49,11 +77,12 @@ async function attemptResolve(key: string): Promise<ResolveInstallKeyResult> {
       configId: String(data.configId),
       locale: data.locale ? String(data.locale) : undefined,
     };
-  } catch {
+  } catch (err) {
     // Timeouts, DNS/socket failures, and garbage bodies behind a proxy all
     // land here. Treat them as retryable rather than telling the customer
-    // their installation is broken.
-    return { status: 'unavailable' };
+    // their installation is broken — but keep the cause, since "backend is
+    // down" and "resolver timed out" call for very different responses.
+    return { status: 'unavailable', reason: describeFetchError(err) };
   } finally {
     clearTimeout(timer);
   }

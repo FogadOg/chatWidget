@@ -259,6 +259,14 @@ export async function createSupportTicket(
     message: string;
     conversation_id?: string;
     session_id?: string;
+    /**
+     * Which flow produced the ticket. Omitted (server-defaults to 'handoff')
+     * for the escalation form; 'unanswered' for the inline capture card, which
+     * is gated on the free-tier `lead_capture` feature instead of the paid
+     * `support_tickets` one.
+     */
+    source?: 'handoff' | 'unanswered';
+    unanswered_question_id?: string;
   },
   embedHeaders?: Record<string, string>,
 ): Promise<{ id: string; created_at: string }> {

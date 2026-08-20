@@ -49,6 +49,7 @@ export default function MinimalEmbedShell(props: Props) {
     onRemoveAttachment,
     messageFeedbackSubmitted,
     onSubmitMessageFeedback,
+    leadCaptureCard,
   } = props;
 
   const { locale: hookLocale } = useWidgetTranslation();
@@ -343,6 +344,11 @@ export default function MinimalEmbedShell(props: Props) {
               label={translate(locale, 'agentTyping')}
             />
           ))}
+
+          {/* Pinned to the end of the flow rather than inserted next to the
+              message that triggered it: the offer stays visible if the visitor
+              keeps typing, instead of scrolling out of view. */}
+          {leadCaptureCard}
         </div>
 
         <Composer

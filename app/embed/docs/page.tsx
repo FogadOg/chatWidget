@@ -78,6 +78,7 @@ export default async function DocsPage({ searchParams }: Props) {
   // Single-key snippet: resolve the public key to the triple server-side when
   // the explicit IDs weren't supplied. The explicit form always wins.
   let resolverUnavailable = false;
+  let resolverFailureReason: string | undefined;
   if ((!clientId || !agentId || !configId) && key) {
     const resolved = await resolveInstallKeyServer(key);
     if (resolved.status === 'resolved') {
@@ -87,6 +88,7 @@ export default async function DocsPage({ searchParams }: Props) {
       if (!params.locale && resolved.locale) locale = resolved.locale;
     } else if (resolved.status === 'unavailable') {
       resolverUnavailable = true;
+      resolverFailureReason = resolved.reason;
     }
   }
 
@@ -106,8 +108,8 @@ export default async function DocsPage({ searchParams }: Props) {
         </p>,
         {
           errorType: 'resolver_unavailable',
-          logMessage: 'Install key resolver was unreachable after retries; the loader will retry the docs embed.',
-          context: { locale, transient: true },
+          logMessage: `Install key resolver was unreachable after retries (${resolverFailureReason || 'unknown cause'}); the loader will retry the docs embed.`,
+          context: { locale, transient: true, reason: resolverFailureReason },
         }
       );
     }

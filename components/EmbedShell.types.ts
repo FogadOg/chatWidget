@@ -37,6 +37,11 @@ export type Props = {
   onSubmitMessageFeedback?: (messageId: string, feedbackType?: string) => void;
   unsureModal?: React.ReactNode;
   handoffModal?: React.ReactNode;
+  /**
+   * Inline capture offered after an unanswered question. Rendered at the end of
+   * the message flow rather than as an overlay, so it never blocks the chat.
+   */
+  leadCaptureCard?: React.ReactNode;
   unsureMessages?: UnsureMessage[];
   onShowUnsureModal?: () => void;
   unreadCount?: number;

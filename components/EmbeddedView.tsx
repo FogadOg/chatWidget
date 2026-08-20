@@ -61,6 +61,7 @@ export function EmbeddedView({ vm }: { vm: ClassicShellVM }) {
     onSubmitMessageFeedback,
     unsureModal,
     handoffModal,
+    leadCaptureCard,
     unsureMessages,
     onShowUnsureModal,
     onCloseUnsureModal,
@@ -591,6 +592,10 @@ export function EmbeddedView({ vm }: { vm: ClassicShellVM }) {
                       ))}
                     </>
                   )}
+                  {/* Pinned to the end of the flow rather than inserted next to
+                      the message that triggered it: the offer stays visible if
+                      the visitor keeps typing, instead of scrolling away. */}
+                  {leadCaptureCard}
                   {showJumpButton && (
                     <JumpToLatest onClick={scrollToBottom} label={jumpToLatestLabel} primaryColor={primaryColor} />
                   )}
