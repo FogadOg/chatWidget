@@ -220,6 +220,7 @@ jest.mock('../components/EmbedShell', () => {
         {props.feedbackDialog}
         {props.unsureModal}
         {props.handoffModal}
+        {props.leadCaptureCard}
         {props.flowResponses && props.flowResponses.length > 0 && (
           <div data-testid="flow-responses">
             {props.flowResponses.map((fr: any, i: number) => (
@@ -5410,6 +5411,147 @@ describe('EmbedClient Component', () => {
         expect(screen.getByText('2 messages')).toBeInTheDocument();
       }, { timeout: 3000 });
       expect(screen.queryByText('Talk to our team')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Lead capture on unanswered questions', () => {
+    // Builds a fetch mock whose chat reply carries the given assistant metadata
+    // and whose widget-config carries the given plan flags.
+    const mockChat = (metadata: any, configData: any) =>
+      mockFetch.mockImplementation((url: string, options?: any) => {
+        if (url.includes('/messages') && options?.method === 'POST') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              status: 'success',
+              data: {
+                session_id: 'sess-capture',
+                conversation_id: 'conv-capture',
+                user_message: {
+                  id: 'um-1',
+                  content: 'Do you ship to Norway?',
+                  sender: 'user',
+                  created_at: new Date().toISOString(),
+                },
+                assistant_message: {
+                  id: 'am-1',
+                  content: "I don't have that information.",
+                  sender: 'assistant',
+                  created_at: new Date().toISOString(),
+                  metadata,
+                },
+              },
+            }),
+          });
+        }
+        if (url.includes('/messages')) {
+          return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { messages: [] } }) });
+        }
+        if (url.includes('/agents/')) {
+          return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { name: 'Test' } }) });
+        }
+        if (url.includes('/widget-config/')) {
+          return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: configData }) });
+        }
+        if (url.includes('/sessions')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'success', data: { session_id: 'sess-capture', expires_at: '2099-01-01T00:00:00Z' } }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: {} }) });
+      });
+
+    const ask = async () => {
+      render(<EmbedClient {...defaultProps} startOpen={true} />);
+      await waitFor(() => expect(screen.getByTestId('embed-shell')).toBeInTheDocument());
+      await act(async () => { await new Promise((r) => setTimeout(r, 200)); });
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'Do you ship to Norway?' } });
+      fireEvent.click(screen.getByTestId('submit-btn'));
+    };
+
+    test('offers the capture card when the agent is unsure', async () => {
+      mockChat({ assistant_unsure: true, unanswered_question_id: 'q-1' }, { lead_capture_enabled: true });
+      await ask();
+      await waitFor(() => {
+        expect(screen.getByTestId('lead-capture-card')).toBeInTheDocument();
+      }, { timeout: 3000 });
+    });
+
+    test('does not offer capture when the plan flag is absent', async () => {
+      mockChat({ assistant_unsure: true }, {});
+      await ask();
+      await waitFor(() => expect(screen.getByText('2 messages')).toBeInTheDocument(), { timeout: 3000 });
+      expect(screen.queryByTestId('lead-capture-card')).not.toBeInTheDocument();
+    });
+
+    test('does not offer capture when the agent answered confidently', async () => {
+      mockChat({ assistant_unsure: false }, { lead_capture_enabled: true });
+      await ask();
+      await waitFor(() => expect(screen.getByText('2 messages')).toBeInTheDocument(), { timeout: 3000 });
+      expect(screen.queryByTestId('lead-capture-card')).not.toBeInTheDocument();
+    });
+
+    test('suppresses the card when a handoff modal is firing for the same message', async () => {
+      // Two asks for one question reads as nagging — the handoff modal already
+      // collects the visitor's details, so it owns this case.
+      mockChat(
+        { assistant_unsure: true, handoff: true },
+        { lead_capture_enabled: true, support_tickets_enabled: true },
+      );
+      await ask();
+      await waitFor(() => expect(screen.getByText('Talk to our team')).toBeInTheDocument(), { timeout: 3000 });
+      expect(screen.queryByTestId('lead-capture-card')).not.toBeInTheDocument();
+    });
+
+    test('still offers capture on an unsure handoff when the plan lacks support tickets', async () => {
+      // handoff:true but no support_tickets — the modal can't open, so the
+      // capture card must not be suppressed or the visitor gets nothing.
+      mockChat(
+        { assistant_unsure: true, handoff: true },
+        { lead_capture_enabled: true, support_tickets_enabled: false },
+      );
+      await ask();
+      await waitFor(() => {
+        expect(screen.getByTestId('lead-capture-card')).toBeInTheDocument();
+      }, { timeout: 3000 });
+      expect(screen.queryByText('Talk to our team')).not.toBeInTheDocument();
+    });
+
+    test('dismissing the card removes it for the rest of the session', async () => {
+      mockChat({ assistant_unsure: true }, { lead_capture_enabled: true });
+      await ask();
+      await waitFor(() => expect(screen.getByTestId('lead-capture-card')).toBeInTheDocument(), { timeout: 3000 });
+
+      fireEvent.click(screen.getByText('No thanks'));
+      await waitFor(() => expect(screen.queryByTestId('lead-capture-card')).not.toBeInTheDocument());
+
+      // Ask again — a visitor who declined once is not asked a second time.
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'And to Sweden?' } });
+      fireEvent.click(screen.getByTestId('submit-btn'));
+      await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+      expect(screen.queryByTestId('lead-capture-card')).not.toBeInTheDocument();
+    });
+
+    test('posts the capture as source=unanswered with the question id', async () => {
+      mockChat({ assistant_unsure: true, unanswered_question_id: 'q-42' }, { lead_capture_enabled: true });
+      await ask();
+      await waitFor(() => expect(screen.getByTestId('lead-capture-card')).toBeInTheDocument(), { timeout: 3000 });
+
+      fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'visitor@example.com' } });
+      fireEvent.click(screen.getByText('Send to the team'));
+
+      await waitFor(() => {
+        const call = mockFetch.mock.calls.find(
+          ([url, opts]: any[]) => String(url).includes('/support-tickets') && opts?.method === 'POST',
+        );
+        expect(call).toBeTruthy();
+        const body = JSON.parse(call[1].body);
+        expect(body.source).toBe('unanswered');
+        expect(body.unanswered_question_id).toBe('q-42');
+        expect(body.email).toBe('visitor@example.com');
+        expect(body.message).toBe('Do you ship to Norway?');
+      }, { timeout: 3000 });
     });
   });
 });
