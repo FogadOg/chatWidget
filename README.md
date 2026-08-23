@@ -146,6 +146,29 @@ The widget fetches its configuration from the config endpoint using the config_i
 
 - Container automatically resizes via postMessage communication
 
+### Chat widget: page-targeted nudges
+
+The teaser bubble can vary by page. `WidgetConfig.teaser_rules` is an ordered
+list — the first rule whose `match` hits the visitor's path *and* whose message
+resolves for their locale wins; a matched-but-untranslated rule falls through to
+the next one rather than rendering nothing. With no match, the plain
+`teaser_message` / `teaser_delay` / `teaser_dismiss_after` fields run, which is
+also what a plan below Starter gets (the backend empties `teaser_rules` on read).
+
+- Resolution lives in `app/embed/session/hooks/resolveTeaserRule.ts`, kept pure
+  and separate from `useTeaserBubble` so the matching can be tested without
+  timers.
+- The path comes from the loader's `pagePath` query param, and afterwards from
+  `WIDGET_PAGE_CONTEXT` messages. **Loaders older than 0.1.2 never send those**,
+  so on those installs SPA route changes and exit-intent rules simply never
+  fire and the default teaser runs — degradation, not breakage.
+- One nudge per browsing session: dismissal is stored in `sessionStorage`, and
+  a nudge that has already shown will not re-fire on later navigations.
+- Impressions post `teaser_shown` telemetry carrying `rule_id`, and a resulting
+  open carries `teaser_rule_id`, so per-rule open rate is a group-by. The
+  visitor id must ride along as `user_id` or the ingest endpoint's 5-second
+  dedup window collapses concurrent visitors into one event.
+
 ### Docs widget: collapsed search bar
 
 The docs widget has no launcher button. Its collapsed state is a search field
@@ -156,7 +179,8 @@ visitor's only way in and out.
 - Configured from the same fields as the chat widget's teaser bubble:
   `teaser_message` (the field's placeholder — **empty means no bar**, and the
   widget then only opens via `CompaninDocsWidget.open()`), `teaser_delay`, and
-  `teaser_dismiss_after`.
+  `teaser_dismiss_after`. It does **not** read `teaser_rules` — page-targeted
+  nudges are chat-only, and the backend strips the field for docs widgets.
 - The iframe is sized to just the bar, so the rest of the host page stays
   clickable. `WIDGET_RESIZE` carries `{ width, height, anchor: 'bottom-center' }`
   and the loader anchors/clamps the container to the viewport; the open panel

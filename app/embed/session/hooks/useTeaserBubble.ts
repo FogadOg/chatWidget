@@ -1,65 +1,91 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { WidgetConfig } from '../../../../types/widget';
+import { resolveTeaserRule } from './resolveTeaserRule';
 
 // Historic versions persisted dismissal here; cleared on load so the teaser
 // isn't still suppressed for visitors who dismissed it under the old scheme.
 const DISMISSED_PREFIX = 'companin-teaser-dismissed-';
+// Dismissal is remembered for the browsing session, not just the page view:
+// with page rules a visitor moving between pages would otherwise be nudged
+// again on every navigation after having already waved one away.
+const SESSION_DISMISSED_PREFIX = 'companin-teaser-session-dismissed-';
+
+function readSessionDismissed(key: string | null): boolean {
+  if (!key) return false;
+  try {
+    return sessionStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export function useTeaserBubble({
   widgetConfig,
   isCollapsed,
   locale,
+  pagePath,
+  exitIntentFired = false,
 }: {
   widgetConfig: WidgetConfig | null;
   isCollapsed: boolean;
   locale: string;
+  /**
+   * Host page path, forwarded by the loader as `pagePath`. Undefined on loaders
+   * too old to send it — page rules then never match and the default teaser
+   * runs, which is the intended degradation.
+   */
+  pagePath?: string | null;
+  /** Set once the host page reports exit intent (newer loaders only). */
+  exitIntentFired?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
   // Lags `visible` by the parent iframe's resize transition (300ms) so the
   // bubble never renders into a viewport that is still growing around it.
   const [bubbleShown, setBubbleShown] = useState(false);
-  // In-memory only: dismissal hides the teaser for this page view; a reload
-  // starts fresh and the teaser is shown again after its delay.
   const [dismissed, setDismissed] = useState(false);
 
-  // Same locale-resolution priority as getLocalizedText in EmbedClient:
-  // user's locale -> base locale -> widget default language -> English -> first available.
-  // Empty strings count as missing so a blank entry doesn't block fallback.
-  const rawMessage = widgetConfig?.teaser_message;
-  const teaserMessage: string | null = (() => {
-    if (!rawMessage || typeof rawMessage !== 'object') return null;
-    const baseLocale = locale.split('-')[0];
-    const defaultLang = widgetConfig?.default_language || 'en';
-    const candidates = [locale, baseLocale, defaultLang, 'en'];
-    for (const lang of candidates) {
-      const value = rawMessage[lang];
-      if (typeof value === 'string' && value.trim()) return value;
-    }
-    const first = Object.values(rawMessage).find(
-      (v) => typeof v === 'string' && v.trim()
-    );
-    return first ?? null;
-  })();
-
   const storageKey = widgetConfig?.id ? `${DISMISSED_PREFIX}${widgetConfig.id}` : null;
+  const sessionKey = widgetConfig?.id ? `${SESSION_DISMISSED_PREFIX}${widgetConfig.id}` : null;
 
-  // Clean up the legacy persisted-dismissal flag from older widget versions.
+  // Clean up the legacy persisted-dismissal flag from older widget versions,
+  // and adopt a dismissal the visitor already made earlier this session.
   useEffect(() => {
-    if (!storageKey) return;
-    try { localStorage.removeItem(storageKey); } catch {}
-  }, [storageKey]);
+    if (storageKey) {
+      try { localStorage.removeItem(storageKey); } catch {}
+    }
+    if (readSessionDismissed(sessionKey)) setDismissed(true);
+  }, [storageKey, sessionKey]);
 
-  // Show the teaser after the configured delay
+  const resolved = useMemo(
+    () => resolveTeaserRule({ widgetConfig, pagePath, locale, exitIntentFired }),
+    [widgetConfig, pagePath, locale, exitIntentFired],
+  );
+
+  const teaserMessage = resolved?.message ?? null;
+  const activeRuleId = resolved?.ruleId ?? null;
+
+  // Re-arm the delay when the resolved nudge changes — an SPA navigating from a
+  // matched page to a different one gets that page's rule, not a stale timer.
+  const ruleKey = resolved ? `${activeRuleId ?? '__default__'}:${teaserMessage}` : null;
+  // Once a nudge has actually been shown, later navigations must not show
+  // another one. Without this a five-page browse produces five bubbles.
+  const alreadyShownRef = useRef(false);
+
+  // Show the teaser after the resolved delay
   useEffect(() => {
-    if (!teaserMessage || dismissed) {
+    if (!teaserMessage || dismissed || alreadyShownRef.current) {
       const timer = setTimeout(() => setVisible(false), 0);
       return () => clearTimeout(timer);
     }
-    const delayMs = widgetConfig?.teaser_delay ?? 3000;
-    const timer = setTimeout(() => setVisible(true), Math.max(delayMs, 0));
+    const delayMs = resolved?.delayMs ?? 3000;
+    const timer = setTimeout(() => {
+      alreadyShownRef.current = true;
+      setVisible(true);
+    }, Math.max(delayMs, 0));
     return () => clearTimeout(timer);
-  // delayMs is a primitive — spreading the dependency is intentional
-  }, [teaserMessage, widgetConfig?.teaser_delay, dismissed]);
+  // ruleKey re-arms the timer when the matched rule changes; delayMs is a
+  // primitive read from the same resolution.
+  }, [teaserMessage, ruleKey, resolved?.delayMs, dismissed]);
 
   // Render the bubble only after the iframe has finished expanding: `visible`
   // triggers the resize; the bubble follows once the parent's 0.3s CSS
@@ -81,22 +107,25 @@ export function useTeaserBubble({
     }
   }, [isCollapsed]);
 
-  // Auto-dismiss after teaser_dismiss_after ms (0 = never)
+  // Auto-dismiss after the resolved dismiss-after window (0 = never)
   useEffect(() => {
     if (!visible) return;
-    const dismissAfter = widgetConfig?.teaser_dismiss_after ?? 0;
+    const dismissAfter = resolved?.dismissAfterMs ?? 0;
     if (dismissAfter <= 0) return;
     const timer = setTimeout(() => {
       setVisible(false);
       setDismissed(true);
     }, dismissAfter);
     return () => clearTimeout(timer);
-  }, [visible, widgetConfig?.teaser_dismiss_after]);
+  }, [visible, resolved?.dismissAfterMs]);
 
   const dismissTeaser = useCallback(() => {
     setVisible(false);
     setDismissed(true);
-  }, []);
+    if (sessionKey) {
+      try { sessionStorage.setItem(sessionKey, '1'); } catch {}
+    }
+  }, [sessionKey]);
 
   return {
     showTeaser: bubbleShown && isCollapsed && !!teaserMessage,
@@ -106,6 +135,8 @@ export function useTeaserBubble({
     teaserExpanded: visible && isCollapsed && !!teaserMessage,
     teaserConfigured: !!teaserMessage,
     teaserMessage,
+    /** Rule that produced the current nudge (null = the org's default teaser). */
+    activeRuleId,
     dismissTeaser,
   };
 }

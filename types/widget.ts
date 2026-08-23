@@ -70,6 +70,29 @@ export type Flow = {
   }>;
 };
 
+/**
+ * One page-targeted teaser rule. Shape and bounds are enforced server-side by
+ * `WidgetConfigSerializer.validate_teaser_rules`, so the widget treats these as
+ * already-validated — but still resolves defensively, because a config can also
+ * arrive from a host page via `WIDGET_INIT_CONFIG`.
+ */
+export type TeaserRule = {
+  /** Stable id, used to attribute impressions and opens back to the rule. */
+  id: string;
+  match: {
+    type: 'prefix' | 'contains' | 'regex';
+    value: string;
+  };
+  delay_ms?: number;
+  dismiss_after_ms?: number;
+  /** Locale → text, resolved with the same fallback chain as `teaser_message`. */
+  message: Record<string, string>;
+  /** `open` is reserved for the auto-open phase; today every rule renders a bubble. */
+  action?: 'bubble' | 'open';
+  /** Requires a loader new enough to report exit intent from the host page. */
+  on_exit_intent?: boolean;
+};
+
 export type WidgetConfig = {
   id: string;
   widget_type?: 'chat' | 'docs';
@@ -130,6 +153,13 @@ export type WidgetConfig = {
   teaser_delay?: number;
   /** Auto-hide the teaser after this many ms (default: 0 = stays until dismissed or widget opens) */
   teaser_dismiss_after?: number;
+  /**
+   * Page-targeted nudges, in priority order — the first rule that matches the
+   * visitor's path and resolves a message for their locale wins. Absent or
+   * empty (including for any org whose plan doesn't unlock
+   * `widget_proactive_triggers`) means the three fields above are used as-is.
+   */
+  teaser_rules?: TeaserRule[];
   // Security
   /** When true, postMessage is only sent to the exact parentOrigin — never '*' */
   strict_origin?: boolean;

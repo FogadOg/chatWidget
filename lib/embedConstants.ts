@@ -4,6 +4,13 @@ export const EMBED_EVENTS = {
   // ── Host → iframe ────────────────────────────────────────────────────────
   INIT_CONFIG: 'WIDGET_INIT_CONFIG',
   HOST_MESSAGE: 'HOST_MESSAGE',
+  /**
+   * Host page reports where the visitor now is, and behaviour the iframe can't
+   * observe for itself — SPA route changes and exit intent. Sent by loaders
+   * from 0.2.0 on; older installs never send it, so anything keyed off it must
+   * degrade to "unknown page, no exit intent" rather than break.
+   */
+  PAGE_CONTEXT: 'WIDGET_PAGE_CONTEXT',
 
   // ── Iframe → host (layout / visibility) ──────────────────────────────────
   RESIZE: 'WIDGET_RESIZE',

@@ -601,6 +601,76 @@
         }
         armLoadTimeout();
 
+      // ── Page context reporting (host → iframe) ───────────────────────────
+      // Everything below is best-effort and must never throw into the host
+      // page: a chat widget may not break a customer's site, so each hook is
+      // individually guarded and silently skipped if unavailable.
+      let pageContextStarted = false;
+      let lastReportedPath = null;
+      let exitIntentReported = false;
+
+      function reportPageContext(payload) {
+        try {
+          postToIframe({ type: 'WIDGET_PAGE_CONTEXT', data: payload });
+        } catch (e) {
+          // Iframe not ready or origin mismatch — the nudge simply doesn't fire.
+        }
+      }
+
+      function reportPathIfChanged() {
+        try {
+          const path = window.location.pathname;
+          if (path === lastReportedPath) return;
+          lastReportedPath = path;
+          // A new page is a fresh chance to catch someone leaving.
+          exitIntentReported = false;
+          reportPageContext({ pagePath: path });
+        } catch (e) {}
+      }
+
+      function startPageContextReporting() {
+        if (pageContextStarted) return;
+        pageContextStarted = true;
+
+        reportPathIfChanged();
+
+        // SPA navigation: history.pushState/replaceState fire no event, so the
+        // only way to see a route change is to wrap them. Both wrappers call
+        // through to the original first and never alter its return value.
+        try {
+          var wrapHistory = function (method) {
+            var original = history[method];
+            if (typeof original !== 'function' || original.__companinWrapped) return;
+            var wrapped = function () {
+              var result = original.apply(this, arguments);
+              try { reportPathIfChanged(); } catch (e) {}
+              return result;
+            };
+            wrapped.__companinWrapped = true;
+            history[method] = wrapped;
+          };
+          wrapHistory('pushState');
+          wrapHistory('replaceState');
+          window.addEventListener('popstate', reportPathIfChanged);
+          window.addEventListener('hashchange', reportPathIfChanged);
+        } catch (e) {}
+
+        // Exit intent: the cursor leaving through the top of the viewport.
+        // Reported once per page — repeat notifications would just re-fire a
+        // nudge the visitor already saw. A mouse-out with a relatedTarget is a
+        // move within the page, not a departure.
+        try {
+          var onMouseOut = function (event) {
+            if (exitIntentReported) return;
+            if (event.relatedTarget || event.toElement) return;
+            if (typeof event.clientY === 'number' && event.clientY > 0) return;
+            exitIntentReported = true;
+            reportPageContext({ pagePath: window.location.pathname, exitIntent: true });
+          };
+          document.addEventListener('mouseout', onMouseOut);
+        } catch (e) {}
+      }
+
       iframe.onload = () => {
         iframeLoaded = true;
         clearTimeout(loadTimeout);
@@ -628,6 +698,12 @@
         } catch (err) {
           logError('Failed to post initial config to iframe', { error: err && err.message });
         }
+        // Page-targeted nudges need to know where the visitor is *now*. The
+        // iframe already receives the path once via the `pagePath` query param,
+        // but it cannot observe the host page afterwards: an SPA route change
+        // never reloads the iframe, and a mouse-out on the parent document is
+        // invisible from inside a fixed corner frame. Both are reported here.
+        startPageContextReporting();
       };
 
       iframe.onerror = (error) => {

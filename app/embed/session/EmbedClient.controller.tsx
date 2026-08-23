@@ -93,6 +93,10 @@ export function useEmbedController(props: EmbedClientProps) {
   configId: initialConfigId,
   locale: initialLocale,
   startOpen: initialStartOpen,
+  // Host page path, put on the embed URL by the loader. Page-targeted teaser
+  // rules match against it; loaders too old to send it simply get the org's
+  // default teaser.
+  pagePath: initialPagePath,
   parentOrigin: initialParentOrigin,
   strictOrigin: initialStrictOrigin = false,
   forceVariantId: initialForceVariantId,
@@ -1143,12 +1147,88 @@ export function useEmbedController(props: EmbedClientProps) {
     }
   }, [isCollapsed, initialPreviewConfig]);
 
+  // Where the visitor is on the host page, and whether they look like they're
+  // leaving. Seeded from the loader's `pagePath` query param (present on every
+  // shipped loader) and updated by WIDGET_PAGE_CONTEXT messages from newer
+  // loaders, which are the only way an iframe can learn about SPA navigation or
+  // an exit-intent mouse-out on the parent document.
+  const [hostPagePath, setHostPagePath] = useState<string | null>(initialPagePath ?? null);
+  const [exitIntentFired, setExitIntentFired] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.source !== window.parent) return;
+      const expectedOrigin = parentTargetOrigin;
+      if (!expectedOrigin) return;
+      if (expectedOrigin !== '*' && event.origin !== expectedOrigin) return;
+
+      const { type, data } = (event.data || {}) as {
+        type?: string;
+        data?: { pagePath?: unknown; exitIntent?: unknown };
+      };
+      if (type !== EMBED_EVENTS.PAGE_CONTEXT || !data) return;
+
+      if (typeof data.pagePath === 'string') {
+        const nextPath = data.pagePath;
+        setHostPagePath((prev) => (prev === nextPath ? prev : nextPath));
+        // A new page is a new chance to catch someone leaving.
+        setExitIntentFired(false);
+      }
+      if (data.exitIntent === true) setExitIntentFired(true);
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [parentTargetOrigin]);
+
   // Proactive teaser bubble shown beside the launcher before first open
-  const { showTeaser, teaserExpanded, teaserConfigured, teaserMessage, dismissTeaser } = useTeaserBubble({
+  const { showTeaser, teaserExpanded, teaserConfigured, teaserMessage, activeRuleId, dismissTeaser } = useTeaserBubble({
     widgetConfig,
     isCollapsed,
     locale: activeLocale,
+    pagePath: hostPagePath,
+    exitIntentFired,
   });
+
+  // Impression telemetry. Reported once per rendered nudge, carrying the rule
+  // it came from so open-rate per rule is a group-by rather than a guess. The
+  // ref keys on the rule so a later navigation that resolves a different rule
+  // can still report, while re-renders of the same one can't double-count
+  // (the ingest view would drop those as duplicates anyway).
+  const reportedTeaserRef = useRef<string | null>(null);
+  // Read by toggleCollapsed, which is defined further down and deliberately
+  // kept out of this state's dependency list — it is passed to many children,
+  // so re-creating it on every teaser tick would churn the whole tree.
+  const teaserVisibleRef = useRef(false);
+  const teaserRuleRef = useRef<string | null>(null);
+  useEffect(() => {
+    teaserVisibleRef.current = showTeaser;
+    teaserRuleRef.current = activeRuleId;
+  }, [showTeaser, activeRuleId]);
+  const teaserAttribution = useCallback(
+    () => ({
+      rule_id: activeRuleId,
+      page_path: hostPagePath,
+      trigger: exitIntentFired && activeRuleId ? 'exit_intent' : 'dwell',
+    }),
+    [activeRuleId, hostPagePath, exitIntentFired],
+  );
+
+  useEffect(() => {
+    if (!showTeaser) return;
+    const key = `${activeRuleId ?? '__default__'}:${hostPagePath ?? ''}`;
+    if (reportedTeaserRef.current === key) return;
+    reportedTeaserRef.current = key;
+    trackEvent('teaser_shown', initialAgentId, teaserAttribution(), initialClientId, undefined, embedHeaders)
+      .catch(() => {});
+  }, [showTeaser, activeRuleId, hostPagePath, initialAgentId, initialClientId, embedHeaders, teaserAttribution]);
+
+  // Wraps the hook's dismiss so an explicit "no thanks" is measurable — the
+  // difference between a nudge that is ignored and one that is refused.
+  const handleDismissTeaser = useCallback(() => {
+    trackEvent('teaser_dismissed', initialAgentId, teaserAttribution(), initialClientId, undefined, embedHeaders)
+      .catch(() => {});
+    dismissTeaser();
+  }, [dismissTeaser, initialAgentId, initialClientId, embedHeaders, teaserAttribution]);
 
   // Rendered footprint of the teaser bubble, reported by EmbedShell so the
   // iframe is sized to the actual message instead of the bubble's max-width.
@@ -2089,11 +2169,20 @@ export function useEmbedController(props: EmbedClientProps) {
     setIsCollapsed((prev) => {
       const newCollapsed = !prev;
 
-      // send telemetry whenever collapse state toggles
+      // send telemetry whenever collapse state toggles.
+      // An open carries the nudge that was on screen when it happened, so a
+      // rule's open-rate is a group-by on rule_id instead of an inference from
+      // how close in time the impression was.
       trackEvent(
         newCollapsed ? 'widget_close' : 'widget_open',
         initialAgentId,
-        { clientId: initialClientId },
+        newCollapsed
+          ? { clientId: initialClientId }
+          : {
+              clientId: initialClientId,
+              teaser_rule_id: teaserVisibleRef.current ? teaserRuleRef.current : null,
+              from_teaser: teaserVisibleRef.current,
+            },
         initialClientId,
         undefined,
         embedHeaders,
@@ -2532,7 +2621,9 @@ export function useEmbedController(props: EmbedClientProps) {
     teaserExpanded,
     teaserConfigured,
     teaserMessage,
-    dismissTeaser,
+    // The measured wrapper, so an explicit dismissal is reported before the
+    // bubble goes away. Same signature as the hook's, so the view is unchanged.
+    dismissTeaser: handleDismissTeaser,
     teaserSize,
     setTeaserSize,
     handleTeaserMeasure,
