@@ -91,6 +91,23 @@
     console.error(COMPANY_NAME + ' Widget Error:', message, context);
   };
 
+  // Where the visitor is, as page-targeting rules see it.
+  //
+  // Path plus fragment, deliberately WITHOUT the query string. The fragment is
+  // included because hash routing (`/#/pricing`) is a real SPA shape, and
+  // without it the hashchange listener below could never report anything — every
+  // route of such a site would look like the same page. The query string is
+  // excluded because this value travels to our servers on the embed URL, and
+  // host-page query strings routinely carry session tokens, emails and order
+  // ids that are none of our business.
+  function currentPagePath() {
+    try {
+      return window.location.pathname + (window.location.hash || '');
+    } catch (e) {
+      return '';
+    }
+  }
+
   // Atomically pick an unbound script tag AND mark it bound before returning,
   // so that multiple widget loaders running back-to-back (LAUNCH-READINESS #21)
   // never read attributes from a tag that another instance is about to claim.
@@ -309,7 +326,7 @@
             const pfParams = new URLSearchParams({
               locale,
               startOpen: startOpen.toString(),
-              pagePath: window.location.pathname,
+              pagePath: currentPagePath(),
               parentOrigin: window.location.origin,
               loaderVersion: WIDGET_VERSION,
             });
@@ -488,7 +505,7 @@
         const params = new URLSearchParams({
           locale,
           startOpen: startOpen.toString(),
-          pagePath: window.location.pathname,
+          pagePath: currentPagePath(),
           parentOrigin: window.location.origin,
           loaderVersion: WIDGET_VERSION,
         });
@@ -609,9 +626,9 @@
       let pageContextStopped = false;
       let lastReportedPath = null;
       let exitIntentReported = false;
-      // Retained so destroy() can unbind them. The history wrappers below can't
-      // be unwrapped safely (another script may have wrapped ours since), so
-      // they check pageContextStopped and become no-ops instead.
+      // Retained so destroy() can unbind them. The history wrappers are handled
+      // separately — they can't be unwrapped safely (another script may have
+      // wrapped ours since), so they deregister their callback instead.
       let pageContextListeners = [];
 
       function reportPageContext(payload) {
@@ -625,7 +642,7 @@
 
       function reportPathIfChanged() {
         try {
-          const path = window.location.pathname;
+          const path = currentPagePath();
           if (path === lastReportedPath) return;
           lastReportedPath = path;
           // A new page is a fresh chance to catch someone leaving.
@@ -640,9 +657,24 @@
       // the rest of the visit.
       function resendPageContext() {
         try {
-          lastReportedPath = window.location.pathname;
+          lastReportedPath = currentPagePath();
           exitIntentReported = false;
           reportPageContext({ pagePath: lastReportedPath });
+        } catch (e) {}
+      }
+
+      // Add or remove this instance's reporter on the shared history wrappers.
+      // Kept off the wrapper's closure on purpose: once history.pushState is
+      // wrapped it stays wrapped for the life of the document, so a widget that
+      // is destroyed and re-initialised must be able to hand the *existing*
+      // wrapper a live callback. Storing the callbacks on the function object
+      // also lets two widgets on one page both hear about a route change.
+      function historyReporters(method, mutate) {
+        try {
+          var fn = history[method];
+          if (!fn || !fn.__companinWrapped) return;
+          if (!fn.__companinReporters) fn.__companinReporters = [];
+          mutate(fn.__companinReporters);
         } catch (e) {}
       }
 
@@ -655,6 +687,12 @@
           } catch (e) {}
         }
         pageContextListeners = [];
+        ['pushState', 'replaceState'].forEach(function (method) {
+          historyReporters(method, function (reporters) {
+            var at = reporters.indexOf(reportPathIfChanged);
+            if (at >= 0) reporters.splice(at, 1);
+          });
+        });
       }
 
       function startPageContextReporting() {
@@ -673,20 +711,36 @@
         try {
           var wrapHistory = function (method) {
             var original = history[method];
-            if (typeof original !== 'function' || original.__companinWrapped) return;
+            if (typeof original !== 'function') return;
+            // Already wrapped — by an earlier instance of this widget, or by an
+            // earlier one that has since been destroyed. Subscribe to it rather
+            // than bailing out: a widget re-initialised after destroy() used to
+            // inherit the dead wrapper and never see a route change again.
+            if (original.__companinWrapped) {
+              historyReporters(method, function (reporters) {
+                if (reporters.indexOf(reportPathIfChanged) < 0) reporters.push(reportPathIfChanged);
+              });
+              return;
+            }
             var wrapped = function () {
               var result = original.apply(this, arguments);
               try {
-                if (!pageContextStopped) reportPathIfChanged();
+                var reporters = wrapped.__companinReporters || [];
+                for (var i = 0; i < reporters.length; i++) {
+                  try { reporters[i](); } catch (e) {}
+                }
               } catch (e) {}
               return result;
             };
             wrapped.__companinWrapped = true;
+            wrapped.__companinReporters = [reportPathIfChanged];
             history[method] = wrapped;
           };
           wrapHistory('pushState');
           wrapHistory('replaceState');
           window.addEventListener('popstate', reportPathIfChanged);
+          // Meaningful because the reported path carries the fragment — see
+          // currentPagePath().
           window.addEventListener('hashchange', reportPathIfChanged);
           pageContextListeners.push({ target: window, type: 'popstate', handler: reportPathIfChanged });
           pageContextListeners.push({ target: window, type: 'hashchange', handler: reportPathIfChanged });
@@ -702,7 +756,7 @@
             if (event.relatedTarget || event.toElement) return;
             if (typeof event.clientY === 'number' && event.clientY > 0) return;
             exitIntentReported = true;
-            reportPageContext({ pagePath: window.location.pathname, exitIntent: true });
+            reportPageContext({ pagePath: currentPagePath(), exitIntent: true });
           };
           document.addEventListener('mouseout', onMouseOut);
           pageContextListeners.push({ target: document, type: 'mouseout', handler: onMouseOut });
