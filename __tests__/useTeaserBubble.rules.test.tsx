@@ -199,6 +199,68 @@ describe('useTeaserBubble with page rules', () => {
     expect(result.current.teaserMessage).toBe('Before you go…');
   });
 
+  it('still fires an exit-intent rule after the default teaser has been shown', () => {
+    // The setup nearly every org has: a plain teaser (free on every plan) plus
+    // an exit-intent rule. A single shared "already nudged" budget made the
+    // exit rule unreachable here, because dwell always spends it first.
+    const config = makeConfig({
+      teaser_rules: [{ ...pricingRule, id: 'r_exit', on_exit_intent: true, message: { en: 'Before you go…' } }],
+    });
+    const base = { widgetConfig: config, isCollapsed: true, locale: 'en', pagePath: '/pricing' } as Props;
+    const { result, rerender } = renderHook(
+      (p: Props = { ...base, exitIntentFired: false }) => useTeaserBubble(p),
+      { initialProps: { ...base, exitIntentFired: false } as Props },
+    );
+
+    settle(3000);
+    expect(result.current.teaserMessage).toBe('Need a hand?');
+    expect(result.current.showTeaser).toBe(true);
+
+    rerender({ ...base, exitIntentFired: true } as Props);
+    settle();
+
+    expect(result.current.teaserMessage).toBe('Before you go…');
+    expect(result.current.showTeaser).toBe(true);
+  });
+
+  it('spends the exit-intent budget only once', () => {
+    const config = makeConfig({
+      teaser_rules: [{ ...pricingRule, id: 'r_exit', on_exit_intent: true, message: { en: 'Before you go…' } }],
+    });
+    const base = { widgetConfig: config, isCollapsed: true, locale: 'en', pagePath: '/pricing' } as Props;
+    const { result, rerender } = renderHook(
+      (p: Props = { ...base, exitIntentFired: true }) => useTeaserBubble(p),
+      { initialProps: { ...base, exitIntentFired: true } as Props },
+    );
+
+    settle();
+    expect(result.current.showTeaser).toBe(true);
+    act(() => { result.current.dismissTeaser(); });
+    settle();
+
+    // Leaving and re-entering the viewport must not re-nudge.
+    rerender({ ...base, exitIntentFired: false } as Props);
+    settle();
+    rerender({ ...base, exitIntentFired: true } as Props);
+    settle(60000);
+
+    expect(result.current.showTeaser).toBe(false);
+  });
+
+  it('does not yank a bubble the visitor is already reading', () => {
+    // A locale switch mid-view changes the resolved message object but not what
+    // should be on screen; the budget check must not force a hide.
+    const { result, rerender } = setup();
+
+    settle(2000);
+    expect(result.current.showTeaser).toBe(true);
+
+    rerender({ widgetConfig: makeConfig(), isCollapsed: true, locale: 'en', pagePath: '/pricing' });
+    advance(0);
+
+    expect(result.current.showTeaser).toBe(true);
+  });
+
   it('survives a config with no rules array at all', () => {
     const { result } = setup({ widgetConfig: makeConfig({ teaser_rules: undefined }) });
 

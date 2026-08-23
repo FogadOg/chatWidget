@@ -67,25 +67,45 @@ export function useTeaserBubble({
   // Re-arm the delay when the resolved nudge changes — an SPA navigating from a
   // matched page to a different one gets that page's rule, not a stale timer.
   const ruleKey = resolved ? `${activeRuleId ?? '__default__'}:${teaserMessage}` : null;
-  // Once a nudge has actually been shown, later navigations must not show
-  // another one. Without this a five-page browse produces five bubbles.
-  const alreadyShownRef = useRef(false);
+  const requiresExitIntent = !!resolved?.requiresExitIntent;
+  // Nudges are budgeted per *trigger class*, not per session. Dwell nudges get
+  // one showing between them, so a five-page browse produces one bubble rather
+  // than five — but an exit-intent rule keeps its own budget. Sharing one
+  // counter made exit intent unreachable in the ordinary setup: it fires by
+  // definition after dwell, so the plain teaser (free on every plan, and
+  // usually configured) would always spend the budget first.
+  const shownTriggersRef = useRef<Set<string>>(new Set());
+  // Which nudge is currently on screen, so a spent budget can distinguish
+  // "same bubble still showing" from "stale bubble that must go".
+  const shownKeyRef = useRef<string | null>(null);
 
   // Show the teaser after the resolved delay
   useEffect(() => {
-    if (!teaserMessage || dismissed || alreadyShownRef.current) {
+    const hideSoon = () => {
       const timer = setTimeout(() => setVisible(false), 0);
       return () => clearTimeout(timer);
+    };
+
+    if (!teaserMessage || dismissed) return hideSoon();
+
+    const triggerClass = requiresExitIntent ? 'exit_intent' : 'dwell';
+    if (shownTriggersRef.current.has(triggerClass)) {
+      // Budget spent. Only pull the bubble if what it's showing no longer
+      // matches what should be shown here — yanking a bubble the visitor is
+      // reading (a locale switch, a config refetch) would be gratuitous.
+      return ruleKey === shownKeyRef.current ? undefined : hideSoon();
     }
+
     const delayMs = resolved?.delayMs ?? 3000;
     const timer = setTimeout(() => {
-      alreadyShownRef.current = true;
+      shownTriggersRef.current.add(triggerClass);
+      shownKeyRef.current = ruleKey;
       setVisible(true);
     }, Math.max(delayMs, 0));
     return () => clearTimeout(timer);
   // ruleKey re-arms the timer when the matched rule changes; delayMs is a
   // primitive read from the same resolution.
-  }, [teaserMessage, ruleKey, resolved?.delayMs, dismissed]);
+  }, [teaserMessage, ruleKey, resolved?.delayMs, dismissed, requiresExitIntent]);
 
   // Render the bubble only after the iframe has finished expanding: `visible`
   // triggers the resize; the bubble follows once the parent's 0.3s CSS

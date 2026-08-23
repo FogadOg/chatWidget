@@ -606,10 +606,16 @@
       // page: a chat widget may not break a customer's site, so each hook is
       // individually guarded and silently skipped if unavailable.
       let pageContextStarted = false;
+      let pageContextStopped = false;
       let lastReportedPath = null;
       let exitIntentReported = false;
+      // Retained so destroy() can unbind them. The history wrappers below can't
+      // be unwrapped safely (another script may have wrapped ours since), so
+      // they check pageContextStopped and become no-ops instead.
+      let pageContextListeners = [];
 
       function reportPageContext(payload) {
+        if (pageContextStopped) return;
         try {
           postToIframe({ type: 'WIDGET_PAGE_CONTEXT', data: payload });
         } catch (e) {
@@ -628,8 +634,35 @@
         } catch (e) {}
       }
 
+      // Unconditional resend, used on every iframe load. A load-timeout retry
+      // re-navigates the iframe to a URL still carrying the ORIGINAL pagePath,
+      // so a fresh frame would otherwise match rules against a stale page for
+      // the rest of the visit.
+      function resendPageContext() {
+        try {
+          lastReportedPath = window.location.pathname;
+          exitIntentReported = false;
+          reportPageContext({ pagePath: lastReportedPath });
+        } catch (e) {}
+      }
+
+      function stopPageContextReporting() {
+        pageContextStopped = true;
+        for (var i = 0; i < pageContextListeners.length; i++) {
+          try {
+            var entry = pageContextListeners[i];
+            entry.target.removeEventListener(entry.type, entry.handler);
+          } catch (e) {}
+        }
+        pageContextListeners = [];
+      }
+
       function startPageContextReporting() {
-        if (pageContextStarted) return;
+        // The listeners are bound once, but every load needs the current page.
+        if (pageContextStarted) {
+          resendPageContext();
+          return;
+        }
         pageContextStarted = true;
 
         reportPathIfChanged();
@@ -643,7 +676,9 @@
             if (typeof original !== 'function' || original.__companinWrapped) return;
             var wrapped = function () {
               var result = original.apply(this, arguments);
-              try { reportPathIfChanged(); } catch (e) {}
+              try {
+                if (!pageContextStopped) reportPathIfChanged();
+              } catch (e) {}
               return result;
             };
             wrapped.__companinWrapped = true;
@@ -653,6 +688,8 @@
           wrapHistory('replaceState');
           window.addEventListener('popstate', reportPathIfChanged);
           window.addEventListener('hashchange', reportPathIfChanged);
+          pageContextListeners.push({ target: window, type: 'popstate', handler: reportPathIfChanged });
+          pageContextListeners.push({ target: window, type: 'hashchange', handler: reportPathIfChanged });
         } catch (e) {}
 
         // Exit intent: the cursor leaving through the top of the viewport.
@@ -668,6 +705,7 @@
             reportPageContext({ pagePath: window.location.pathname, exitIntent: true });
           };
           document.addEventListener('mouseout', onMouseOut);
+          pageContextListeners.push({ target: document, type: 'mouseout', handler: onMouseOut });
         } catch (e) {}
       }
 
@@ -1146,6 +1184,9 @@
           destroy: () => {
             try {
               window.removeEventListener("message", handleMessage);
+              // Page-context hooks live on the host document, not the widget
+              // container, so removing the container doesn't unbind them.
+              stopPageContextReporting();
               Object.keys(debounceState).forEach((eventName) => {
                 const state = debounceState[eventName];
                 if (state && state.timer) clearTimeout(state.timer);
