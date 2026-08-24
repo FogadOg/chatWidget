@@ -9,7 +9,9 @@ import type {
   FlowButton,
   Flow,
   SourceData,
+  RichAction,
 } from '../../../types/widget';
+import type { RichActionContext } from '../../../components/blocks/types';
 import { ButtonLike } from '../../../hooks/useClickedButtons';
 import { validateMessageInput } from '../../../lib/validation';
 import { checkAndConsume } from '../../../lib/rateLimiter';
@@ -136,6 +138,12 @@ export function useEmbedController(props: EmbedClientProps) {
 
   // Page context pushed via chat.setContext() — merged into every API request.
   const pageContextRef = useRef<Record<string, unknown>>({});
+
+  // What the host loader told us it can do (HOST_MESSAGE → `capabilities`).
+  // Empty on every install running a loader pinned before that message existed,
+  // so each read is a "can we do the better thing?" check with a fallback, never
+  // a requirement.
+  const hostCapabilitiesRef = useRef<Set<string>>(new Set());
 
   // Track the last session ID we emitted WIDGET_CONVERSATION_CREATED for so we
   // don't fire it twice on re-renders.
@@ -2060,6 +2068,73 @@ export function useEmbedController(props: EmbedClientProps) {
     handleSubmit(new Event('submit') as unknown as React.FormEvent, labelText || b.action, true);
   };
 
+  /**
+   * A visitor took an action on a rich block — a card CTA, a button row, a link.
+   *
+   * Three things can happen, and they compose: every action is tracked, any
+   * action carrying a `conversion_goal` records one, and then the kind decides
+   * what the visitor actually sees.
+   */
+  const handleRichAction = useCallback((
+    action: RichAction,
+    context: RichActionContext,
+    event?: React.MouseEvent,
+  ) => {
+    trackEvent(
+      'button_clicked',
+      initialAgentId,
+      { label: action.label, source: 'rich_block', kind: action.kind },
+      initialClientId,
+      undefined,
+      embedHeaders,
+    ).catch(() => {});
+
+    const sid = sessionIdRef.current;
+
+    // Dedup on message + action: a double-tap, a re-render, or a restored
+    // transcript must not book the same outcome twice.
+    if (action.conversion_goal && sid) {
+      trackConversion(
+        sid,
+        {
+          goal_type: action.conversion_goal,
+          goal_label: action.label || null,
+          dedup_key: `${context.messageId}:${action.id}`,
+          metadata: { source: 'rich_block', kind: action.kind },
+        },
+        authTokenRef.current ?? undefined,
+        embedHeaders,
+      ).catch(() => {});
+    }
+
+    if (action.kind === 'reply') {
+      const text = (action.payload || action.label || '').trim();
+      if (text) {
+        void handleSubmit(new Event('submit') as unknown as React.FormEvent, text);
+      }
+      return;
+    }
+
+    if (action.kind === 'link' && action.url) {
+      // "Add to cart" belongs in the page the visitor is already on, not in a
+      // new tab. Only the host page can do that, and only a loader new enough
+      // to have announced `card_action` is listening — otherwise the anchor's
+      // own target="_blank" runs, which is why this never preventDefaults
+      // speculatively.
+      if (hostCapabilitiesRef.current.has('card_action') && parentSensitiveOrigin) {
+        try {
+          window.parent.postMessage(
+            { type: EMBED_EVENTS.CARD_ACTION, data: { url: action.url, action_id: action.id } },
+            parentSensitiveOrigin,
+          );
+          event?.preventDefault();
+        } catch {
+          // Host refused the message — let the anchor navigate as it would have.
+        }
+      }
+    }
+  }, [initialAgentId, initialClientId, embedHeaders, handleSubmit, parentSensitiveOrigin]);
+
   const handleInteractionButtonClick = async (button: ButtonLike) => {
     const b = button as FlowButton;
 
@@ -2364,6 +2439,17 @@ export function useEmbedController(props: EmbedClientProps) {
             return;
           }
 
+          if (command.action === 'capabilities') {
+            // Loader telling us what it supports. Older pinned loaders never
+            // send this, so every capability read must default to "no".
+            const d = command.data as Record<string, unknown> | null | undefined;
+            const features = Array.isArray(d?.features) ? d.features : [];
+            hostCapabilitiesRef.current = new Set(
+              features.filter((f): f is string => typeof f === 'string'),
+            );
+            return;
+          }
+
           if (command.action === 'conversion') {
             // A goal fired on the host page via CompaninWidget.trackConversion().
             // Attribute it to the current session; no-op silently until a session
@@ -2635,6 +2721,7 @@ export function useEmbedController(props: EmbedClientProps) {
     handleSubmit,
     handleFollowUpButtonClick,
     handleInteractionButtonClick,
+    handleRichAction,
     toggleCollapsed,
     isDebug,
     initialClientId,

@@ -231,5 +231,8 @@
   "docsSearchError": "Ricerca non riuscita. Per favore riprova.",
   "docsSearchRetry": "Riprova",
   "gettingStartedCredentialAlt": "Preferisci un valore singolo? Invece dei tre ID sopra, puoi passare un attributo {code} con la tua Chiave Widget (copia dalla stessa configurazione del widget). Usa quello che la tua integrazione preferisce.",
-  "emptyStatePrompt": "Come posso aiutarti oggi?"
+  "emptyStatePrompt": "Come posso aiutarti oggi?",
+  "cardsNext": "Avanti",
+  "cardsPrevious": "Indietro",
+  "cardsCarousel": "Carosello di schede"
 }

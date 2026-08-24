@@ -231,5 +231,8 @@
   "docsSearchError": "Zoekopdracht mislukt. Probeer het opnieuw.",
   "docsSearchRetry": "Probeer opnieuw",
   "gettingStartedCredentialAlt": "Geef je de voorkeur aan een enkele waarde? In plaats van de drie bovenstaande ID's, kun je één {code} attribuut doorgeven met je Widget-sleutel (kopieer deze uit dezelfde widgetconfiguratie). Gebruik wat jouw integratie het liefst heeft.",
-  "emptyStatePrompt": "Hoe kan ik u vandaag helpen?"
+  "emptyStatePrompt": "Hoe kan ik u vandaag helpen?",
+  "cardsNext": "Volgende",
+  "cardsPrevious": "Vorige",
+  "cardsCarousel": "Kaartencarrousel"
 }

@@ -9,9 +9,11 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 type MDComponents = Record<string, React.ComponentType<any>>;
 import { t as translate } from '../lib/i18n';
 import { useWidgetTranslation } from '../hooks/useWidgetTranslation';
-import type { WidgetConfig } from '../types/widget';
+import type { RichContent, WidgetConfig } from '../types/widget';
 import { normalizeHexColor, getReadableTextColor, withAlpha } from '../lib/colors';
 import { STATUS_COLORS } from '../lib/constants';
+import RichBlocks from './blocks/RichBlocks';
+import type { BlockTheme, OnRichAction } from './blocks/types';
 
 type Source = { url?: string; title?: string; snippet?: string };
 type Attachment = { id: string; filename: string; content_type?: string; size_bytes?: number; url?: string | null };
@@ -25,6 +27,7 @@ type Message = {
   metadata?: {
     safety_policy_action?: string;
     safety_decision_reason?: string;
+    rich?: RichContent;
   };
   pending?: boolean;
 };
@@ -41,6 +44,8 @@ type Props = {
   onSubmitMessageFeedback?: (messageId: string, feedbackType?: string) => void;
   messageFeedbackSubmitted?: Set<string>;
   showTimestamps?: boolean;
+  /** Called when a visitor takes an action on a rich block (card CTA, button). */
+  onRichAction?: OnRichAction;
 };
 
 // Converts bare URLs and email addresses in plain-text content to markdown links
@@ -61,7 +66,7 @@ function linkifyText(text: string): string {
   return text;
 }
 
-export default function MessageBubble({ message, widgetConfig, agentName, showMessageAvatars = true, textColor = '#111', agentBubbleBg = 'rgba(0,0,0,0.07)', fontStyles = {}, messageBubbleRadius = 8, onSubmitMessageFeedback, messageFeedbackSubmitted = new Set(), showTimestamps = true }: Props) {
+export default function MessageBubble({ message, widgetConfig, agentName, showMessageAvatars = true, textColor = '#111', agentBubbleBg = 'rgba(0,0,0,0.07)', fontStyles = {}, messageBubbleRadius = 8, onSubmitMessageFeedback, messageFeedbackSubmitted = new Set(), showTimestamps = true, onRichAction }: Props) {
   const { locale } = useWidgetTranslation();
   // Theme-aware neutrals derived from the configured text color so secondary
   // text, hairlines and code surfaces adapt to dark/branded themes instead of
@@ -71,6 +76,39 @@ export default function MessageBubble({ message, widgetConfig, agentName, showMe
   const codeBg = withAlpha(textColor, 0.08);
   const hasFeedback = messageFeedbackSubmitted.has(message.id);
   const safetyAction = message.metadata?.safety_policy_action || '';
+
+  // Rich blocks (cards, carousels, buttons, images, links) attached to an agent
+  // reply. Resolved here rather than inside the block components so a block
+  // renders identically wherever it's mounted — every layout variant shares
+  // this component, and none of them has to know the schema exists.
+  const richContent = message.from === 'agent' ? message.metadata?.rich : undefined;
+  const blockTheme = useMemo<BlockTheme>(() => {
+    const primaryColor = normalizeHexColor(widgetConfig?.primary_color, '#111827');
+    // Only defer to the OS preference when the org hasn't opted out of it.
+    const respectsReducedMotion = widgetConfig?.respect_reduced_motion ?? true;
+    let reducedMotion = false;
+    if (respectsReducedMotion && typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      try {
+        reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      } catch {
+        reducedMotion = false;
+      }
+    }
+    return {
+      textColor,
+      mutedTextColor: withAlpha(textColor, 0.6),
+      borderColor: withAlpha(textColor, 0.12),
+      // Translucent rather than a fixed color so the card composites correctly
+      // over whatever surface it lands on — light, dark, or a branded panel.
+      surfaceColor: withAlpha(textColor, 0.04),
+      primaryColor,
+      onPrimaryColor: getReadableTextColor(primaryColor),
+      cardRadius: messageBubbleRadius,
+      buttonRadius: widgetConfig?.button_border_radius ?? 6,
+      fontStyles: fontStyles as React.CSSProperties,
+      reducedMotion,
+    };
+  }, [widgetConfig?.primary_color, widgetConfig?.button_border_radius, widgetConfig?.respect_reduced_motion, textColor, messageBubbleRadius, fontStyles]);
   const showSafetyFallback = message.from === 'agent' && /fallback|forbidden_topic_block|escalation_handoff/.test(safetyAction);
 
   const [copied, setCopied] = useState(false);
@@ -310,6 +348,28 @@ export default function MessageBubble({ message, widgetConfig, agentName, showMe
               {/* Sources panel intentionally omitted — citations are inline */}
             </div>
           </div>
+          {/*
+            Rich blocks sit *below* the bubble rather than inside it: a card or a
+            carousel needs the full column width, and the bubble is capped at
+            80%. Same alignment rule as the feedback row beneath it.
+          */}
+          {richContent && (
+            <div
+              className="w-full"
+              style={{
+                marginInlineStart: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0',
+                maxWidth: (showMessageAvatars && widgetConfig?.bot_avatar) ? 'calc(100% - 40px)' : '100%',
+              }}
+            >
+              <RichBlocks
+                content={richContent}
+                theme={blockTheme}
+                locale={locale}
+                messageId={message.id}
+                onAction={onRichAction}
+              />
+            </div>
+          )}
           {!hasFeedback && onSubmitMessageFeedback && (
             <div className="mt-1 flex gap-2" style={{ marginInlineStart: (showMessageAvatars && widgetConfig?.bot_avatar) ? '40px' : '0' }}>
               <button type="button" onClick={() => onSubmitMessageFeedback(message.id, 'thumbs_up')} className="text-xs opacity-50 hover:opacity-100 transition-opacity flex items-center gap-1 rounded p-0.5 focus:outline-none focus-visible:ring-2" style={{ color: textColor, ['--tw-ring-color' as string]: withAlpha(textColor, 0.4) }} title={translate(locale, 'feedbackThumbsUp')} aria-label={translate(locale, 'feedbackPositive')}>

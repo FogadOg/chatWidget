@@ -787,6 +787,16 @@
           if (window.WidgetConfig && iframeWindow) {
             postToIframe({ type: 'WIDGET_INIT_CONFIG', data: window.WidgetConfig });
           }
+          // Tell the iframe what this loader can do for it. Installs pin
+          // `widget-<ver>.js` with SRI, so most run a loader that predates any
+          // given capability and simply never announces it — the iframe treats
+          // an absent announcement as "not supported" and falls back.
+          if (iframeWindow) {
+            postToIframe({
+              type: 'HOST_MESSAGE',
+              data: { action: 'capabilities', features: ['card_action'] },
+            });
+          }
         } catch (err) {
           logError('Failed to post initial config to iframe', { error: err && err.message });
         }
@@ -1702,6 +1712,29 @@
             if (!type) return;
 
             switch (type) {
+            case "WIDGET_CARD_ACTION": {
+                // A visitor followed a card CTA and the iframe asked us to
+                // navigate the host page instead of opening a new tab — "Add to
+                // cart" belongs in the page the shopper is already on.
+                //
+                // The message already passed the origin check above, but parse
+                // the URL anyway: navigation is the single most damaging thing
+                // this loader can be talked into, and `javascript:` in a
+                // location assignment executes in the merchant's page.
+                var cardUrl = data && typeof data.url === 'string' ? data.url : '';
+                if (!cardUrl) break;
+                try {
+                    var parsedCardUrl = new URL(cardUrl, window.location.href);
+                    if (parsedCardUrl.protocol !== 'https:' && parsedCardUrl.protocol !== 'http:') {
+                        logError('Refused card action with unsupported scheme', { protocol: parsedCardUrl.protocol });
+                        break;
+                    }
+                    window.location.assign(parsedCardUrl.href);
+                } catch (err) {
+                    logError('Failed to handle card action', { error: err && err.message });
+                }
+                break;
+            }
             case "WIDGET_RESIZE":
                 // A resize means the real widget booted — the retried load
                 // recovered, so error-card suppression no longer applies.

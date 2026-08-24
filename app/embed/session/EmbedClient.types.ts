@@ -31,7 +31,7 @@ export type EmbedClientProps = {
 
 export type HostWidgetAction =
   | 'open' | 'close' | 'toggle' | 'reset'
-  | 'identify' | 'prefill' | 'context' | 'setTheme' | 'conversion';
+  | 'identify' | 'prefill' | 'context' | 'setTheme' | 'conversion' | 'capabilities';
 
 export type ParsedHostMessageCommand =
   | { kind: 'action'; action: HostWidgetAction; data?: unknown }

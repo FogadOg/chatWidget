@@ -231,5 +231,8 @@
   "docsSearchError": "A busca falhou. Por favor, tente novamente.",
   "docsSearchRetry": "Tente novamente",
   "gettingStartedCredentialAlt": "Prefere um único valor? Em vez dos três IDs acima, você pode passar um atributo {code} com sua Chave do Widget (copie-a da mesma configuração do widget). Use o que sua integração preferir.",
-  "emptyStatePrompt": "Como posso ajudá-lo hoje?"
+  "emptyStatePrompt": "Como posso ajudá-lo hoje?",
+  "cardsNext": "Seguinte",
+  "cardsPrevious": "Anterior",
+  "cardsCarousel": "Carrossel de cartões"
 }

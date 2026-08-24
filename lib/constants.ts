@@ -121,6 +121,17 @@ export const SUPPORTED_LOCALES = [
   'en', 'de', 'es', 'fr', 'pt', 'sv', 'nl', 'nb', 'it', 'pl', 'tr', 'id', 'ko', 'ru'
 ] as const;
 
+/**
+ * Rich-block schema version this build renders. Mirrors
+ * `BLOCK_SCHEMA_VERSION` in `core/services/rich_blocks.py`. Content stamped
+ * with any other version renders as nothing, so an older widget never
+ * half-renders a newer schema.
+ */
+export const RICH_BLOCK_SCHEMA_VERSION = 1;
+
+/** Minimum width of a carousel item, in px — also the scroll step. */
+export const RICH_CARD_MIN_WIDTH = 208;
+
 // Input validation
 export const INPUT_LIMITS = {
   MAX_MESSAGE_LENGTH: 4000,

@@ -19,6 +19,58 @@ export type MessageAttachment = {
   url: string | null;
 };
 
+/**
+ * What taking a rich-block action does.
+ *
+ * - `link`       — opens `url`.
+ * - `reply`      — sends `payload` as if the visitor had typed it.
+ * - `conversion` — records the goal and nothing else (the outcome itself
+ *                  happens on the host page).
+ */
+export type RichActionKind = 'link' | 'reply' | 'conversion';
+
+export type RichAction = {
+  /** Stable within its message; half of the conversion dedup key. */
+  id: string;
+  kind: RichActionKind;
+  label: string;
+  /** Required for `link`. Always absolute, https/mailto/tel (server-enforced). */
+  url?: string;
+  /** Required for `reply`; defaults to the label server-side. */
+  payload?: string;
+  /** When set, taking the action records a ConversionEvent under this goal. */
+  conversion_goal?: string;
+};
+
+/** Always https — the embed CSP is `img-src 'self' data: https:`. */
+export type RichImage = { url: string; alt?: string };
+
+/** One line under a card title: price, dates, availability. */
+export type RichMetaRow = { label?: string; value: string };
+
+export type RichCard = {
+  title: string;
+  subtitle?: string;
+  image?: RichImage;
+  meta?: RichMetaRow[];
+  actions?: RichAction[];
+};
+
+export type RichBlock =
+  | ({ type: 'card' } & RichCard)
+  | { type: 'carousel'; items: RichCard[] }
+  | { type: 'image'; url: string; alt?: string; link?: string }
+  | { type: 'links'; items: Array<{ label: string; url: string }> }
+  | { type: 'buttons'; buttons: RichAction[] };
+
+/**
+ * Structured content attached to an agent reply, minted server-side only
+ * (`core/services/rich_blocks.py`). A `v` the widget doesn't recognize renders
+ * as nothing — that's what lets the schema grow without breaking transcripts
+ * already in the database.
+ */
+export type RichContent = { v: number; blocks: RichBlock[] };
+
 export type Message = {
   id: string;
   text: string;
@@ -36,6 +88,7 @@ export type Message = {
     citation_validation_reason?: string;
     confidence_score?: number;
     confidence_threshold?: number;
+    rich?: RichContent;
   };
   pending?: boolean;
 };
@@ -250,6 +303,7 @@ export type MessageData = {
       citation_validation_reason?: string;
       confidence_score?: number;
       confidence_threshold?: number;
+      rich?: RichContent;
     };
   };
 };

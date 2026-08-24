@@ -159,6 +159,7 @@ export default function EmbedClient(props: EmbedClientProps) {
     handleSubmit,
     handleFollowUpButtonClick,
     handleInteractionButtonClick,
+    handleRichAction,
     toggleCollapsed,
     isDebug,
     isPersistent,
@@ -268,6 +269,7 @@ export default function EmbedClient(props: EmbedClientProps) {
         widgetConfig={safeWidgetConfig}
         onInteractionButtonClick={handleInteractionButtonClick}
         onFollowUpButtonClick={handleFollowUpButtonClick}
+        onRichAction={handleRichAction}
         flowResponses={flowResponses}
         getLocalizedText={getLocalizedText}
         showFeedbackDialog={showFeedbackDialogOverride ?? showFeedbackDialog}

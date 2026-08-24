@@ -231,5 +231,8 @@
   "docsSearchError": "Die Suche ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
   "docsSearchRetry": "Wiederholen",
   "gettingStartedCredentialAlt": "Bevorzugen Sie einen einzelnen Wert? Anstelle der drei oben genannten IDs können Sie ein {code}-Attribut mit Ihrem Widget-Schlüssel übergeben (kopieren Sie es aus derselben Widget-Konfiguration). Verwenden Sie, was Ihre Integration bevorzugt.",
-  "emptyStatePrompt": "Wie kann ich Ihnen heute helfen?"
+  "emptyStatePrompt": "Wie kann ich Ihnen heute helfen?",
+  "cardsNext": "Weiter",
+  "cardsPrevious": "Zurück",
+  "cardsCarousel": "Kartenkarussell"
 }

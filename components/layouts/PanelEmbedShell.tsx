@@ -43,6 +43,7 @@ export default function PanelEmbedShell(props: Props) {
     leadCaptureCard,
     messageFeedbackSubmitted,
     onSubmitMessageFeedback,
+    onRichAction,
     agentName,
     onToggleTheme,
   } = props;
@@ -208,6 +209,7 @@ export default function PanelEmbedShell(props: Props) {
                     fontStyles={fontStyles}
                     messageBubbleRadius={messageBubbleRadius}
                     onSubmitMessageFeedback={onSubmitMessageFeedback}
+                    onRichAction={onRichAction}
                     messageFeedbackSubmitted={messageFeedbackSubmitted}
                     showTimestamps={showTimestamps}
                   />

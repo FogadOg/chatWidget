@@ -231,5 +231,8 @@
   "docsSearchError": "Søket mislyktes. Vennligst prøv igjen.",
   "docsSearchRetry": "Prøv igjen",
   "gettingStartedCredentialAlt": "Foretrekker du en enkelt verdi? I stedet for de tre ID-ene ovenfor, kan du sende ett {code} attributt med Widget-nøkkelen din (kopier den fra den samme widgetkonfigurasjonen). Bruk det som din integrasjon foretrekker.",
-  "emptyStatePrompt": "Hvordan kan jeg hjelpe deg i dag?"
+  "emptyStatePrompt": "Hvordan kan jeg hjelpe deg i dag?",
+  "cardsNext": "Neste",
+  "cardsPrevious": "Forrige",
+  "cardsCarousel": "Kortkarusell"
 }

@@ -6,6 +6,7 @@ import type {
   UnsureMessage,
 } from '../types/widget';
 import { ButtonLike } from '../hooks/useClickedButtons';
+import type { OnRichAction } from './blocks/types';
 
 export type Props = {
   isEmbedded: boolean;
@@ -29,6 +30,12 @@ export type Props = {
   widgetConfig?: WidgetConfig;
   onInteractionButtonClick?: (button: ButtonLike) => void | Promise<void>;
   onFollowUpButtonClick?: (button: ButtonLike) => void | Promise<void>;
+  /**
+   * A visitor took an action on a rich block attached to an agent reply — a
+   * card CTA, a button row, a link. Every layout variant forwards this to
+   * MessageBubble, which owns block rendering.
+   */
+  onRichAction?: OnRichAction;
   flowResponses?: FlowResponse[];
   getLocalizedText?: (textObj: Record<string, string> | undefined) => string;
   showFeedbackDialog?: boolean;

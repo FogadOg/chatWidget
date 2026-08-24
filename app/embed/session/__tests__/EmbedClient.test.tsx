@@ -35,6 +35,16 @@ describe('EmbedClient helpers', () => {
     expect(parseHostMessageCommand({})).toBeNull();
   });
 
+  test('parseHostMessageCommand recognizes the loader capability announcement', () => {
+    // Loaders older than this message never send it, so the iframe must treat
+    // its absence as "no capabilities" rather than waiting for one.
+    expect(parseHostMessageCommand({ action: 'capabilities', features: ['card_action'] })).toEqual({
+      kind: 'action',
+      action: 'capabilities',
+      data: { action: 'capabilities', features: ['card_action'] },
+    });
+  });
+
   test('injectCustomAssets appends sanitized style when safe', () => {
     injectCustomAssets('body{color:red}');
     const style = document.head.querySelector('style');

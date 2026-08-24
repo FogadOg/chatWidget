@@ -1,11 +1,11 @@
 // =============================================================================
 // AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY
 // Source: src/embed/widget.js
-// Version: 0.1.3
+// Version: 0.1.4
 // Regenerate: npm run build:embed
 // =============================================================================
 // Stable-channel loader: pins to the versioned release built alongside this file.
-// Customers on this URL stay on v0.1.3 until this stub is redeployed.
+// Customers on this URL stay on v0.1.4 until this stub is redeployed.
 // To advance the stable channel, bump the version in package.json and redeploy.
 (function () {
   'use strict';
@@ -25,7 +25,7 @@
       }
     }
   }
-  s.src = host + "/widget-0.1.3.js";
+  s.src = host + "/widget-0.1.4.js";
   s.async = true;
   s.crossOrigin = 'anonymous';
   (document.head || document.documentElement).appendChild(s);

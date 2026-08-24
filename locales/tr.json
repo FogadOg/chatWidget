@@ -231,5 +231,8 @@
   "consentNoticeBody": "Tarayıcınızda konuşmanızı saklamak istiyoruz, böylece sayfayı yenilediğinizde kaybolmaz. Onay vermediğiniz sürece hiçbir şey saklanmaz.",
   "consentAccept": "İzin ver",
   "consentDecline": "Hayır, teşekkürler.",
-  "emptyStatePrompt": "Bugün size nasıl yardımcı olabilirim?"
+  "emptyStatePrompt": "Bugün size nasıl yardımcı olabilirim?",
+  "cardsNext": "İleri",
+  "cardsPrevious": "Geri",
+  "cardsCarousel": "Kart karuseli"
 }

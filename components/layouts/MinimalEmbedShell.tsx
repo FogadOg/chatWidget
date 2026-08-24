@@ -49,6 +49,7 @@ export default function MinimalEmbedShell(props: Props) {
     onRemoveAttachment,
     messageFeedbackSubmitted,
     onSubmitMessageFeedback,
+    onRichAction,
     leadCaptureCard,
   } = props;
 
@@ -286,6 +287,7 @@ export default function MinimalEmbedShell(props: Props) {
                   fontStyles={fontStyles}
                   messageBubbleRadius={messageBubbleRadius}
                   onSubmitMessageFeedback={onSubmitMessageFeedback}
+                  onRichAction={onRichAction}
                   messageFeedbackSubmitted={messageFeedbackSubmitted}
                   showTimestamps={showTimestamps}
                 />

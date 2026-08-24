@@ -33,6 +33,16 @@ export const EMBED_EVENTS = {
   /** The agent sent a response. */
   RESPONSE: 'WIDGET_RESPONSE',
   AUTH_FAILURE: 'WIDGET_AUTH_FAILURE',
+  /**
+   * A visitor followed a link on a rich block (a card CTA) and asked the host
+   * page to navigate itself — "Add to cart" belongs in the page, not a new tab.
+   *
+   * Only sent when the loader has announced the `card_action` capability
+   * (HOST_MESSAGE → `capabilities`). Snippets pin `widget-<ver>.js` with SRI, so
+   * most installs run a loader that has never heard of this event; those never
+   * announce it and the anchor opens in a new tab as normal.
+   */
+  CARD_ACTION: 'WIDGET_CARD_ACTION',
 
   // ── Iframe → host (user / files) ─────────────────────────────────────────
   /** User identity was updated via identify(). */

@@ -59,6 +59,7 @@ export function EmbeddedView({ vm }: { vm: ClassicShellVM }) {
     feedbackDialog,
     messageFeedbackSubmitted,
     onSubmitMessageFeedback,
+    onRichAction,
     unsureModal,
     handoffModal,
     leadCaptureCard,
@@ -488,6 +489,7 @@ export function EmbeddedView({ vm }: { vm: ClassicShellVM }) {
                                   fontStyles={fontStyles}
                                   messageBubbleRadius={messageBubbleRadius}
                                   onSubmitMessageFeedback={onSubmitMessageFeedback}
+                                  onRichAction={onRichAction}
                                   messageFeedbackSubmitted={messageFeedbackSet}
                                   showTimestamps={showTimestamps}
                                 />

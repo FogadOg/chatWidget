@@ -231,5 +231,8 @@
   "docsSearchError": "Wyszukiwanie nie powiodło się. Proszę spróbować ponownie.",
   "docsSearchRetry": "Spróbuj ponownie",
   "gettingStartedCredentialAlt": "Preferujesz jedną wartość? Zamiast trzech identyfikatorów powyżej, możesz przekazać jeden atrybut {code} z kluczem widgetu (skopiuj go z tej samej konfiguracji widgetu). Użyj tego, co preferuje twoja integracja.",
-  "emptyStatePrompt": "Jak mogę ci dzisiaj pomóc?"
+  "emptyStatePrompt": "Jak mogę ci dzisiaj pomóc?",
+  "cardsNext": "Dalej",
+  "cardsPrevious": "Wstecz",
+  "cardsCarousel": "Karuzela kart"
 }

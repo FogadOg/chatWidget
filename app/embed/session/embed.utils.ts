@@ -82,6 +82,13 @@ export function parseHostMessageCommand(raw: unknown): ParsedHostMessageCommand 
     if (command === 'conversion') {
       return { kind: 'action', action: 'conversion', data: payload };
     }
+
+    // The loader announcing what it can do for us. Absent on every install
+    // running an older pinned loader, which is why anything keyed off it must
+    // degrade rather than depend on it.
+    if (command === 'capabilities') {
+      return { kind: 'action', action: 'capabilities', data: payload };
+    }
   }
 
   const textValue = [payload.text, payload.message, payload.content, payload.prompt, payload.query]

@@ -1,470 +1,582 @@
 {
   "de.json": {
-    "total_keys": 206,
+    "total_keys": 228,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 21,
+    "untranslated_count": 8,
     "untranslated_sample": [
       {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
+        "key": "feedbackNeutral",
+        "value": "Okay"
       },
       {
-        "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
-      },
-      {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
+        "key": "onlineStatus",
+        "value": "Online"
       },
       {
         "key": "handoffNameLabel",
         "value": "Name"
       },
       {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
+        "key": "leadCaptureNameLabel",
+        "value": "Name (optional)"
       },
       {
         "key": "uncertaintyLogAgent",
         "value": "Agent:"
       },
       {
-        "key": "thinking",
-        "value": "Thinking..."
+        "key": "contextCache",
+        "value": "Cache"
+      },
+      {
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
+      },
+      {
+        "key": "devOverlayOffline",
+        "value": "Offline"
       }
     ],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{anpassen}"
+        ]
+      }
+    ]
   },
   "es.json": {
-    "total_keys": 206,
+    "total_keys": 228,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 17,
+    "untranslated_count": 2,
     "untranslated_sample": [
       {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
+        "key": "statusError",
+        "value": "Error"
       },
       {
-        "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
-      },
-      {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
-      },
-      {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
-      },
-      {
-        "key": "thinking",
-        "value": "Thinking..."
-      },
-      {
-        "key": "thoughtForFewSeconds",
-        "value": "Thought for a few seconds"
-      },
-      {
-        "key": "thoughtForSeconds",
-        "value": "Thought for {duration} seconds"
+        "key": "errorLabel",
+        "value": "Error"
       }
     ],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
-  },
-  "fr.json": {
-    "total_keys": 206,
-    "empty_values_count": 0,
-    "empty_values_sample": [],
-    "untranslated_count": 18,
-    "untranslated_sample": [
-      {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
-      },
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
       {
         "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{personalizar}"
+        ]
+      }
+    ]
+  },
+  "fr.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 6,
+    "untranslated_sample": [
+      {
+        "key": "sourcesCount.one",
+        "value": "{count} source"
       },
       {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
+        "key": "sourcesCount.other",
+        "value": "{count} sources"
+      },
+      {
+        "key": "consoleTitle",
+        "value": "Console"
+      },
+      {
+        "key": "imageLabel",
+        "value": "Image"
       },
       {
         "key": "handoffMessageLabel",
         "value": "Message"
       },
       {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
-      },
-      {
-        "key": "thinking",
-        "value": "Thinking..."
-      },
-      {
-        "key": "thoughtForFewSeconds",
-        "value": "Thought for a few seconds"
+        "key": "contextCache",
+        "value": "Cache"
       }
     ],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
-  },
-  "it.json": {
-    "total_keys": 206,
-    "empty_values_count": 0,
-    "empty_values_sample": [],
-    "untranslated_count": 19,
-    "untranslated_sample": [
-      {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
-      },
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
       {
         "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{personnaliser}"
+        ]
+      }
+    ]
+  },
+  "id.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 6,
+    "untranslated_sample": [
+      {
+        "key": "handoffEmailLabel",
+        "value": "Email"
       },
       {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
+        "key": "leadCaptureEmailLabel",
+        "value": "Email"
       },
       {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
+        "key": "contextCache",
+        "value": "Cache"
       },
       {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
       },
       {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
+        "key": "devOverlayOffline",
+        "value": "Offline"
       },
       {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
-      },
-      {
-        "key": "thinking",
-        "value": "Thinking..."
-      },
-      {
-        "key": "thoughtForFewSeconds",
-        "value": "Thought for a few seconds"
-      },
-      {
-        "key": "thoughtForSeconds",
-        "value": "Thought for {duration} seconds"
+        "key": "devHarnessTitle",
+        "value": "Widget Dev Harness"
       }
     ],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{kustomisasi}"
+        ]
+      }
+    ]
+  },
+  "it.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 8,
+    "untranslated_sample": [
+      {
+        "key": "chat",
+        "value": "Chat"
+      },
+      {
+        "key": "consoleTitle",
+        "value": "Console"
+      },
+      {
+        "key": "onlineStatus",
+        "value": "Online"
+      },
+      {
+        "key": "handoffEmailLabel",
+        "value": "Email"
+      },
+      {
+        "key": "leadCaptureEmailLabel",
+        "value": "Email"
+      },
+      {
+        "key": "contextCache",
+        "value": "Cache"
+      },
+      {
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
+      },
+      {
+        "key": "devOverlayOffline",
+        "value": "Offline"
+      }
+    ],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{personalizza}"
+        ]
+      }
+    ]
+  },
+  "ko.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
     "placeholder_mismatches_count": 0,
     "placeholder_mismatches_sample": []
   },
   "nb.json": {
-    "total_keys": 206,
+    "total_keys": 228,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 20,
+    "untranslated_count": 6,
     "untranslated_sample": [
       {
-        "key": "appTitle",
-        "value": "Customer Support AI Agent Widget"
+        "key": "send",
+        "value": "Send"
       },
       {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
+        "key": "chat",
+        "value": "Chat"
       },
       {
-        "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
-      },
-      {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
-      },
-      {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
+        "key": "handoffSubmittingButton",
+        "value": "Sending..."
       },
       {
         "key": "uncertaintyLogAgent",
         "value": "Agent:"
       },
       {
-        "key": "thinking",
-        "value": "Thinking..."
+        "key": "contextCache",
+        "value": "Cache"
+      },
+      {
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
       }
     ],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
+    "placeholder_mismatches_count": 2,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "sourcesCount.one",
+        "en": [
+          "{count}"
+        ],
+        "loc": [
+          "{telle}"
+        ]
+      },
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{tilpass}"
+        ]
+      }
+    ]
   },
   "nl.json": {
-    "total_keys": 206,
+    "total_keys": 228,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 22,
+    "untranslated_count": 12,
     "untranslated_sample": [
       {
-        "key": "appTitle",
-        "value": "Customer Support AI Agent Widget"
+        "key": "stopStreaming",
+        "value": "Stop"
       },
       {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
+        "key": "chat",
+        "value": "Chat"
       },
       {
-        "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
+        "key": "chatControl.open",
+        "value": "Open chat"
       },
       {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
+        "key": "parametersLabel",
+        "value": "Parameters"
       },
       {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
+        "key": "consoleTitle",
+        "value": "Console"
       },
       {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
+        "key": "openChat",
+        "value": "Open Chat"
       },
       {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
+        "key": "onlineStatus",
+        "value": "Online"
       },
       {
         "key": "uncertaintyLogAgent",
         "value": "Agent:"
       },
       {
-        "key": "thinking",
-        "value": "Thinking..."
+        "key": "contextCache",
+        "value": "Cache"
+      },
+      {
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
       }
     ],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
-  },
-  "pl.json": {
-    "total_keys": 206,
-    "empty_values_count": 0,
-    "empty_values_sample": [],
-    "untranslated_count": 20,
-    "untranslated_sample": [
+    "placeholder_mismatches_count": 4,
+    "placeholder_mismatches_sample": [
       {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
+        "key": "sourcesCount.one",
+        "en": [
+          "{count}"
+        ],
+        "loc": [
+          "{aantal}"
+        ]
+      },
+      {
+        "key": "sourcesCount.other",
+        "en": [
+          "{count}"
+        ],
+        "loc": [
+          "{aantal}"
+        ]
       },
       {
         "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
-      },
-      {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
-      },
-      {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
-      },
-      {
-        "key": "uncertaintyLogAgent",
-        "value": "Agent:"
-      },
-      {
-        "key": "thinking",
-        "value": "Thinking..."
-      },
-      {
-        "key": "thoughtForFewSeconds",
-        "value": "Thought for a few seconds"
-      }
-    ],
-    "suspicious_markers_count": 0,
-    "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
-  },
-  "pt.json": {
-    "total_keys": 206,
-    "empty_values_count": 0,
-    "empty_values_sample": [],
-    "untranslated_count": 19,
-    "untranslated_sample": [
-      {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
-      },
-      {
-        "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
-      },
-      {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
-      },
-      {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
-      },
-      {
-        "key": "thinking",
-        "value": "Thinking..."
-      },
-      {
-        "key": "thoughtForFewSeconds",
-        "value": "Thought for a few seconds"
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{aanpassen}"
+        ]
       },
       {
         "key": "thoughtForSeconds",
-        "value": "Thought for {duration} seconds"
+        "en": [
+          "{duration}"
+        ],
+        "loc": [
+          "{duur}"
+        ]
       }
-    ],
-    "suspicious_markers_count": 0,
-    "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
+    ]
   },
-  "sv.json": {
-    "total_keys": 206,
+  "pl.json": {
+    "total_keys": 228,
     "empty_values_count": 0,
     "empty_values_sample": [],
-    "untranslated_count": 20,
+    "untranslated_count": 5,
     "untranslated_sample": [
       {
-        "key": "gettingStartedStep1Title",
-        "value": "Get your Widget ID"
+        "key": "onlineStatus",
+        "value": "Online"
       },
       {
-        "key": "gettingStartedStep1Desc",
-        "value": "In the dashboard, go to {customize}, select your widget config, and copy its Widget ID."
-      },
-      {
-        "key": "gettingStartedStep2Desc",
-        "value": "Choose your framework and paste the snippet into your app, replacing {key} with your Widget ID."
-      },
-      {
-        "key": "sessionExpiredTitle",
-        "value": "Your session expired"
-      },
-      {
-        "key": "sessionExpiredBody",
-        "value": "We've started a fresh session so you can keep chatting."
-      },
-      {
-        "key": "sessionExpiredDismiss",
-        "value": "Dismiss"
-      },
-      {
-        "key": "agentTyping",
-        "value": "Customer Support AI Agent is typing"
+        "key": "handoffEmailLabel",
+        "value": "Email"
       },
       {
         "key": "uncertaintyLogAgent",
         "value": "Agent:"
       },
       {
-        "key": "thinking",
-        "value": "Thinking..."
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
       },
       {
-        "key": "thoughtForFewSeconds",
-        "value": "Thought for a few seconds"
+        "key": "devOverlayOffline",
+        "value": "Offline"
       }
     ],
     "suspicious_markers_count": 0,
     "suspicious_markers_sample": [],
-    "placeholder_mismatches_count": 0,
-    "placeholder_mismatches_sample": []
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "sourcesCount.one",
+        "en": [
+          "{count}"
+        ],
+        "loc": [
+          "{liczba}"
+        ]
+      }
+    ]
+  },
+  "pt.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 6,
+    "untranslated_sample": [
+      {
+        "key": "consoleTitle",
+        "value": "Console"
+      },
+      {
+        "key": "onlineStatus",
+        "value": "Online"
+      },
+      {
+        "key": "handoffEmailLabel",
+        "value": "Email"
+      },
+      {
+        "key": "contextCache",
+        "value": "Cache"
+      },
+      {
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
+      },
+      {
+        "key": "devOverlayOffline",
+        "value": "Offline"
+      }
+    ],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 2,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "sourcesCount.one",
+        "en": [
+          "{count}"
+        ],
+        "loc": [
+          "{contagem}"
+        ]
+      },
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{personalizar}"
+        ]
+      }
+    ]
+  },
+  "ru.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 0,
+    "untranslated_sample": [],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{настройки}"
+        ]
+      }
+    ]
+  },
+  "sv.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 5,
+    "untranslated_sample": [
+      {
+        "key": "onlineStatus",
+        "value": "Online"
+      },
+      {
+        "key": "uncertaintyLogAgent",
+        "value": "Agent:"
+      },
+      {
+        "key": "contextCache",
+        "value": "Cache"
+      },
+      {
+        "key": "devOverlayOfflineActive",
+        "value": "Offline ✓"
+      },
+      {
+        "key": "devOverlayOffline",
+        "value": "Offline"
+      }
+    ],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 2,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "sourcesCount.one",
+        "en": [
+          "{count}"
+        ],
+        "loc": [
+          "{antal}"
+        ]
+      },
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{anpassa}"
+        ]
+      }
+    ]
+  },
+  "tr.json": {
+    "total_keys": 228,
+    "empty_values_count": 0,
+    "empty_values_sample": [],
+    "untranslated_count": 1,
+    "untranslated_sample": [
+      {
+        "key": "of",
+        "value": "of"
+      }
+    ],
+    "suspicious_markers_count": 0,
+    "suspicious_markers_sample": [],
+    "placeholder_mismatches_count": 1,
+    "placeholder_mismatches_sample": [
+      {
+        "key": "gettingStartedStep1Desc",
+        "en": [
+          "{customize}"
+        ],
+        "loc": [
+          "{özelleştir}"
+        ]
+      }
+    ]
   }
 }
