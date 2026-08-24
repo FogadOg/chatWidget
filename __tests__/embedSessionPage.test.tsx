@@ -66,8 +66,10 @@ describe('Embed session page', () => {
     const html = renderToStaticMarkup(element as any);
     expect(html).toContain('Default Session Error');
     expect(html).toContain('/embed-error-reporter.js');
+    // Identifying details live in the message string (Next's browser overlay
+    // stringifies object args to `{}`); the object stays as a second arg.
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[Companin Widget Embed Error]',
+      expect.stringContaining('[Companin Widget Embed Error] embed_error: Default Session Error'),
       expect.objectContaining({
         errorType: 'embed_error',
         title: 'Default Session Error',
