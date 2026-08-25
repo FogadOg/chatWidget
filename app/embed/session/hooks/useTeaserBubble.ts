@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { WidgetConfig } from '../../../../types/widget';
 import { resolveTeaserRule } from './resolveTeaserRule';
 
@@ -18,6 +18,19 @@ function readSessionDismissed(key: string | null): boolean {
     return false;
   }
 }
+
+/**
+ * sessionStorage is shared with the other frames of this tab, which do get a
+ * `storage` event — the host page's own script, or a second widget frame,
+ * writing the flag is the only way it changes without us knowing.
+ */
+function subscribeSessionDismissed(onStoreChange: () => void): () => void {
+  window.addEventListener('storage', onStoreChange);
+  return () => window.removeEventListener('storage', onStoreChange);
+}
+
+/** No storage on the server; the client re-reads it as soon as it hydrates. */
+const serverSessionDismissed = () => false;
 
 export function useTeaserBubble({
   widgetConfig,
@@ -42,19 +55,29 @@ export function useTeaserBubble({
   // Lags `visible` by the parent iframe's resize transition (300ms) so the
   // bubble never renders into a viewport that is still growing around it.
   const [bubbleShown, setBubbleShown] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissedHere, setDismissedHere] = useState(false);
 
   const storageKey = widgetConfig?.id ? `${DISMISSED_PREFIX}${widgetConfig.id}` : null;
   const sessionKey = widgetConfig?.id ? `${SESSION_DISMISSED_PREFIX}${widgetConfig.id}` : null;
 
-  // Clean up the legacy persisted-dismissal flag from older widget versions,
-  // and adopt a dismissal the visitor already made earlier this session.
+  // Clean up the legacy persisted-dismissal flag from older widget versions.
   useEffect(() => {
-    if (storageKey) {
-      try { localStorage.removeItem(storageKey); } catch {}
-    }
-    if (readSessionDismissed(sessionKey)) setDismissed(true);
-  }, [storageKey, sessionKey]);
+    if (!storageKey) return;
+    try { localStorage.removeItem(storageKey); } catch {}
+  }, [storageKey]);
+
+  // A dismissal the visitor already made earlier this session is read straight
+  // from storage rather than copied into state by an effect — on a fresh page
+  // load the very first render then already knows the teaser is retired.
+  const getSessionDismissed = useCallback(() => readSessionDismissed(sessionKey), [sessionKey]);
+  const sessionDismissed = useSyncExternalStore(
+    subscribeSessionDismissed,
+    getSessionDismissed,
+    serverSessionDismissed,
+  );
+  // `dismissedHere` covers this page view: our own write fires no storage event
+  // in the frame that made it, and auto-dismiss never touches storage at all.
+  const dismissed = dismissedHere || sessionDismissed;
 
   const resolved = useMemo(
     () => resolveTeaserRule({ widgetConfig, pagePath, locale, exitIntentFired }),
@@ -134,14 +157,14 @@ export function useTeaserBubble({
     if (dismissAfter <= 0) return;
     const timer = setTimeout(() => {
       setVisible(false);
-      setDismissed(true);
+      setDismissedHere(true);
     }, dismissAfter);
     return () => clearTimeout(timer);
   }, [visible, resolved?.dismissAfterMs]);
 
   const dismissTeaser = useCallback(() => {
     setVisible(false);
-    setDismissed(true);
+    setDismissedHere(true);
     if (sessionKey) {
       try { sessionStorage.setItem(sessionKey, '1'); } catch {}
     }
