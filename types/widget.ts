@@ -146,6 +146,21 @@ export type TeaserRule = {
   on_exit_intent?: boolean;
 };
 
+/**
+ * One input on the in-chat capture card, as configured on the agent.
+ *
+ * `label` is operator-authored and rendered verbatim. It is empty for the two
+ * reserved keys on an unconfigured agent, which is the card's signal to use its
+ * own localized string instead — that is what keeps the default card translated
+ * in every locale while a custom field shows exactly what was typed.
+ */
+export type LeadCaptureField = {
+  key: string;
+  label: string;
+  type: 'text' | 'email' | 'tel' | 'textarea';
+  required: boolean;
+};
+
 export type WidgetConfig = {
   id: string;
   widget_type?: 'chat' | 'docs';
@@ -235,6 +250,12 @@ export type WidgetConfig = {
    * question (lead_capture plan feature — available on every plan).
    */
   lead_capture_enabled?: boolean;
+  /**
+   * What the capture card asks for, configured per agent. The server always
+   * sends a usable list (email plus an optional name when the agent was never
+   * configured), so the card renders from this and nothing else.
+   */
+  lead_capture_fields?: LeadCaptureField[];
   /** When true, the composer shows a file-attach control (widget_file_upload plan feature + org toggle). */
   file_upload_enabled?: boolean;
   // Design system
@@ -304,6 +325,14 @@ export type MessageData = {
       confidence_score?: number;
       confidence_threshold?: number;
       rich?: RichContent;
+      /** Links a capture back to the question that went unanswered. */
+      unanswered_question_id?: string | null;
+      /**
+       * Present when the agent itself asked for the capture card, because the
+       * visitor wanted something a human should pick up. `topic` is the agent's
+       * one-line summary and becomes the ticket's message.
+       */
+      capture_offer?: { reason?: string; topic?: string } | null;
     };
   };
 };

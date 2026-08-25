@@ -444,18 +444,24 @@ export function useEmbedController(props: EmbedClientProps) {
   const [hasEscalated, setHasEscalated] = useState(false);
   const handoffConversationIdRef = useRef<string | null>(null);
   const supportTicketsEnabled = widgetConfig?.support_tickets_enabled === true;
-  // Inline capture offered after an unanswered question. Separate from the
-  // handoff modal: available on every plan, asks for one field, and never
-  // blocks the conversation. Missing/unknown flags are treated as disabled.
+  // Inline capture, offered either after an unanswered question or when the
+  // agent judged the visitor wanted a human. Separate from the handoff modal:
+  // available on every plan, asks only what the agent was configured to ask, and
+  // never blocks the conversation. Missing/unknown flags are treated as disabled.
   const leadCaptureEnabled = widgetConfig?.lead_capture_enabled === true;
+  const captureFields = widgetConfig?.lead_capture_fields;
   const [captureOffer, setCaptureOffer] = useState<{
+    /** Why the card appeared — it changes the wording, not the fields. */
+    reason: 'unanswered' | 'intent';
+    /** What the ticket says: the visitor's own question, or the agent's summary of what they want. */
     question: string;
     unansweredQuestionId: string | null;
     conversationId: string | null;
     timestamp: number;
   } | null>(null);
   // One offer per session — set by both submit and dismiss, so a visitor who
-  // said no once is not asked again on the next unanswered question.
+  // said no once is not asked again on the next unanswered question, and the
+  // agent volunteering the card cannot turn into repeated asking.
   const [captureResolved, setCaptureResolved] = useState(false);
   const postedShowUnreadBadge = useRef<boolean | undefined>(undefined);
   const postedEdgeOffset = useRef<number | undefined>(undefined);
@@ -575,20 +581,25 @@ export function useEmbedController(props: EmbedClientProps) {
   // Submit the inline capture. Deliberately lets errors propagate: the card
   // catches them to show its inline error state and keeps the typed email, so a
   // transient network failure doesn't silently discard the lead.
-  const handleCaptureSubmit = useCallback(async (email: string, name: string) => {
+  const handleCaptureSubmit = useCallback(async (values: Record<string, string>) => {
     if (!leadCaptureEnabled || !captureOffer) return;
+    // `name` and `email` have their own columns server-side; everything else the
+    // agent asked for travels in `fields`, where it is re-checked against that
+    // agent's configuration before anything is stored.
+    const { email = '', name = '', ...rest } = values;
     await createSupportTicket(
       authToken ?? '',
       {
         name,
         email,
-        // The question the agent couldn't answer is the useful payload — it's
-        // what the operator needs in order to reply.
+        // What the operator needs in order to reply: the question the agent
+        // couldn't answer, or its one-line summary of what the visitor wants.
         message: captureOffer.question,
-        source: 'unanswered',
+        source: captureOffer.reason === 'intent' ? 'intent' : 'unanswered',
         unanswered_question_id: captureOffer.unansweredQuestionId ?? undefined,
         conversation_id: captureOffer.conversationId ?? undefined,
         session_id: sessionId ?? undefined,
+        fields: Object.keys(rest).length > 0 ? rest : undefined,
       },
       embedHeaders,
     );
@@ -1791,21 +1802,36 @@ export function useEmbedController(props: EmbedClientProps) {
         }]);
       }
 
-      // Offer inline capture when the agent couldn't answer. Suppressed while a
-      // handoff is firing for the same message — the handoff modal already asks
-      // for the visitor's details, and two asks in a row for one question reads
-      // as nagging. The handoff branch below owns that case.
+      // The agent volunteered the card because the visitor wanted a human to
+      // pick this up. Present only when the org's plan and the agent's own
+      // settings both allow it — the server decides that, and simply doesn't
+      // send this when they don't.
+      const intentOffer = messageData?.assistant_message?.metadata?.capture_offer;
+      const intentTopic =
+        intentOffer && typeof intentOffer === 'object' ? String(intentOffer.topic || '') : '';
+
+      // Offer inline capture when the agent couldn't answer, or when it asked to.
+      // Suppressed while a handoff is firing for the same message — the handoff
+      // modal already asks for the visitor's details, and two asks in a row for
+      // one question reads as nagging. The handoff branch below owns that case.
       if (
-        agentWasUnsure
+        (agentWasUnsure || intentTopic)
         && leadCaptureEnabled
         && !captureResolved
         && !captureOffer
         && !(handoffRequested && supportTicketsEnabled)
       ) {
+        // Intent wins when both fire: an agent that asked for the visitor's
+        // details has more to go on than a phrase-match on its own uncertainty.
+        const isIntent = Boolean(intentTopic);
         setCaptureOffer({
-          question: messageData.user_message?.content || message,
-          unansweredQuestionId:
-            messageData.assistant_message?.metadata?.unanswered_question_id ?? null,
+          reason: isIntent ? 'intent' : 'unanswered',
+          question: isIntent
+            ? intentTopic
+            : (messageData.user_message?.content || message),
+          unansweredQuestionId: isIntent
+            ? null
+            : (messageData.assistant_message?.metadata?.unanswered_question_id ?? null),
           conversationId: messageData.conversation_id ?? null,
           timestamp: Date.now(),
         });
@@ -2664,6 +2690,7 @@ export function useEmbedController(props: EmbedClientProps) {
     handoffConversationIdRef,
     supportTicketsEnabled,
     leadCaptureEnabled,
+    captureFields,
     captureOffer,
     captureResolved,
     handleCaptureSubmit,

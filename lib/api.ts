@@ -263,10 +263,18 @@ export async function createSupportTicket(
      * Which flow produced the ticket. Omitted (server-defaults to 'handoff')
      * for the escalation form; 'unanswered' for the inline capture card, which
      * is gated on the free-tier `lead_capture` feature instead of the paid
-     * `support_tickets` one.
+     * `support_tickets` one; 'intent' when the agent offered that same card
+     * because the visitor asked for something a human should pick up, gated on
+     * `lead_capture_intent`.
      */
-    source?: 'handoff' | 'unanswered';
+    source?: 'handoff' | 'unanswered' | 'intent';
     unanswered_question_id?: string;
+    /**
+     * Answers to the extra fields the agent's capture card asked for, beyond
+     * name and email. Re-checked server-side against that agent's own
+     * configuration, so anything it didn't ask for is dropped.
+     */
+    fields?: Record<string, string>;
   },
   embedHeaders?: Record<string, string>,
 ): Promise<{ id: string; created_at: string }> {

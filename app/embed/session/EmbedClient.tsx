@@ -131,6 +131,7 @@ export default function EmbedClient(props: EmbedClientProps) {
     setHasEscalated,
     handoffConversationIdRef,
     supportTicketsEnabled,
+    captureFields,
     captureOffer,
     handleCaptureSubmit,
     handleCaptureDismiss,
@@ -314,6 +315,8 @@ export default function EmbedClient(props: EmbedClientProps) {
               translations={{
                 leadCaptureTitle: String(t.leadCaptureTitle),
                 leadCaptureBody: String(t.leadCaptureBody),
+                leadCaptureIntentTitle: String(t.leadCaptureIntentTitle),
+                leadCaptureIntentBody: String(t.leadCaptureIntentBody),
                 leadCaptureNameLabel: String(t.leadCaptureNameLabel),
                 leadCaptureEmailLabel: String(t.leadCaptureEmailLabel),
                 leadCaptureSubmit: String(t.leadCaptureSubmit),
@@ -321,7 +324,10 @@ export default function EmbedClient(props: EmbedClientProps) {
                 leadCaptureSuccess: String(t.leadCaptureSuccess),
                 leadCaptureError: String(t.leadCaptureError),
                 leadCaptureDismiss: String(t.leadCaptureDismiss),
+                leadCaptureOptional: String(t.leadCaptureOptional),
               }}
+              fields={captureFields}
+              reason={captureOffer.reason}
               onSubmit={handleCaptureSubmit}
               onDismiss={handleCaptureDismiss}
               primaryColor={widgetConfig?.primary_color || '#111827'}

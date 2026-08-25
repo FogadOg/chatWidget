@@ -5553,5 +5553,75 @@ describe('EmbedClient Component', () => {
         expect(body.message).toBe('Do you ship to Norway?');
       }, { timeout: 3000 });
     });
+
+    describe('offered on intent', () => {
+      // The agent asked for the card itself, on a question it answered fine.
+      // The server only sends `capture_offer` when the plan and the agent's own
+      // setting both allow it, so the widget just honors what it is given.
+      const intentMeta = { capture_offer: { reason: 'intent', topic: 'A quote for 40 seats' } };
+
+      test('offers the card with the intent wording, not the failure wording', async () => {
+        mockChat(intentMeta, { lead_capture_enabled: true });
+        await ask();
+        await waitFor(() => {
+          expect(screen.getByTestId('lead-capture-card')).toHaveAttribute('data-capture-reason', 'intent');
+        }, { timeout: 3000 });
+      });
+
+      test('posts source=intent with the agent topic as the message', async () => {
+        mockChat(intentMeta, { lead_capture_enabled: true });
+        await ask();
+        await waitFor(() => expect(screen.getByTestId('lead-capture-card')).toBeInTheDocument(), { timeout: 3000 });
+
+        fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.com' } });
+        fireEvent.click(screen.getByText('Send to the team'));
+
+        await waitFor(() => {
+          const call = mockFetch.mock.calls.find(
+            ([url, opts]: any[]) => String(url).includes('/support-tickets') && opts?.method === 'POST',
+          );
+          expect(call).toBeTruthy();
+          const body = JSON.parse(call[1].body);
+          expect(body.source).toBe('intent');
+          expect(body.message).toBe('A quote for 40 seats');
+          // Nothing went unanswered here, so there is no question to link back to.
+          expect(body.unanswered_question_id).toBeUndefined();
+        }, { timeout: 3000 });
+      });
+
+      test('asks for the agent-configured fields and posts the extras under `fields`', async () => {
+        mockChat(intentMeta, {
+          lead_capture_enabled: true,
+          lead_capture_fields: [
+            { key: 'email', label: '', type: 'email', required: true },
+            { key: 'company', label: 'Company', type: 'text', required: true },
+          ],
+        });
+        await ask();
+        await waitFor(() => expect(screen.getByTestId('lead-capture-card')).toBeInTheDocument(), { timeout: 3000 });
+
+        fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.com' } });
+        fireEvent.change(screen.getByLabelText('Company'), { target: { value: 'Acme' } });
+        fireEvent.click(screen.getByText('Send to the team'));
+
+        await waitFor(() => {
+          const call = mockFetch.mock.calls.find(
+            ([url, opts]: any[]) => String(url).includes('/support-tickets') && opts?.method === 'POST',
+          );
+          expect(call).toBeTruthy();
+          const body = JSON.parse(call[1].body);
+          // name/email keep their own columns; everything else travels together.
+          expect(body.email).toBe('buyer@example.com');
+          expect(body.fields).toEqual({ company: 'Acme' });
+        }, { timeout: 3000 });
+      });
+
+      test('is still suppressed when the org has no lead capture at all', async () => {
+        mockChat(intentMeta, {});
+        await ask();
+        await waitFor(() => expect(screen.getByText('2 messages')).toBeInTheDocument(), { timeout: 3000 });
+        expect(screen.queryByTestId('lead-capture-card')).not.toBeInTheDocument();
+      });
+    });
   });
 });
